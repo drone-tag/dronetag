@@ -13,6 +13,7 @@ import {
 import { awaitFirebaseAuthReady } from '@/lib/firebase/auth';
 import { DEMO_MODE, getFirebaseDb } from '@/lib/firebase/config';
 import * as demo from '@/lib/demo/entitiesStore';
+import { fileToDataUrl } from '@/lib/demo/fileToDataUrl';
 import { adminFetch } from '@/lib/client/adminApi';
 import { requestPublicDroneResync } from '@/lib/client/resyncPublicDrones';
 import type { Certificate, CertificateKind } from '@/lib/types/entities';
@@ -101,7 +102,14 @@ export async function uploadCertificatePdf(
 ): Promise<string> {
   if (DEMO_MODE) {
     await new Promise((r) => setTimeout(r, 300));
-    return URL.createObjectURL(file);
+    const fileUrl = await fileToDataUrl(file);
+    await demo.updateCertificate(certificateId, {
+      fileUrl,
+      verificationStatus: parserTrusted ? 'verified' : 'pending',
+    });
+    const cert = await demo.getCertificate(certificateId);
+    if (cert?.userId) await requestPublicDroneResync(cert.userId);
+    return fileUrl;
   }
   const before = await getCertificate(certificateId);
   const form = new FormData();

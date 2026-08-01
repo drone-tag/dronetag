@@ -164,7 +164,7 @@ export function SignupOtpVerification({ channels, phone, onComplete }: SignupOtp
       </div>
 
       {wantsEmail ? (
-        <section className="space-y-3 rounded-lg border border-[var(--color-border)] bg-gray-50 p-4">
+        <section className="space-y-3 rounded-lg border border-[var(--color-border)] bg-[var(--color-hover)] p-4">
           <p className="text-sm font-medium text-[var(--color-text)]">{t('signup.otp.emailSection')}</p>
           <p className="text-xs text-[var(--color-text-secondary)]">{user?.email}</p>
           {!emailVerified ? (
@@ -180,7 +180,7 @@ export function SignupOtpVerification({ channels, phone, onComplete }: SignupOtp
                 {emailSent ? t('signup.otp.resend') : t('signup.otp.sendEmail')}
               </Button>
               {devEmailCode ? (
-                <p className="text-xs text-amber-700">{t('signup.otp.devCode', { code: devEmailCode })}</p>
+                <p className="text-xs text-[var(--tone-warning-fg)]">{t('signup.otp.devCode', { code: devEmailCode })}</p>
               ) : null}
               {emailSent ? (
                 <div className="flex gap-2">
@@ -213,7 +213,7 @@ export function SignupOtpVerification({ channels, phone, onComplete }: SignupOtp
       ) : null}
 
       {wantsPhone ? (
-        <section className="space-y-3 rounded-lg border border-[var(--color-border)] bg-gray-50 p-4">
+        <section className="space-y-3 rounded-lg border border-[var(--color-border)] bg-[var(--color-hover)] p-4">
           <p className="text-sm font-medium text-[var(--color-text)]">{t('signup.otp.phoneSection')}</p>
           <p className="text-xs text-[var(--color-text-secondary)]">{phoneE164}</p>
           {!phoneVerified ? (
@@ -261,7 +261,7 @@ export function SignupOtpVerification({ channels, phone, onComplete }: SignupOtp
       <div ref={recaptchaRef} id="signup-phone-recaptcha" className="hidden" aria-hidden />
 
       {error ? (
-        <div className="rounded-lg bg-red-50 px-3 py-2.5 text-sm text-red-700" role="alert">
+        <div className="rounded-lg bg-[var(--tone-danger-bg)] px-3 py-2.5 text-sm text-[var(--tone-danger-fg)]" role="alert">
           {error}
         </div>
       ) : null}

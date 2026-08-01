@@ -25,8 +25,8 @@ export function SlotIndicator({ used, max, className }: SlotIndicatorProps) {
       className={classNames(
         'inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-medium ring-1 ring-inset',
         atCap
-          ? 'bg-amber-50 text-amber-800 ring-amber-600/20'
-          : 'bg-gray-50 text-gray-700 ring-gray-500/20',
+          ? 'bg-[var(--tone-warning-bg)] text-[var(--tone-warning-fg)] ring-[var(--tone-warning-ring)]'
+          : 'bg-[var(--color-hover)] text-[var(--color-text)] ring-[var(--color-border)]',
         className,
       )}
     >
@@ -34,7 +34,7 @@ export function SlotIndicator({ used, max, className }: SlotIndicatorProps) {
         {t('slot.usage', { used, max })}
       </span>
       {atCap ? (
-        <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-amber-700">
+        <span className="rounded-full bg-[var(--tone-warning-hover)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-[var(--tone-warning-fg)]">
           {t('slot.atCap')}
         </span>
       ) : null}

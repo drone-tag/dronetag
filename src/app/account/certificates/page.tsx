@@ -39,7 +39,7 @@ import { Modal } from '@/components/ui/Modal';
 import { Select } from '@/components/ui/Select';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { UploadField } from '@/components/ui/UploadField';
-import { PolicyStatusBadge } from '@/components/ui/StatusBadge';
+import { PolicyStatusBadge, VerificationBadge } from '@/components/ui/StatusBadge';
 import { ConfirmDialog } from '@/components/account/ConfirmDialog';
 import { EntityListShell } from '@/components/account/EntityListShell';
 import { FormErrorBanner } from '@/components/account/FormErrorBanner';
@@ -109,15 +109,12 @@ export default function AccountCertificatesPage() {
 
   if (loading) {
     return (
-      <div className="mt-8 flex items-center gap-3 text-sm text-gray-500">
-        <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-gray-600" />
+      <div className="mt-8 flex items-center gap-3 text-sm text-[var(--color-text-secondary)]">
+        <div className="h-4 w-4 animate-spin rounded-full border-2 border-[var(--color-border)] border-t-gray-600" />
         {t('common.loading')}
       </div>
     );
   }
-
-  const cap = slots?.certificate ?? 1;
-  const atCap = certificates.length >= cap;
 
   async function handleCreate(
     form: CertFormState,
@@ -137,12 +134,15 @@ export default function AccountCertificatesPage() {
         issuedAt: form.issuedAt,
         expiresAt: form.expiresAt,
         fileUrl: pendingPdf ? '' : form.fileUrl,
-        verificationStatus: 'unverified',
+        verificationStatus: parserTrusted ? 'verified' : 'pending',
         notes: '',
       });
 
       if (pendingPdf) {
         await uploadCertificatePdf(certificateId, pendingPdf, parserTrusted);
+        if (parserTrusted) {
+          await updateCertificate(certificateId, { verificationStatus: 'verified' });
+        }
       } else if (parserTrusted) {
         await updateCertificate(certificateId, { verificationStatus: 'verified' });
       }
@@ -172,18 +172,33 @@ export default function AccountCertificatesPage() {
     }
   }
 
+  const activeCertificates = certificates.filter(
+    (c) => computeCertificateStatus(c) !== 'expired',
+  );
+  const archivedCount = certificates.length - activeCertificates.length;
+  const cap = slots?.certificate ?? 1;
+  const atCap = activeCertificates.length >= cap;
+
   return (
     <EntityListShell
       title={t('cert.list.title')}
       subtitle={t('cert.list.subtitle')}
-      used={certificates.length}
+      used={activeCertificates.length}
       max={cap}
       newLabel={t('cert.list.new')}
       onNew={() => setCreating(true)}
       newDisabled={atCap}
     >
       <FormErrorBanner show={Boolean(saveError)} message={saveError ?? undefined} />
-      {certificates.length === 0 ? (
+      {archivedCount > 0 ? (
+        <p className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm text-[var(--color-text-secondary)]">
+          {t('permits.archiveNotice').replace('{count}', String(archivedCount))}{' '}
+          <a href="/account/archive" className="font-medium text-[var(--color-action)] underline-offset-2 hover:underline">
+            {t('account.tab.archive')}
+          </a>
+        </p>
+      ) : null}
+      {activeCertificates.length === 0 ? (
         <EmptyState
           title={t('cert.list.empty')}
           description={t('cert.list.emptyDesc')}
@@ -196,7 +211,7 @@ export default function AccountCertificatesPage() {
         />
       ) : (
         <ul className="space-y-3">
-          {certificates.map((c) => (
+          {activeCertificates.map((c) => (
             <li key={c.id}>
               <Card padding="md">
                 <EntityListRow
@@ -208,22 +223,23 @@ export default function AccountCertificatesPage() {
                       ]}
                       extra={
                         !c.fileUrl ? (
-                          <span className="text-[11px] text-gray-400">{t('entity.noPdfAttached')}</span>
+                          <span className="text-[11px] text-[var(--color-text-secondary)]">{t('entity.noPdfAttached')}</span>
                         ) : null
                       }
                     />
                   }
                 >
                   <div className="flex min-w-0 flex-wrap items-center gap-1.5">
-                    <h3 className="text-sm font-semibold text-gray-900 sm:text-base">
+                    <h3 className="text-sm font-semibold text-[var(--color-text)] sm:text-base">
                       {t(kindLabelKey(c.kind))}
                     </h3>
+                    <VerificationBadge status={c.verificationStatus} />
                     <PolicyStatusBadge status={computeCertificateStatus(c)} />
                   </div>
                   {c.registrationNumber ? (
-                    <p className="mt-1 truncate font-mono text-[11px] text-gray-700 sm:text-xs">{c.registrationNumber}</p>
+                    <p className="mt-1 truncate font-mono text-[11px] text-[var(--color-text)] sm:text-xs">{c.registrationNumber}</p>
                   ) : null}
-                  <p className="mt-1 text-[11px] leading-snug text-gray-500 sm:text-xs">
+                  <p className="mt-1 text-[11px] leading-snug text-[var(--color-text-secondary)] sm:text-xs">
                     {c.issuedBy ? <>{t('cert.field.issuedBy')}: {c.issuedBy}</> : null}
                     {c.issuedAt && c.expiresAt ? (
                       <>
@@ -438,7 +454,7 @@ function CertFormModal({
       <form onSubmit={handleSubmit} noValidate className="space-y-4">
         <FormErrorBanner show={Object.keys(errors).length > 0} />
 
-        <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+        <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-hover)] p-4">
           <UploadField
             label={t('cert.field.filePdf')}
             accept=".pdf,application/pdf"
@@ -449,27 +465,28 @@ function CertFormModal({
             className="mb-0"
           />
           {parsing ? (
-            <p className="mt-2 flex items-center gap-2 text-xs text-gray-500">
-              <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-gray-300 border-t-gray-600" />
+            <p className="mt-2 flex items-center gap-2 text-xs text-[var(--color-text-secondary)]">
+              <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-[var(--color-border)] border-t-gray-600" />
               {t('cert.parse.parsing')}
             </p>
           ) : null}
           {parseMessage ? (
             <p className="mt-2 text-xs text-blue-700">{parseMessage}</p>
           ) : null}
-          <p className="mt-2 text-[11px] text-gray-400">{t('cert.parse.hint')}</p>
+          <p className="mt-2 text-[11px] text-[var(--color-text-secondary)]">{t('cert.parse.hint')}</p>
+          <p className="mt-1 text-[11px] text-[var(--color-text-secondary)]">{t('account.verification.uploadHint')}</p>
         </div>
 
         {showPreview ? (
-          <div className="flex flex-wrap items-start justify-between gap-3 rounded-lg border border-gray-200 px-4 py-3">
+          <div className="flex flex-wrap items-start justify-between gap-3 rounded-lg border border-[var(--color-border)] px-4 py-3">
             <div className="min-w-0 space-y-1">
-              <p className="text-sm font-medium text-gray-900">
+              <p className="text-sm font-medium text-[var(--color-text)]">
                 {t(kindLabelKey(form.kind))}
               </p>
               {form.registrationNumber ? (
-                <p className="font-mono text-xs text-gray-700">{form.registrationNumber}</p>
+                <p className="font-mono text-xs text-[var(--color-text)]">{form.registrationNumber}</p>
               ) : null}
-              <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-gray-600">
+              <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-[var(--color-text-secondary)]">
                 {form.issuedBy ? (
                   <span>{t('cert.field.issuedBy')}: {form.issuedBy}</span>
                 ) : null}
@@ -484,7 +501,7 @@ function CertFormModal({
                 ) : null}
               </div>
               {parsedHolder ? (
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-[var(--color-text-secondary)]">
                   {t('field.holderName')}: {parsedHolder}
                 </p>
               ) : null}
@@ -544,15 +561,15 @@ function CertViewModal({
   return (
     <Modal isOpen onClose={onClose} title={t('cert.view.title')}>
       <div className="space-y-4">
-        <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-relaxed text-amber-900">
+        <div className="rounded-lg border border-[var(--tone-warning-border)] bg-[var(--tone-warning-bg)] px-4 py-3 text-sm leading-relaxed text-[var(--tone-warning-fg)]">
           {t('cert.locked.hint')}
         </div>
 
-        <div className="flex flex-wrap items-start justify-between gap-3 rounded-lg border border-gray-200 px-4 py-3">
+        <div className="flex flex-wrap items-start justify-between gap-3 rounded-lg border border-[var(--color-border)] px-4 py-3">
           <div className="min-w-0 space-y-1">
-            <p className="text-sm font-medium text-gray-900">{t(kindLabelKey(certificate.kind))}</p>
+            <p className="text-sm font-medium text-[var(--color-text)]">{t(kindLabelKey(certificate.kind))}</p>
             {certificate.registrationNumber ? (
-              <p className="font-mono text-xs text-gray-700">{certificate.registrationNumber}</p>
+              <p className="font-mono text-xs text-[var(--color-text)]">{certificate.registrationNumber}</p>
             ) : null}
           </div>
           <PolicyStatusBadge status={status} />

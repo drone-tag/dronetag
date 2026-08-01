@@ -129,13 +129,14 @@ export function nowIso(): string {
 
 export const MAX_OPERATORS_PER_USER = 3;
 
-export type QuotaSlot = 'drone' | 'operator' | 'certificate' | 'pdf';
+export type QuotaSlot = 'drone' | 'operator' | 'certificate' | 'pdf' | 'permit';
 
 const QUOTA_COLLECTIONS: Record<QuotaSlot, string> = {
   drone: 'drones',
   operator: 'operators',
   certificate: 'certificates',
   pdf: 'documents',
+  permit: 'authorizations',
 };
 
 const SLOT_DEFAULTS: Record<QuotaSlot, number> = {
@@ -143,7 +144,15 @@ const SLOT_DEFAULTS: Record<QuotaSlot, number> = {
   operator: 1,
   certificate: 1,
   pdf: 1,
+  permit: 3,
 };
+
+function isExpiryInPast(iso: unknown): boolean {
+  if (typeof iso !== 'string' || !iso.trim()) return false;
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return false;
+  return d < new Date();
+}
 
 /**
  * Reject the current operation if creating one more entity of the given
@@ -151,6 +160,8 @@ const SLOT_DEFAULTS: Record<QuotaSlot, number> = {
  *
  * For operators, we additionally apply a hard ceiling of MAX_OPERATORS_PER_USER
  * regardless of granted slots.
+ *
+ * For `permit` / `certificate`, only non-expired rows count (expired → Archive).
  */
 export async function enforceQuota(uid: string, kind: QuotaSlot): Promise<void> {
   const db = getFirestore();
@@ -164,9 +175,14 @@ export async function enforceQuota(uid: string, kind: QuotaSlot): Promise<void> 
   const usageSnap = await db
     .collection(QUOTA_COLLECTIONS[kind])
     .where('userId', '==', uid)
-    .count()
     .get();
-  const used = usageSnap.data().count;
+
+  let used = usageSnap.size;
+  if (kind === 'permit') {
+    used = usageSnap.docs.filter((d) => !isExpiryInPast(d.data().validTo)).length;
+  } else if (kind === 'certificate') {
+    used = usageSnap.docs.filter((d) => !isExpiryInPast(d.data().expiresAt)).length;
+  }
 
   if (used >= cap) {
     throw new HttpsError(

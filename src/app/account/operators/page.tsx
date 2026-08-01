@@ -205,8 +205,8 @@ export default function AccountOperatorsPage() {
 
   if (loading) {
     return (
-      <div className="mt-8 flex items-center gap-3 text-sm text-gray-500">
-        <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-gray-600" />
+      <div className="mt-8 flex items-center gap-3 text-sm text-[var(--color-text-secondary)]">
+        <div className="h-4 w-4 animate-spin rounded-full border-2 border-[var(--color-border)] border-t-gray-600" />
         {t('common.loading')}
       </div>
     );
@@ -240,7 +240,7 @@ export default function AccountOperatorsPage() {
         />
       ) : (
         <>
-          <p className="mb-3 text-xs leading-relaxed text-gray-500">
+          <p className="mb-3 text-xs leading-relaxed text-[var(--color-text-secondary)]">
             {t('operator.current.hint')}
           </p>
           <ul className="space-y-3">
@@ -346,16 +346,16 @@ function OperatorRow({
                   ? t('operator.current.badge')
                   : t('operator.current.set', { name: operatorDisplayName(operator) })
               }
-              className="tap-44 mt-0.5 inline-flex shrink-0 items-center justify-center rounded-full p-1 transition hover:bg-gray-100 disabled:cursor-default disabled:hover:bg-transparent"
+              className="tap-44 mt-0.5 inline-flex shrink-0 items-center justify-center rounded-full p-1 transition hover:bg-[var(--color-hover)] disabled:cursor-default disabled:hover:bg-transparent"
             >
               {selecting ? (
-                <span className="h-5 w-5 animate-spin rounded-full border-2 border-gray-300 border-t-blue-600" />
+                <span className="h-5 w-5 animate-spin rounded-full border-2 border-[var(--color-border)] border-t-blue-600" />
               ) : (
                 <span
                   className={
                     isCurrent
-                      ? 'flex h-5 w-5 items-center justify-center rounded-full border-[5px] border-blue-600 bg-white'
-                      : 'h-5 w-5 rounded-full border-2 border-gray-300 bg-white'
+                      ? 'flex h-5 w-5 items-center justify-center rounded-full border-[5px] border-blue-600 bg-[var(--color-card)]'
+                      : 'h-5 w-5 rounded-full border-2 border-[var(--color-border)] bg-[var(--color-card)]'
                   }
                   aria-hidden
                 />
@@ -363,25 +363,25 @@ function OperatorRow({
             </button>
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-1.5">
-                <h3 className="text-sm font-semibold text-gray-900 sm:text-base">
+                <h3 className="text-sm font-semibold text-[var(--color-text)] sm:text-base">
                   {operatorDisplayName(operator)}
                 </h3>
                 {isCurrent ? (
-                  <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-blue-700 ring-1 ring-inset ring-blue-600/20">
+                  <span className="rounded-full bg-[var(--tone-info-bg)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-[var(--tone-info-fg)] ring-1 ring-inset ring-[var(--tone-info-ring)]">
                     {t('operator.current.badge')}
                   </span>
                 ) : null}
-                <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-gray-700">
+                <span className="rounded-full bg-[var(--color-hover)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-[var(--color-text)]">
                   {t(`operator.kind.${operator.kind}`)}
                 </span>
               </div>
-              <p className="mt-0.5 truncate text-[11px] text-gray-500 sm:text-xs">
+              <p className="mt-0.5 truncate text-[11px] text-[var(--color-text-secondary)] sm:text-xs">
                 {operator.kind === 'company'
                   ? operator.company.email || ''
                   : operator.private.email || ''}
               </p>
               {droneUsage > 0 ? (
-                <p className="mt-1 text-[11px] text-amber-700 sm:text-xs">
+                <p className="mt-1 text-[11px] text-[var(--tone-warning-fg)] sm:text-xs">
                   {t('operator.delete.warningPublic', { count: droneUsage })}
                 </p>
               ) : null}
@@ -556,16 +556,16 @@ function OperatorFormModal({
           </div>
         )}
 
-        <label className="flex items-start gap-3 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5">
+        <label className="flex items-start gap-3 rounded-lg border border-[var(--color-border)] bg-[var(--color-hover)] px-3 py-2.5">
           <input
             type="checkbox"
             checked={form.isDefault}
             onChange={(e) => setField('isDefault', e.target.checked)}
-            className="mt-0.5 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+            className="mt-0.5 h-4 w-4 rounded border-[var(--color-border)] text-blue-600 focus:ring-blue-500"
           />
           <span className="flex-1 text-sm">
-            <span className="font-medium text-gray-900">{t('operator.field.isDefault')}</span>
-            <span className="block text-xs text-gray-500">{t('operator.field.isDefaultHint')}</span>
+            <span className="font-medium text-[var(--color-text)]">{t('operator.field.isDefault')}</span>
+            <span className="block text-xs text-[var(--color-text-secondary)]">{t('operator.field.isDefaultHint')}</span>
           </span>
         </label>
 

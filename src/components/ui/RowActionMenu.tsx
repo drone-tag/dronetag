@@ -50,8 +50,8 @@ export function RowActionMenu({ actions, extra }: { actions: RowAction[]; extra?
             className={classNames(
               'tap-44 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
               a.danger
-                ? 'text-red-600 hover:bg-red-50'
-                : 'text-[var(--color-text-secondary)] hover:bg-gray-100 hover:text-[var(--color-text)]',
+                ? 'text-[var(--tone-danger-fg)] hover:bg-[var(--tone-danger-bg)]'
+                : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-hover)] hover:text-[var(--color-text)]',
             )}
           >
             {a.label}
@@ -66,7 +66,7 @@ export function RowActionMenu({ actions, extra }: { actions: RowAction[]; extra?
           <>
             <button
               type="button"
-              className="tap-44 ml-auto inline-flex items-center justify-center rounded-xl border border-[var(--color-border)] bg-white px-3 py-2 text-sm font-medium text-[var(--color-text)]"
+              className="tap-44 ml-auto inline-flex items-center justify-center rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] px-3 py-2 text-sm font-medium text-[var(--color-text)]"
               aria-expanded={open}
               aria-haspopup="menu"
               aria-controls={menuId}
@@ -83,7 +83,7 @@ export function RowActionMenu({ actions, extra }: { actions: RowAction[]; extra?
               <div
                 id={menuId}
                 role="menu"
-                className="absolute right-0 bottom-full z-20 mb-2 min-w-[11rem] overflow-hidden rounded-xl border border-[var(--color-border)] bg-white py-1 shadow-lg"
+                className="absolute right-0 bottom-full z-20 mb-2 min-w-[11rem] overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] py-1 shadow-lg"
               >
                 {visible.map((a) => (
                   <button
@@ -92,7 +92,7 @@ export function RowActionMenu({ actions, extra }: { actions: RowAction[]; extra?
                     role="menuitem"
                     className={classNames(
                       'tap-44 flex w-full items-center px-4 py-3 text-left text-sm font-medium',
-                      a.danger ? 'text-red-600 hover:bg-red-50' : 'text-[var(--color-text)] hover:bg-gray-50',
+                      a.danger ? 'text-[var(--tone-danger-fg)] hover:bg-[var(--tone-danger-bg)]' : 'text-[var(--color-text)] hover:bg-[var(--color-hover)]',
                     )}
                     onClick={() => {
                       setOpen(false);

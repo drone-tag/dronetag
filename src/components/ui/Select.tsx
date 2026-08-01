@@ -22,7 +22,7 @@ export type SelectProps = {
 >;
 
 const fieldBase =
-  'w-full rounded-lg border px-4 py-2.5 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20';
+  'w-full rounded-lg border bg-[var(--color-card)] px-4 py-2.5 text-sm text-[var(--color-text)] outline-none transition focus:border-[var(--color-action)] focus:ring-2 focus:ring-[var(--color-action)]/20';
 
 export function Select({
   label,
@@ -44,11 +44,11 @@ export function Select({
     <div className={classNames('w-full', className)}>
       <label
         htmlFor={selectId}
-        className="mb-1.5 block text-sm font-medium text-gray-700"
+        className="mb-1.5 block text-sm font-medium text-[var(--color-text)]"
       >
         {label}
         {required ? (
-          <span className="ml-0.5 text-red-500" aria-hidden>
+          <span className="ml-0.5 text-[var(--color-expired)]" aria-hidden>
             *
           </span>
         ) : null}
@@ -65,9 +65,9 @@ export function Select({
         className={classNames(
           fieldBase,
           error
-            ? 'border-red-500 focus:border-red-500 focus:ring-red-500/20'
-            : 'border-gray-300',
-          disabled && 'cursor-not-allowed bg-gray-50 opacity-70'
+            ? 'border-[var(--color-expired)] focus:border-[var(--color-expired)] focus:ring-[var(--color-expired)]/20'
+            : 'border-[var(--color-border)]',
+          disabled && 'cursor-not-allowed bg-[var(--color-hover)] opacity-70',
         )}
         {...rest}
       >
@@ -81,7 +81,7 @@ export function Select({
         ))}
       </select>
       {error ? (
-        <p id={`${selectId}-error`} className="mt-1.5 text-sm text-red-600" role="alert">
+        <p id={`${selectId}-error`} className="mt-1.5 text-sm text-[var(--color-expired)]" role="alert">
           {error}
         </p>
       ) : null}

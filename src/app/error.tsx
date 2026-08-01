@@ -19,7 +19,7 @@ export default function AppError({
   reset: () => void;
 }) {
   return (
-    <div className="min-h-[60dvh] bg-gray-50 py-12">
+    <div className="min-h-[60dvh] bg-[var(--color-app-bg)] py-12">
       <ErrorPanel error={error} reset={reset} context="global" />
     </div>
   );

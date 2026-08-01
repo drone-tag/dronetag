@@ -2,9 +2,8 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
-import { type ReactNode } from 'react';
+import { type ReactNode, useEffect, useRef, useState } from 'react';
 import { usePathname } from 'next/navigation';
-import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { logout } from '@/lib/firebase/auth';
@@ -16,29 +15,33 @@ import { Button } from '@/components/ui/Button';
 import { MobileDrawer } from '@/components/layout/MobileDrawer';
 import { ACCOUNT_NAV_ITEMS, isAccountNavActive } from '@/components/layout/accountNavConfig';
 import { NavIcons } from '@/components/layout/navIcons';
-
-function userInitials(name: string): string {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  if (parts.length === 0) return '?';
-  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-  return `${parts[0][0] ?? ''}${parts[parts.length - 1][0] ?? ''}`.toUpperCase();
-}
+import { DemoPersonaSwitcher } from '@/components/demo/DemoPersonaSwitcher';
+import { useSyncHeaderOffset } from '@/lib/hooks/useSyncHeaderOffset';
+import { InboxBellButton } from '@/components/layout/InboxBellButton';
+import { UserAvatar } from '@/components/ui/UserAvatar';
+import { useAccountAvatar } from '@/lib/hooks/useAccountAvatar';
 
 export function Navbar() {
   const pathname = usePathname();
   const { user, isAdmin } = useAuth();
   const { language, setLanguage, t } = useLanguage();
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const headerRef = useRef<HTMLElement>(null);
   const inAdmin = pathname.startsWith('/admin');
   const inAccount = pathname === '/account' || pathname.startsWith('/account/');
+  /** Profile chip in the top bar on small screens only; desktop sidebar owns it. Never for admin. */
+  const showAccountProfileChip = Boolean(user && inAccount && !isAdmin);
+  const { photoUrl, name: accountName } = useAccountAvatar(user?.uid);
+
+  useSyncHeaderOffset(headerRef);
 
   useEffect(() => {
     setDrawerOpen(false);
   }, [pathname]);
 
-  const displayName = user?.displayName ?? user?.email ?? '';
+  const displayName = accountName || user?.displayName || user?.email || '';
 
-  function drawerNavLink(href: string, label: string, icon: React.ReactNode, active: boolean) {
+  function drawerNavLink(href: string, label: string, icon: ReactNode, active: boolean) {
     return (
       <Link
         href={href}
@@ -46,7 +49,7 @@ export function Navbar() {
           'tap-44 flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium transition-colors',
           active
             ? 'bg-[var(--color-action-light)] text-[var(--color-action)]'
-            : 'text-[var(--color-text)] hover:bg-gray-50',
+            : 'text-[var(--color-text)] hover:bg-[var(--color-hover)]',
         )}
         onClick={() => setDrawerOpen(false)}
       >
@@ -56,57 +59,122 @@ export function Navbar() {
     );
   }
 
+  const brandLink = (
+    <Link
+      href={user ? (isAdmin ? '/admin' : '/account') : '/'}
+      className="flex shrink-0 items-center gap-2"
+      onClick={() => setDrawerOpen(false)}
+    >
+      <span className="inline-flex overflow-hidden rounded-lg">
+        <Image
+          src="/logo.png?v=3"
+          alt="DroneTag"
+          width={512}
+          height={512}
+          className="h-7 w-7 sm:h-9 sm:w-9"
+          priority
+          unoptimized
+        />
+      </span>
+      <span className="hidden text-sm font-bold text-[var(--color-navy)] sm:inline">
+        DroneTag
+      </span>
+    </Link>
+  );
+
   return (
     <>
-      <header className="safe-pt fixed top-0 right-0 left-0 z-50 border-b border-[var(--color-border)] bg-white/90 backdrop-blur-md">
+      <header
+        ref={headerRef}
+        className="safe-pt surface-header fixed top-0 right-0 left-0 z-50 border-b backdrop-blur-md"
+      >
         {DEMO_MODE ? (
-          <div className="bg-amber-500 px-4 py-1.5 text-center text-xs font-medium text-white">
-            Demo Mode — running with sample data, no Firebase connected
+          <div className="flex flex-wrap items-center justify-center gap-3 bg-[var(--color-expiring)] px-4 py-1.5 text-center text-xs font-medium text-white">
+            <span>{t('demo.banner')}</span>
+            <DemoPersonaSwitcher compact />
           </div>
         ) : null}
         <div className="mx-auto flex h-[var(--header-height)] max-w-7xl items-center justify-between gap-2 px-4 sm:gap-3 sm:px-6">
-          <Link href={user ? '/account' : '/'} className="flex shrink-0 items-center gap-2" onClick={() => setDrawerOpen(false)}>
-            <span className="inline-flex overflow-hidden rounded-lg">
-              <Image src="/logo.png?v=3" alt="DroneTag" width={512} height={512} className="h-7 w-7 sm:h-9 sm:w-9" priority unoptimized />
-            </span>
-            <span className="hidden text-sm font-bold text-[var(--color-navy)] sm:inline">DroneTag</span>
-          </Link>
+          {showAccountProfileChip ? (
+            <>
+              <Link
+                href="/account/settings"
+                className="flex min-w-0 shrink items-center gap-2 lg:hidden"
+                onClick={() => setDrawerOpen(false)}
+                aria-label={t('settings.title')}
+              >
+                <UserAvatar
+                  name={displayName}
+                  photoUrl={photoUrl}
+                  className="h-8 w-8 shrink-0 sm:h-9 sm:w-9"
+                  textClassName="bg-[var(--color-brand-solid)] text-[10px] text-[var(--color-on-brand)] sm:text-xs"
+                />
+                <span className="hidden min-w-0 sm:block">
+                  <span className="block truncate text-sm font-semibold text-[var(--color-text)]">
+                    {displayName || t('nav.account')}
+                  </span>
+                  <span className="block truncate text-[11px] text-[var(--color-text-secondary)]">
+                    {t('account.tab.settings')}
+                  </span>
+                </span>
+              </Link>
+              <div className="hidden lg:block">{brandLink}</div>
+            </>
+          ) : (
+            brandLink
+          )}
 
           <nav className="hidden items-center gap-1 md:flex" aria-label="Main">
-            <label htmlFor="nav-language" className="sr-only">{t('common.language')}</label>
+            <label htmlFor="nav-language" className="sr-only">
+              {t('common.language')}
+            </label>
             <select
               id="nav-language"
               value={language}
               onChange={(e) => setLanguage(e.target.value as Language)}
-              className="rounded-lg border border-[var(--color-border)] bg-white py-1.5 pr-8 pl-2 text-xs text-[var(--color-text-secondary)] outline-none focus:border-[var(--color-action)] focus:ring-2 focus:ring-[var(--color-action)]/20"
+              className="rounded-lg border border-[var(--color-border)] bg-[var(--color-card)] py-1.5 pr-8 pl-2 text-xs text-[var(--color-text-secondary)] outline-none focus:border-[var(--color-action)] focus:ring-2 focus:ring-[var(--color-action)]/20"
             >
               {LANGUAGES.map((lang) => (
-                <option key={lang.value} value={lang.value}>{lang.label}</option>
+                <option key={lang.value} value={lang.value}>
+                  {lang.label}
+                </option>
               ))}
             </select>
+            {user ? <InboxBellButton /> : null}
             {user ? (
               <>
                 {isAdmin ? (
-                  <Link href="/admin" className="rounded-lg px-3 py-2 text-sm font-medium text-[var(--color-text-secondary)] hover:bg-gray-50 hover:text-[var(--color-text)]">
+                  <Link
+                    href="/admin"
+                    className="rounded-lg px-3 py-2 text-sm font-medium text-[var(--color-text-secondary)] hover:bg-[var(--color-hover)] hover:text-[var(--color-text)]"
+                  >
                     {t('nav.dashboard')}
                   </Link>
-                ) : null}
-                {!inAdmin ? (
-                  <Link href="/account" className="rounded-lg px-3 py-2 text-sm font-medium text-[var(--color-text-secondary)] hover:bg-gray-50 hover:text-[var(--color-text)]">
+                ) : (
+                  <Link
+                    href="/account"
+                    className="rounded-lg px-3 py-2 text-sm font-medium text-[var(--color-text-secondary)] hover:bg-[var(--color-hover)] hover:text-[var(--color-text)]"
+                  >
                     {t('nav.account')}
                   </Link>
-                ) : null}
+                )}
                 <Button type="button" variant="ghost" size="sm" onClick={() => void logout()}>
                   {t('nav.logout')}
                 </Button>
               </>
             ) : (
               <>
-                <Link href="/login" className="rounded-lg px-3 py-2 text-sm font-medium text-[var(--color-text-secondary)] hover:bg-gray-50">
+                <Link
+                  href="/login"
+                  className="rounded-lg px-3 py-2 text-sm font-medium text-[var(--color-text-secondary)] hover:bg-[var(--color-hover)]"
+                >
                   {t('nav.login')}
                 </Link>
                 {ALLOW_PUBLIC_SIGNUP || DEMO_MODE ? (
-                  <Link href="/signup" className="rounded-lg bg-[var(--color-navy)] px-3 py-2 text-sm font-semibold text-white hover:opacity-90">
+                  <Link
+                    href="/signup"
+                    className="rounded-lg bg-[var(--color-brand-solid)] px-3 py-2 text-sm font-semibold text-[var(--color-on-brand)] hover:opacity-90"
+                  >
                     {t('nav.signup')}
                   </Link>
                 ) : null}
@@ -115,18 +183,24 @@ export function Navbar() {
           </nav>
 
           <div className="flex items-center gap-1 md:hidden">
-            {user ? (
+            {user ? <InboxBellButton /> : null}
+            {user && !inAccount && !isAdmin ? (
               <Link
-                href="/account/profile"
-                className="tap-44 flex h-9 w-9 items-center justify-center rounded-full bg-[var(--color-navy)] text-xs font-bold text-white"
-                aria-label={t('nav.account')}
+                href="/account/settings"
+                className="tap-44 flex h-9 w-9 items-center justify-center overflow-hidden rounded-full"
+                aria-label={t('account.tab.settings')}
               >
-                {userInitials(displayName)}
+                <UserAvatar
+                  name={displayName}
+                  photoUrl={photoUrl}
+                  className="h-9 w-9"
+                  textClassName="bg-[var(--color-brand-solid)] text-xs text-[var(--color-on-brand)]"
+                />
               </Link>
             ) : null}
             <button
               type="button"
-              className="tap-44 inline-flex items-center justify-center rounded-xl p-2.5 text-[var(--color-text-secondary)] hover:bg-gray-100"
+              className="tap-44 inline-flex items-center justify-center rounded-xl p-2.5 text-[var(--color-text-secondary)] hover:bg-[var(--color-hover)]"
               aria-expanded={drawerOpen}
               aria-controls="mobile-drawer"
               aria-label={drawerOpen ? t('nav.menuClose') : t('nav.menuOpen')}
@@ -149,27 +223,36 @@ export function Navbar() {
       <MobileDrawer isOpen={drawerOpen} onClose={() => setDrawerOpen(false)} title="DroneTag">
         <div className="flex flex-col gap-1 p-3" id="mobile-drawer">
           <div className="mb-2 px-3">
-            <label htmlFor="nav-language-mobile" className="sr-only">{t('common.language')}</label>
+            <label htmlFor="nav-language-mobile" className="sr-only">
+              {t('common.language')}
+            </label>
             <select
               id="nav-language-mobile"
               value={language}
               onChange={(e) => setLanguage(e.target.value as Language)}
-              className="tap-44 w-full rounded-xl border border-[var(--color-border)] bg-white px-3 py-2.5 text-sm"
+              className="tap-44 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] px-3 py-2.5 text-sm text-[var(--color-text)]"
             >
               {LANGUAGES.map((lang) => (
-                <option key={lang.value} value={lang.value}>{lang.label}</option>
+                <option key={lang.value} value={lang.value}>
+                  {lang.label}
+                </option>
               ))}
             </select>
           </div>
 
-          {user && !inAccount ? (
+          {user && !inAccount && !isAdmin ? (
             <>
               {drawerNavLink('/account', t('account.nav.home'), <NavIcons.home className="h-5 w-5" />, false)}
               {ACCOUNT_NAV_ITEMS.filter((i) => i.href !== '/account').map((item) => {
                 const Icon = NavIcons[item.icon];
                 return (
                   <div key={item.href}>
-                    {drawerNavLink(item.href, t(item.labelKey), <Icon className="h-5 w-5" />, isAccountNavActive(pathname ?? '', item))}
+                    {drawerNavLink(
+                      item.href,
+                      t(item.labelKey),
+                      <Icon className="h-5 w-5" />,
+                      isAccountNavActive(pathname ?? '', item),
+                    )}
                   </div>
                 );
               })}
@@ -181,16 +264,31 @@ export function Navbar() {
               {drawerNavLink('/', t('nav.home'), <NavIcons.home className="h-5 w-5" />, pathname === '/')}
               {drawerNavLink('/login', t('nav.login'), <NavIcons.profile className="h-5 w-5" />, pathname === '/login')}
               {ALLOW_PUBLIC_SIGNUP || DEMO_MODE
-                ? drawerNavLink('/signup', t('nav.signup'), <NavIcons.certificates className="h-5 w-5" />, pathname === '/signup')
+                ? drawerNavLink(
+                    '/signup',
+                    t('nav.signup'),
+                    <NavIcons.certificates className="h-5 w-5" />,
+                    pathname === '/signup',
+                  )
                 : null}
             </>
           ) : (
             <>
-              {isAdmin ? drawerNavLink('/admin', t('nav.dashboard'), <NavIcons.settings className="h-5 w-5" />, inAdmin) : null}
+              {isAdmin
+                ? drawerNavLink(
+                    '/admin',
+                    t('nav.dashboard'),
+                    <NavIcons.settings className="h-5 w-5" />,
+                    inAdmin,
+                  )
+                : null}
               <button
                 type="button"
-                className="tap-44 flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium text-red-600 hover:bg-red-50"
-                onClick={() => { setDrawerOpen(false); void logout(); }}
+                className="tap-44 flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium text-[var(--color-expired)] hover:bg-[var(--color-danger-soft)]"
+                onClick={() => {
+                  setDrawerOpen(false);
+                  void logout();
+                }}
               >
                 <NavIcons.logout className="h-5 w-5 shrink-0" />
                 {t('nav.logout')}

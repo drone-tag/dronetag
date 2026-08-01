@@ -1,7 +1,14 @@
 /**
  * Heuristic parser for Italian / EU drone liability insurance PDFs.
- * Extracts holder name, provider, policy number, validity dates, and UAS specs.
+ * Extracts holder, provider, policy number, validity dates, and one or
+ * more covered UAS (a single policy often lists several aircraft).
  */
+
+export interface ParsedCoveredDrone {
+  manufacturer: string;
+  model: string;
+  registrationMark: string;
+}
 
 export interface ParsedPolicyFields {
   holderName: string;
@@ -9,6 +16,9 @@ export interface ParsedPolicyFields {
   policyNumber: string;
   issueDate: string;
   expiryDate: string;
+  /** All aircraft / UAS rows found on the schedule (may be empty). */
+  coveredDrones: ParsedCoveredDrone[];
+  /** First covered drone — kept for older callers / UI chips. */
   droneManufacturer: string;
   droneModel: string;
   droneRegistrationMark: string;
@@ -81,86 +91,126 @@ function normalizeDroneToken(raw: string): string {
 function titleCaseDroneName(raw: string): string {
   const s = normalizeDroneToken(raw);
   if (!s) return '';
-  // Keep all-caps brands (DJI) and mixed models (Mini 4 Pro)
   if (s.length <= 4 && s === s.toLowerCase()) return s.toUpperCase();
   return s.replace(/\b([a-zà-öø-ÿ])([a-zà-öø-ÿ]*)/gi, (_, a: string, b: string) => a.toUpperCase() + b);
 }
 
-function extractDroneSpecs(text: string): {
-  droneManufacturer: string;
-  droneModel: string;
-  droneRegistrationMark: string;
-} {
-  let droneManufacturer = '';
-  let droneModel = '';
-  let droneRegistrationMark = '';
+function droneKey(d: ParsedCoveredDrone): string {
+  return `${d.manufacturer}|${d.model}|${d.registrationMark}`.toLowerCase();
+}
 
-  // Coverdrone / EU summary table: PDF text stream places marca+tipo values
-  // immediately after the "(4) Marchi di registrazione" header row.
-  const afterTableHeaders = text.match(
-    /(?:specifiche\s+degli\s+uas|parte\s+2)[^.]{0,200}?marchi\s+di\s+registrazione\s+([a-z0-9°]+)\s+([a-z0-9][a-z0-9\s\-]+?)(?=\s+attrezzatura|\s+parte\s+3|\s+usi\s+standard|\s+operatori\b|$)/i,
+function pushUniqueDrone(list: ParsedCoveredDrone[], next: ParsedCoveredDrone) {
+  if (!next.manufacturer && !next.model && !next.registrationMark) return;
+  if (list.some((d) => droneKey(d) === droneKey(next))) return;
+  list.push(next);
+}
+
+/**
+ * Extract every UAS / aircraft row from the policy schedule.
+ * Scenarios the heuristics try to cover:
+ * - Single drone (Marca/Tipo or Coverdrone summary table)
+ * - Multi-drone schedule (repeated Marca/Tipo or make/model pairs)
+ * - Operator/fleet policies with several registration marks
+ */
+function extractCoveredDrones(text: string): ParsedCoveredDrone[] {
+  const covered: ParsedCoveredDrone[] = [];
+
+  // Coverdrone / EU: values after "(4) Marchi di registrazione" — may repeat.
+  const afterHeaders = text.matchAll(
+    /marchi\s+di\s+registrazione\s+([a-z0-9°]+)\s+([a-z0-9][a-z0-9\s\-]+?)(?=\s+attrezzatura|\s+parte\s+3|\s+usi\s+standard|\s+operatori\b|\s+marca\b|$)/gi,
   );
-  if (afterTableHeaders?.[1] && afterTableHeaders?.[2]) {
-    droneManufacturer = titleCaseDroneName(afterTableHeaders[1]);
-    droneModel = titleCaseDroneName(afterTableHeaders[2]);
+  for (const m of afterHeaders) {
+    pushUniqueDrone(covered, {
+      manufacturer: titleCaseDroneName(m[1]),
+      model: titleCaseDroneName(m[2]),
+      registrationMark: '',
+    });
   }
 
-  // Inline "Marca: dji Tipo: mini 4 pro"
-  if (!droneManufacturer || !droneModel) {
-    const marcaTipo = text.match(
-      /\bmarca\s*[:.]?\s*([a-z0-9°]+)\s+tipo\s*[:.]?\s*(.+?)(?=\s+anno\s+di\s+fabbricazione|\s+marchi\s+di\s+registrazione|\s+attrezzatura|\s+parte\s+[3-9]|\s+usi\s+standard|$)/i,
-    );
-    if (marcaTipo?.[1] && marcaTipo?.[2]) {
-      droneManufacturer = titleCaseDroneName(marcaTipo[1]);
-      droneModel = titleCaseDroneName(marcaTipo[2]);
-    }
+  // Inline "Marca: … Tipo: …" (repeatable on multi-UAS schedules)
+  const marcaTipo = text.matchAll(
+    /\bmarca\s*[:.]?\s*([a-z0-9°]+)\s+tipo\s*[:.]?\s*(.+?)(?=\s+anno\s+di\s+fabbricazione|\s+marchi\s+di\s+registrazione|\s+attrezzatura|\s+parte\s+[3-9]|\s+usi\s+standard|\s+marca\b|$)/gi,
+  );
+  for (const m of marcaTipo) {
+    pushUniqueDrone(covered, {
+      manufacturer: titleCaseDroneName(m[1]),
+      model: titleCaseDroneName(m[2]),
+      registrationMark: '',
+    });
   }
 
   // English layouts
-  if (!droneManufacturer || !droneModel) {
-    const en = text.match(
-      /\b(?:make|brand|manufacturer)\s*[:.]?\s*([a-z0-9°]+)\s+(?:model|type)\s*[:.]?\s*(.+?)(?=\s+serial|\s+year|\s+registration|$)/i,
-    );
-    if (en?.[1] && en?.[2]) {
-      droneManufacturer = titleCaseDroneName(en[1]);
-      droneModel = titleCaseDroneName(en[2]);
+  const enPairs = text.matchAll(
+    /\b(?:make|brand|manufacturer)\s*[:.]?\s*([a-z0-9°]+)\s+(?:model|type)\s*[:.]?\s*(.+?)(?=\s+serial|\s+year|\s+registration|\s+make\b|$)/gi,
+  );
+  for (const m of enPairs) {
+    pushUniqueDrone(covered, {
+      manufacturer: titleCaseDroneName(m[1]),
+      model: titleCaseDroneName(m[2]),
+      registrationMark: '',
+    });
+  }
+
+  // Explicit registration marks — attach to first drone without one, or add stub rows
+  const regs = [
+    ...text.matchAll(/\bmarchi\s+di\s+registrazione\s*[:.]?\s*([A-Z0-9][A-Z0-9\-]{3,})\b/g),
+  ]
+    .map((m) => m[1].trim())
+    .filter((r) => !/^(elettronica|attrezzatura)$/i.test(r));
+
+  for (const reg of regs) {
+    const open = covered.find((d) => !d.registrationMark);
+    if (open) {
+      open.registrationMark = reg;
+    } else if (covered.length === 0) {
+      pushUniqueDrone(covered, { manufacturer: '', model: '', registrationMark: reg });
+    } else {
+      // Extra marks on a multi-drone schedule without matching marca rows
+      pushUniqueDrone(covered, { manufacturer: '', model: '', registrationMark: reg });
     }
   }
 
-  // Registration mark — only when explicitly populated (skip empty cells / false positives)
-  const regInline = text.match(
-    /\bmarchi\s+di\s+registrazione\s*[:.]?\s*([A-Z0-9][A-Z0-9\-]{3,})\b/,
-  );
-  if (regInline?.[1] && !/^(elettronica|attrezzatura)$/i.test(regInline[1])) {
-    droneRegistrationMark = regInline[1].trim();
-  }
-
-  return { droneManufacturer, droneModel, droneRegistrationMark };
+  return covered;
 }
 
-/** Fuzzy-match a user's drone fleet against PDF-extracted marca/tipo. */
+/** Fuzzy-match a user's drone fleet against one PDF marca/tipo row. */
 export function matchDroneFromPolicySpecs(
   drones: { id: string; manufacturer: string; model: string }[],
   manufacturer: string,
   model: string,
 ): string | null {
-  if (!manufacturer && !model) return null;
-  const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
-  const mfg = norm(manufacturer);
-  const mdl = norm(model);
-  if (!mfg && !mdl) return null;
+  const ids = matchDronesFromPolicySpecs(drones, [{ manufacturer, model, registrationMark: '' }]);
+  return ids[0] ?? null;
+}
 
-  let best: { id: string; score: number } | null = null;
-  for (const d of drones) {
-    const dm = norm(d.manufacturer);
-    const dl = norm(d.model);
-    let score = 0;
-    if (mfg && dm && (dm.includes(mfg) || mfg.includes(dm))) score += 2;
-    if (mdl && dl && (dl.includes(mdl) || mdl.includes(dl))) score += 3;
-    if (mfg && dl.includes(mfg)) score += 1;
-    if (score > 0 && (!best || score > best.score)) best = { id: d.id, score };
+/** Match all PDF aircraft rows to the user's fleet (unique ids, best score ≥ 3). */
+export function matchDronesFromPolicySpecs(
+  drones: { id: string; manufacturer: string; model: string }[],
+  covered: ParsedCoveredDrone[],
+): string[] {
+  const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+  const matched = new Set<string>();
+
+  for (const row of covered) {
+    const mfg = norm(row.manufacturer);
+    const mdl = norm(row.model);
+    if (!mfg && !mdl) continue;
+
+    let best: { id: string; score: number } | null = null;
+    for (const d of drones) {
+      if (matched.has(d.id)) continue;
+      const dm = norm(d.manufacturer);
+      const dl = norm(d.model);
+      let score = 0;
+      if (mfg && dm && (dm.includes(mfg) || mfg.includes(dm))) score += 2;
+      if (mdl && dl && (dl.includes(mdl) || mdl.includes(dl))) score += 3;
+      if (mfg && dl.includes(mfg)) score += 1;
+      if (score > 0 && (!best || score > best.score)) best = { id: d.id, score };
+    }
+    if (best && best.score >= 3) matched.add(best.id);
   }
-  return best && best.score >= 3 ? best.id : null;
+
+  return [...matched];
 }
 
 function cleanExtractedPhrase(raw: string): string {
@@ -179,8 +229,6 @@ function isPlausibleHolderName(name: string): boolean {
 }
 
 function extractHolderName(text: string): string {
-  // Order matters: specific table labels before generic "assicurato".
-  // Never match the "assicurato" substring inside "assicuratori".
   const patterns = [
     /nome\s+dell[''']?assicurat[oa]\s*[:.]?\s*(.+?)(?=\s+uso\b|\s+assicuratori\b|\s+contraente\b|\s+premio\b|$)/i,
     /(?:contraente|titolare|nominativo)\s*[:.]?\s*(.+?)(?=\s+uso\b|\s+assicuratori\b|\s+premio\b|$)/i,
@@ -272,11 +320,12 @@ export function parsePolicyPdfText(text: string): ParsedPolicyFields {
   const holderName = extractHolderName(normalized);
   const provider = extractProvider(normalized);
   const policyNumber = extractPolicyNumber(normalized);
-  const { droneManufacturer, droneModel, droneRegistrationMark } = extractDroneSpecs(normalized);
+  const coveredDrones = extractCoveredDrones(normalized);
+  const first = coveredDrones[0];
 
   const extracted = [
     holderName, provider, policyNumber, issueDate, expiryDate,
-    droneManufacturer, droneModel,
+    first?.manufacturer, first?.model,
   ].filter(Boolean);
   const hasAllKey = Boolean(
     holderName && provider && policyNumber && issueDate && expiryDate,
@@ -288,9 +337,10 @@ export function parsePolicyPdfText(text: string): ParsedPolicyFields {
     policyNumber,
     issueDate,
     expiryDate,
-    droneManufacturer,
-    droneModel,
-    droneRegistrationMark,
+    coveredDrones,
+    droneManufacturer: first?.manufacturer ?? '',
+    droneModel: first?.model ?? '',
+    droneRegistrationMark: first?.registrationMark ?? '',
     partial: extracted.length > 0 && !hasAllKey,
   };
 }

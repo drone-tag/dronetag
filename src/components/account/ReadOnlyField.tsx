@@ -12,8 +12,8 @@ export function ReadOnlyField({
 }) {
   return (
     <div className={className}>
-      <p className="text-xs font-medium uppercase tracking-wider text-gray-500">{label}</p>
-      <p className="mt-0.5 text-sm text-gray-900">{value || '-'}</p>
+      <p className="text-xs font-medium uppercase tracking-wider text-[var(--color-text-secondary)]">{label}</p>
+      <p className="mt-0.5 text-sm text-[var(--color-text)]">{value || '-'}</p>
     </div>
   );
 }

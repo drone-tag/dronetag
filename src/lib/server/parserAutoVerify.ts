@@ -106,7 +106,7 @@ export async function resolveInsuranceVerificationAfterPdfUpload(input: {
     parserTrustedByUser: input.parserTrustedByUser,
   });
 
-  return decision.autoVerify ? 'verified' : 'unverified';
+  return decision.autoVerify ? 'verified' : 'pending';
 }
 
 export async function resolveCertificateVerificationAfterPdfUpload(input: {
@@ -125,18 +125,25 @@ export async function resolveCertificateVerificationAfterPdfUpload(input: {
     parserTrustedByUser: input.parserTrustedByUser,
   });
 
-  return decision.autoVerify ? 'verified' : 'unverified';
+  return decision.autoVerify ? 'verified' : 'pending';
 }
 
 export function insuranceFromFirestore(id: string, raw: Record<string, unknown>): Insurance {
   const str = (k: string) => (typeof raw[k] === 'string' ? (raw[k] as string) : '');
   const optStr = (k: string) => (typeof raw[k] === 'string' ? (raw[k] as string) : null);
+  const droneId = optStr('droneId');
+  const droneIds = Array.isArray(raw.droneIds)
+    ? raw.droneIds.filter((x): x is string => typeof x === 'string' && x.trim().length > 0)
+    : droneId
+      ? [droneId]
+      : [];
   return {
     id,
     userId: str('userId'),
     link: (str('link') || 'drone') as Insurance['link'],
-    droneId: optStr('droneId'),
+    droneId: droneIds[0] ?? droneId,
     operatorId: optStr('operatorId'),
+    droneIds,
     provider: str('provider'),
     policyNumber: str('policyNumber'),
     holderName: str('holderName'),

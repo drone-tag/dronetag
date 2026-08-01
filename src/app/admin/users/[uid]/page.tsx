@@ -23,12 +23,14 @@ import { getPilot, updatePilot } from '@/lib/firebase/pilots';
 import { listOperators } from '@/lib/firebase/operators';
 import { listDronesByUser, clearActiveOperator } from '@/lib/firebase/drones';
 import { listInsurances, updateInsurance } from '@/lib/firebase/insurances';
+import { listAuthorizations, updateAuthorization } from '@/lib/firebase/authorizations';
 import { listCertificates, updateCertificate } from '@/lib/firebase/certificates';
 import { listDocuments, updateDocument } from '@/lib/firebase/documents';
 import { requestPublicDroneResync } from '@/lib/client/resyncPublicDrones';
 import { ensureSlots, setSlots } from '@/lib/firebase/slots';
 import type { AccountType, UserAccount } from '@/lib/types/account';
 import type {
+  Authorization,
   Certificate,
   DocumentRef,
   Drone,
@@ -43,7 +45,13 @@ import {
   isActiveOperatorOverride,
   operatorDisplayName,
 } from '@/lib/utils/entities';
-import { formatDate, formatDateTime, getPublicProfileUrl } from '@/lib/utils';
+import {
+  computeAuthorizationStatus,
+  computeCertificateStatus,
+  formatDate,
+  formatDateTime,
+  getPublicProfileUrl,
+} from '@/lib/utils';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
@@ -78,10 +86,10 @@ type PilotForm = Pick<
   | 'emergencyContact'
 >;
 
-type SlotKey = 'certificate' | 'drone' | 'operator' | 'pdf' | 'nfc_badge' | 'personalization';
+type SlotKey = 'certificate' | 'drone' | 'operator' | 'pdf' | 'permit' | 'archive' | 'nfc_badge' | 'personalization';
 type SlotForm = Record<SlotKey, number>;
 
-const SLOT_KEYS: SlotKey[] = ['drone', 'operator', 'certificate', 'pdf', 'nfc_badge', 'personalization'];
+const SLOT_KEYS: SlotKey[] = ['drone', 'operator', 'certificate', 'pdf', 'permit', 'archive', 'nfc_badge', 'personalization'];
 
 export default function AdminUserDetailPage() {
   const params = useParams<{ uid: string | string[] }>();
@@ -101,11 +109,12 @@ export default function AdminUserDetailPage() {
   const [insurances, setInsurances] = useState<Insurance[]>([]);
   const [certificates, setCertificates] = useState<Certificate[]>([]);
   const [documents, setDocuments] = useState<DocumentRef[]>([]);
+  const [authorizations, setAuthorizations] = useState<Authorization[]>([]);
   const [loading, setLoading] = useState(true);
 
   const reload = useCallback(async () => {
     if (!uid) return;
-    const [a, p, s, opList, dList, iList, cList, docList] = await Promise.all([
+    const [a, p, s, opList, dList, iList, cList, docList, azList] = await Promise.all([
       getAccount(uid),
       getPilot(uid),
       ensureSlots(uid),
@@ -114,6 +123,7 @@ export default function AdminUserDetailPage() {
       listInsurances(uid),
       listCertificates(uid),
       listDocuments(uid),
+      listAuthorizations(uid),
     ]);
     setAccount(a);
     setPilot(p);
@@ -123,6 +133,7 @@ export default function AdminUserDetailPage() {
     setInsurances(iList);
     setCertificates(cList);
     setDocuments(docList);
+    setAuthorizations(azList);
     await requestPublicDroneResync(uid);
   }, [uid]);
 
@@ -143,8 +154,8 @@ export default function AdminUserDetailPage() {
   if (loading) {
     return (
       <div className="mx-auto max-w-[1400px] px-4 py-8 sm:px-6 lg:px-8">
-        <div className="flex items-center gap-3 text-sm text-gray-500">
-          <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-gray-600" />
+        <div className="flex items-center gap-3 text-sm text-[var(--color-text-secondary)]">
+          <div className="h-4 w-4 animate-spin rounded-full border-2 border-[var(--color-border)] border-t-gray-600" />
           {t('common.loading')}
         </div>
       </div>
@@ -154,10 +165,10 @@ export default function AdminUserDetailPage() {
   if (!account) {
     return (
       <div className="mx-auto max-w-[1400px] px-4 py-8 sm:px-6 lg:px-8">
-        <Link href="/admin/users" className="text-sm text-gray-500 hover:text-gray-700">
+        <Link href="/admin/users" className="text-sm text-[var(--color-text-secondary)] hover:text-[var(--color-text)]">
           {t('admin.users.backToList')}
         </Link>
-        <p className="mt-4 text-sm text-gray-500">{t('profile.notFound')}</p>
+        <p className="mt-4 text-sm text-[var(--color-text-secondary)]">{t('profile.notFound')}</p>
       </div>
     );
   }
@@ -167,7 +178,7 @@ export default function AdminUserDetailPage() {
       <div>
         <Link
           href="/admin/users"
-          className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700"
+          className="inline-flex items-center gap-1.5 text-sm text-[var(--color-text-secondary)] hover:text-[var(--color-text)]"
         >
           <svg viewBox="0 0 20 20" fill="currentColor" className="h-3.5 w-3.5" aria-hidden>
             <path
@@ -178,8 +189,13 @@ export default function AdminUserDetailPage() {
           </svg>
           {t('admin.users.backToList')}
         </Link>
-        <h2 className="mt-2 text-xl font-semibold text-gray-900">{accountDisplayName(account)}</h2>
-        <p className="mt-1 font-mono text-xs text-gray-500">{uid}</p>
+        <h2 className="mt-2 text-xl font-semibold text-[var(--color-text)]">{accountDisplayName(account)}</h2>
+        <p className="mt-1 font-mono text-xs text-[var(--color-text-secondary)]">{uid}</p>
+        <div className="mt-3">
+          <Button href={`/admin/support?user=${encodeURIComponent(uid)}`} variant="secondary" size="sm">
+            {t('admin.users.openSupport')}
+          </Button>
+        </div>
       </div>
 
       <Card padding="md" className="border-sky-100 bg-sky-50/50">
@@ -191,16 +207,16 @@ export default function AdminUserDetailPage() {
       </Card>
 
       <div id="pagina-pubblica" className="scroll-mt-24">
-      <Card padding="md" className="border-gray-200 bg-gray-50/60">
-        <h3 className="text-sm font-semibold text-gray-900">{t('admin.users.publicHint.title')}</h3>
-        <p className="mt-1.5 text-sm text-gray-600">{t('admin.users.publicHint.body')}</p>
+      <Card padding="md" className="border-[var(--color-border)] bg-[var(--color-hover)]">
+        <h3 className="text-sm font-semibold text-[var(--color-text)]">{t('admin.users.publicHint.title')}</h3>
+        <p className="mt-1.5 text-sm text-[var(--color-text-secondary)]">{t('admin.users.publicHint.body')}</p>
         {drones.some((d) => d.visibility === 'public' && d.slug.trim()) ? (
           <ul className="mt-3 space-y-2">
             {drones
               .filter((d) => d.visibility === 'public' && d.slug.trim())
               .map((d) => (
                 <li key={d.id} className="flex flex-wrap items-center gap-2 text-sm">
-                  <span className="font-medium text-gray-800">
+                  <span className="font-medium text-[var(--color-text)]">
                     {[d.manufacturer, d.model].filter(Boolean).join(' ').trim() || d.slug}
                   </span>
                   <a
@@ -218,11 +234,11 @@ export default function AdminUserDetailPage() {
           <div className="mt-3 flex flex-wrap items-center gap-2">
             <span
               title={t('admin.users.publicProfileUnavailable')}
-              className="cursor-not-allowed rounded-md border border-gray-200 bg-white px-2.5 py-1.5 text-xs font-medium text-gray-400"
+              className="cursor-not-allowed rounded-md border border-[var(--color-border)] bg-[var(--color-card)] px-2.5 py-1.5 text-xs font-medium text-[var(--color-text-secondary)]"
             >
               {t('dashboard.viewPublicProfile')}
             </span>
-            <p className="text-sm text-amber-800">{t('admin.users.publicHint.none')}</p>
+            <p className="text-sm text-[var(--tone-warning-fg)]">{t('admin.users.publicHint.none')}</p>
           </div>
         )}
       </Card>
@@ -233,8 +249,10 @@ export default function AdminUserDetailPage() {
       {slots ? <SlotsSection uid={uid} slots={slots} usage={{
         operator: operators.length,
         drone: drones.length,
-        certificate: certificates.length,
+        certificate: certificates.filter((c) => computeCertificateStatus(c) !== 'expired').length,
         pdf: documents.length,
+        permit: authorizations.filter((a) => computeAuthorizationStatus(a) !== 'expired').length,
+        archive: slots.archive ?? 0,
         nfc_badge: 0,
         personalization: 0,
       }} onSaved={reload} /> : null}
@@ -246,6 +264,8 @@ export default function AdminUserDetailPage() {
       <InsurancesSection insurances={insurances} drones={drones} onChanged={reload} />
 
       <CertificatesSection certificates={certificates} onChanged={reload} />
+
+      <AuthorizationsSection authorizations={authorizations} onChanged={reload} />
 
       <DocumentsSection documents={documents} onChanged={reload} />
     </div>
@@ -321,7 +341,7 @@ function AccountSection({
 
   return (
     <Card padding="md">
-      <h3 className="mb-4 text-base font-semibold text-gray-900">
+      <h3 className="mb-4 text-base font-semibold text-[var(--color-text)]">
         {t('admin.users.detail.account')}
       </h3>
       <form onSubmit={handleSubmit} className="space-y-4" noValidate>
@@ -420,7 +440,7 @@ function PilotSection({
 
   return (
     <Card padding="md">
-      <h3 className="mb-4 text-base font-semibold text-gray-900">
+      <h3 className="mb-4 text-base font-semibold text-[var(--color-text)]">
         {t('admin.users.detail.pilot')}
       </h3>
       <form onSubmit={handleSubmit} className="space-y-4" noValidate>
@@ -473,6 +493,8 @@ function SlotsSection({
     operator: slots.operator,
     certificate: slots.certificate,
     pdf: slots.pdf,
+    permit: slots.permit ?? 3,
+    archive: slots.archive ?? 0,
     nfc_badge: slots.nfc_badge,
     personalization: slots.personalization,
   }));
@@ -501,8 +523,8 @@ function SlotsSection({
 
   return (
     <Card padding="md">
-      <h3 className="text-base font-semibold text-gray-900">{t('admin.slots.title')}</h3>
-      <p className="mt-1 text-sm text-gray-500">{t('admin.slots.subtitle')}</p>
+      <h3 className="text-base font-semibold text-[var(--color-text)]">{t('admin.slots.title')}</h3>
+      <p className="mt-1 text-sm text-[var(--color-text-secondary)]">{t('admin.slots.subtitle')}</p>
       <form onSubmit={handleSubmit} className="mt-4 space-y-4" noValidate>
         <FormErrorBanner show={Boolean(error)} message={error ?? undefined} />
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -515,7 +537,7 @@ function SlotsSection({
                 value={String(form[k])}
                 onChange={(e) => setVal(k, e.target.value)}
               />
-              <p className="mt-1 text-xs text-gray-500">
+              <p className="mt-1 text-xs text-[var(--color-text-secondary)]">
                 {t('admin.slots.usage', { used: usage[k] })}
               </p>
             </div>
@@ -535,29 +557,29 @@ function OperatorsSection({ operators, drones }: { operators: Operator[]; drones
   const { t } = useLanguage();
   return (
     <Card padding="md">
-      <h3 className="mb-3 text-base font-semibold text-gray-900">
+      <h3 className="mb-3 text-base font-semibold text-[var(--color-text)]">
         {t('admin.users.detail.operators')} ({operators.length})
       </h3>
       {operators.length === 0 ? (
-        <p className="text-sm text-gray-500">—</p>
+        <p className="text-sm text-[var(--color-text-secondary)]">—</p>
       ) : (
-        <ul className="divide-y divide-gray-100">
+        <ul className="divide-y divide-[var(--color-border)]">
           {operators.map((op) => {
             const usage = drones.filter((d) => d.defaultOperatorId === op.id || d.activeOperatorId === op.id).length;
             return (
               <li key={op.id} className="flex flex-wrap items-center justify-between gap-2 py-2.5 text-sm">
                 <div>
-                  <span className="font-medium text-gray-900">{operatorDisplayName(op)}</span>
-                  <span className="ml-2 rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-gray-700">
+                  <span className="font-medium text-[var(--color-text)]">{operatorDisplayName(op)}</span>
+                  <span className="ml-2 rounded-full bg-[var(--color-hover)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-[var(--color-text)]">
                     {t(`operator.kind.${op.kind}`)}
                   </span>
                   {op.isDefault ? (
-                    <span className="ml-1 rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-blue-700 ring-1 ring-inset ring-blue-600/20">
+                    <span className="ml-1 rounded-full bg-[var(--tone-info-bg)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-[var(--tone-info-fg)] ring-1 ring-inset ring-[var(--tone-info-ring)]">
                       {t('operator.field.isDefault')}
                     </span>
                   ) : null}
                 </div>
-                <span className="text-xs text-gray-500">{usage} drone(s)</span>
+                <span className="text-xs text-[var(--color-text-secondary)]">{usage} drone(s)</span>
               </li>
             );
           })}
@@ -591,13 +613,13 @@ function DronesSection({
 
   return (
     <Card padding="md">
-      <h3 className="mb-3 text-base font-semibold text-gray-900">
+      <h3 className="mb-3 text-base font-semibold text-[var(--color-text)]">
         {t('admin.users.detail.drones')} ({drones.length})
       </h3>
       {drones.length === 0 ? (
-        <p className="text-sm text-gray-500">—</p>
+        <p className="text-sm text-[var(--color-text-secondary)]">—</p>
       ) : (
-        <ul className="divide-y divide-gray-100">
+        <ul className="divide-y divide-[var(--color-border)]">
           {drones.map((d) => {
             const overrideActive = isActiveOperatorOverride(d);
             const op = operators.find((x) => x.id === d.defaultOperatorId);
@@ -606,14 +628,14 @@ function DronesSection({
                 <div className="min-w-0">
                   <Link
                     href={`/admin/drones/${d.id}`}
-                    className="font-medium text-gray-900 hover:underline"
+                    className="font-medium text-[var(--color-text)] hover:underline"
                   >
                     {[d.manufacturer, d.model].filter(Boolean).join(' ').trim() || d.slug}
                   </Link>
-                  <span className="ml-2 rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-gray-700">
+                  <span className="ml-2 rounded-full bg-[var(--color-hover)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-[var(--color-text)]">
                     {d.classMarking}
                   </span>
-                  <p className="mt-0.5 text-xs text-gray-500">
+                  <p className="mt-0.5 text-xs text-[var(--color-text-secondary)]">
                     {t('drone.field.defaultOperator')}: {op ? operatorDisplayName(op) : '—'}
                   </p>
                 </div>
@@ -675,24 +697,24 @@ function InsurancesSection({
 
   return (
     <Card padding="md">
-      <h3 className="mb-3 text-base font-semibold text-gray-900">
+      <h3 className="mb-3 text-base font-semibold text-[var(--color-text)]">
         {t('admin.users.detail.insurances')} ({insurances.length})
       </h3>
       {insurances.length === 0 ? (
-        <p className="text-sm text-gray-500">—</p>
+        <p className="text-sm text-[var(--color-text-secondary)]">—</p>
       ) : (
-        <ul className="divide-y divide-gray-100">
+        <ul className="divide-y divide-[var(--color-border)]">
           {insurances.map((i) => {
             const drone = drones.find((d) => d.id === i.droneId);
             return (
               <li key={i.id} className="flex flex-wrap items-center justify-between gap-2 py-2.5 text-sm">
                 <div>
-                  <span className="font-medium text-gray-900">{i.provider || '—'}</span>
-                  <span className="ml-2 font-mono text-xs text-gray-600">{i.policyNumber || '—'}</span>
-                  <span className="ml-2 rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-gray-700">
+                  <span className="font-medium text-[var(--color-text)]">{i.provider || '—'}</span>
+                  <span className="ml-2 font-mono text-xs text-[var(--color-text-secondary)]">{i.policyNumber || '—'}</span>
+                  <span className="ml-2 rounded-full bg-[var(--color-hover)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-[var(--color-text)]">
                     {t(`verification.${i.verificationStatus}`)}
                   </span>
-                  <p className="mt-0.5 text-xs text-gray-500">
+                  <p className="mt-0.5 text-xs text-[var(--color-text-secondary)]">
                     {i.expiryDate ? `${t('profile.validUntil')} ${formatDate(i.expiryDate)}` : '—'}
                     {drone ? ` · ${drone.slug}` : null}
                   </p>
@@ -703,7 +725,7 @@ function InsurancesSection({
                       href={i.pdfUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-xs font-medium text-blue-600 underline-offset-2 hover:underline"
+                      className="text-xs font-medium text-[var(--color-action)] underline-offset-2 hover:underline"
                     >
                       {t('common.viewDocument')}
                     </a>
@@ -745,23 +767,23 @@ function CertificatesSection({
 
   return (
     <Card padding="md">
-      <h3 className="mb-3 text-base font-semibold text-gray-900">
+      <h3 className="mb-3 text-base font-semibold text-[var(--color-text)]">
         {t('admin.users.detail.certificates')} ({certificates.length})
       </h3>
       {certificates.length === 0 ? (
-        <p className="text-sm text-gray-500">—</p>
+        <p className="text-sm text-[var(--color-text-secondary)]">—</p>
       ) : (
-        <ul className="divide-y divide-gray-100">
+        <ul className="divide-y divide-[var(--color-border)]">
           {certificates.map((c) => (
             <li key={c.id} className="flex flex-wrap items-center justify-between gap-2 py-2.5 text-sm">
               <div>
-                <span className="font-medium text-gray-900">
+                <span className="font-medium text-[var(--color-text)]">
                   {c.registrationNumber || c.kind}
                 </span>
-                <span className="ml-2 rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-gray-700">
+                <span className="ml-2 rounded-full bg-[var(--color-hover)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-[var(--color-text)]">
                   {t(`verification.${c.verificationStatus}`)}
                 </span>
-                <p className="mt-0.5 text-xs text-gray-500">
+                <p className="mt-0.5 text-xs text-[var(--color-text-secondary)]">
                   {c.issuedBy ? `${c.issuedBy} · ` : null}
                   {c.expiresAt ? formatDate(c.expiresAt) : '—'}
                 </p>
@@ -771,6 +793,75 @@ function CertificatesSection({
                   current={c.verificationStatus}
                   busy={busyId === c.id}
                   onSet={(s) => verify(c, s)}
+                />
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </Card>
+  );
+}
+
+function AuthorizationsSection({
+  authorizations,
+  onChanged,
+}: {
+  authorizations: Authorization[];
+  onChanged: () => Promise<void> | void;
+}) {
+  const { t } = useLanguage();
+  const [busyId, setBusyId] = useState<string | null>(null);
+
+  async function verify(a: Authorization, next: VerificationStatus) {
+    setBusyId(a.id);
+    try {
+      await updateAuthorization(a.id, { verificationStatus: next });
+      await onChanged();
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  return (
+    <Card padding="md">
+      <h3 className="mb-3 text-base font-semibold text-[var(--color-text)]">
+        {t('admin.users.detail.authorizations')} ({authorizations.length})
+      </h3>
+      {authorizations.length === 0 ? (
+        <p className="text-sm text-[var(--color-text-secondary)]">—</p>
+      ) : (
+        <ul className="divide-y divide-[var(--color-border)]">
+          {authorizations.map((a) => (
+            <li key={a.id} className="flex flex-wrap items-center justify-between gap-2 py-2.5 text-sm">
+              <div>
+                <span className="font-medium text-[var(--color-text)]">
+                  {a.label || t(`permits.kind.${a.kind}`)}
+                </span>
+                <span className="ml-2 rounded-full bg-[var(--color-hover)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-[var(--color-text)]">
+                  {t(`verification.${a.verificationStatus}`)}
+                </span>
+                <p className="mt-0.5 text-xs text-[var(--color-text-secondary)]">
+                  {t(`permits.kind.${a.kind}`)}
+                  {a.validTo ? ` · ${formatDate(a.validTo)}` : null}
+                  {computeAuthorizationStatus(a) === 'expired' ? ` · ${t('policy.expired')}` : null}
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                {a.fileUrl ? (
+                  <a
+                    href={a.fileUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs font-medium text-[var(--color-action)] underline-offset-2 hover:underline"
+                  >
+                    {t('common.viewDocument')}
+                  </a>
+                ) : null}
+                <VerifyControls
+                  current={a.verificationStatus}
+                  busy={busyId === a.id}
+                  onSet={(s) => verify(a, s)}
                 />
               </div>
             </li>
@@ -803,21 +894,21 @@ function DocumentsSection({
 
   return (
     <Card padding="md">
-      <h3 className="mb-3 text-base font-semibold text-gray-900">
+      <h3 className="mb-3 text-base font-semibold text-[var(--color-text)]">
         {t('admin.users.detail.documents')} ({documents.length})
       </h3>
       {documents.length === 0 ? (
-        <p className="text-sm text-gray-500">—</p>
+        <p className="text-sm text-[var(--color-text-secondary)]">—</p>
       ) : (
-        <ul className="divide-y divide-gray-100">
+        <ul className="divide-y divide-[var(--color-border)]">
           {documents.map((d) => (
             <li key={d.id} className="flex flex-wrap items-center justify-between gap-2 py-2.5 text-sm">
               <div>
-                <span className="font-medium text-gray-900">{d.label || d.kind}</span>
-                <span className="ml-2 rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-gray-700">
+                <span className="font-medium text-[var(--color-text)]">{d.label || d.kind}</span>
+                <span className="ml-2 rounded-full bg-[var(--color-hover)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-[var(--color-text)]">
                   {t(`verification.${d.verificationStatus}`)}
                 </span>
-                <p className="mt-0.5 text-xs text-gray-500">
+                <p className="mt-0.5 text-xs text-[var(--color-text-secondary)]">
                   {d.fileName || '—'}
                   {d.updatedAt ? ` · ${formatDateTime(d.updatedAt)}` : null}
                 </p>
@@ -828,7 +919,7 @@ function DocumentsSection({
                     href={d.fileUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-xs font-medium text-blue-600 underline-offset-2 hover:underline"
+                    className="text-xs font-medium text-[var(--color-action)] underline-offset-2 hover:underline"
                   >
                     {t('common.viewDocument')}
                   </a>

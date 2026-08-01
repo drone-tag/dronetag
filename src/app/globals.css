@@ -1,23 +1,53 @@
 @import "tailwindcss";
 
 :root {
-  /* Brand palette */
-  --color-navy: #07152F;
-  --color-action: #2563EB;
-  --color-action-light: #EFF6FF;
-  --color-app-bg: #F6F8FC;
-  --color-card: #FFFFFF;
+  --color-navy: #07152f;
+  --color-brand-solid: #07152f;
+  --color-on-brand: #ffffff;
+  --color-action: #2563eb;
+  --color-action-hover: #1d4ed8;
+  --color-action-light: #eff6ff;
+  --color-app-bg: #f6f8fc;
+  --color-card: #ffffff;
   --color-text: #111827;
   --color-text-secondary: #667085;
-  --color-border: #E5E7EB;
-  --color-valid: #16A34A;
-  --color-expiring: #D97706;
-  --color-expired: #DC2626;
+  --color-border: #e5e7eb;
+  --color-hover: #f3f4f6;
+  --color-danger-soft: #fef2f2;
+  --color-valid: #16a34a;
+  --color-expiring: #d97706;
+  --color-expired: #dc2626;
+  --color-header-bg: rgb(255 255 255 / 0.92);
+
+  /* Semantic tones — badges, KPI variants, alerts (light + dark safe) */
+  --tone-success-bg: #ecfdf5;
+  --tone-success-fg: #047857;
+  --tone-success-border: #a7f3d0;
+  --tone-success-ring: rgb(5 150 105 / 0.2);
+  --tone-success-hover: #d1fae5;
+  --tone-warning-bg: #fffbeb;
+  --tone-warning-fg: #b45309;
+  --tone-warning-border: #fde68a;
+  --tone-warning-ring: rgb(217 119 6 / 0.2);
+  --tone-warning-hover: #fef3c7;
+  --tone-danger-bg: #fef2f2;
+  --tone-danger-fg: #b91c1c;
+  --tone-danger-border: #fecaca;
+  --tone-danger-ring: rgb(220 38 38 / 0.2);
+  --tone-danger-hover: #fee2e2;
+  --tone-info-bg: #eff6ff;
+  --tone-info-fg: #1d4ed8;
+  --tone-info-border: #bfdbfe;
+  --tone-info-ring: rgb(37 99 235 / 0.2);
+  --tone-info-hover: #dbeafe;
 
   --background: var(--color-app-bg);
   --foreground: var(--color-text);
 
   --header-height: 3rem;
+  --demo-banner-height: 0px;
+  /* Fallback before JS measures the fixed header (includes safe-area via safe-pt). */
+  --app-header-offset: calc(var(--header-height) + var(--safe-top) + var(--demo-banner-height));
   --bottom-nav-height: 3.625rem;
   --fab-clearance: 4.5rem;
   --sidebar-width: 16.5rem;
@@ -29,6 +59,54 @@
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   --safe-left: env(safe-area-inset-left, 0px);
   --safe-right: env(safe-area-inset-right, 0px);
+
+  color-scheme: light;
+}
+
+[data-theme="dark"] {
+  --color-navy: #e8eef8;
+  --color-brand-solid: #3b82f6;
+  --color-on-brand: #ffffff;
+  --color-action: #60a5fa;
+  --color-action-hover: #93c5fd;
+  --color-action-light: rgb(59 130 246 / 0.16);
+  --color-app-bg: #0a0f1a;
+  --color-card: #121a27;
+  --color-text: #f1f5f9;
+  --color-text-secondary: #94a3b8;
+  --color-border: #243044;
+  --color-hover: #1a2436;
+  --color-danger-soft: rgb(239 68 68 / 0.12);
+  --color-valid: #34d399;
+  --color-expiring: #fbbf24;
+  --color-expired: #f87171;
+  --color-header-bg: rgb(10 15 26 / 0.92);
+  --shadow-card: 0 0 0 1px rgb(255 255 255 / 0.03), 0 1px 2px rgb(0 0 0 / 0.35), 0 8px 24px rgb(0 0 0 / 0.4);
+
+  --tone-success-bg: rgb(16 185 129 / 0.14);
+  --tone-success-fg: #6ee7b7;
+  --tone-success-border: rgb(16 185 129 / 0.28);
+  --tone-success-ring: rgb(16 185 129 / 0.28);
+  --tone-success-hover: rgb(16 185 129 / 0.22);
+  --tone-warning-bg: rgb(245 158 11 / 0.14);
+  --tone-warning-fg: #fcd34d;
+  --tone-warning-border: rgb(245 158 11 / 0.3);
+  --tone-warning-ring: rgb(245 158 11 / 0.28);
+  --tone-warning-hover: rgb(245 158 11 / 0.22);
+  --tone-danger-bg: rgb(239 68 68 / 0.14);
+  --tone-danger-fg: #fca5a5;
+  --tone-danger-border: rgb(239 68 68 / 0.3);
+  --tone-danger-ring: rgb(239 68 68 / 0.28);
+  --tone-danger-hover: rgb(239 68 68 / 0.22);
+  --tone-info-bg: rgb(59 130 246 / 0.16);
+  --tone-info-fg: #93c5fd;
+  --tone-info-border: rgb(59 130 246 / 0.3);
+  --tone-info-ring: rgb(59 130 246 / 0.28);
+  --tone-info-hover: rgb(59 130 246 / 0.24);
+
+  --background: var(--color-app-bg);
+  --foreground: var(--color-text);
+  color-scheme: dark;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -71,7 +149,6 @@ body {
   outline-offset: 2px;
 }
 
-/* Safe area utilities */
 .safe-pt   { padding-top: var(--safe-top); }
 .safe-pb   { padding-bottom: var(--safe-bottom); }
 .safe-px   { padding-left: var(--safe-left); padding-right: var(--safe-right); }
@@ -89,9 +166,13 @@ body {
 .min-h-dvh { min-height: 100dvh; }
 .max-h-dvh { max-height: 100dvh; }
 
-/* App shell offsets */
+html[data-demo='true'] {
+  /* Single-line demo banner; ResizeObserver corrects if it wraps. */
+  --demo-banner-height: 2.25rem;
+}
+
 .pt-header {
-  padding-top: calc(var(--header-height) + var(--safe-top));
+  padding-top: var(--app-header-offset);
 }
 
 .pb-bottom-nav {
@@ -114,7 +195,6 @@ body {
   max-width: 100%;
 }
 
-/* Card surface */
 .app-card {
   background: var(--color-card);
   border: 1px solid var(--color-border);
@@ -122,21 +202,28 @@ body {
   box-shadow: var(--shadow-card);
 }
 
-/* Skeleton shimmer */
 @keyframes shimmer {
   0% { background-position: -200% 0; }
   100% { background-position: 200% 0; }
 }
 
 .skeleton {
-  background: linear-gradient(90deg, #eef1f6 25%, #f8f9fc 50%, #eef1f6 75%);
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--color-border) 70%, transparent) 25%,
+    var(--color-hover) 50%,
+    color-mix(in srgb, var(--color-border) 70%, transparent) 75%
+  );
   background-size: 200% 100%;
   animation: shimmer 1.4s ease-in-out infinite;
   border-radius: 0.5rem;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .skeleton { animation: none; background: #eef1f6; }
+  .skeleton {
+    animation: none;
+    background: var(--color-hover);
+  }
 }
 
 @keyframes landing-fade-in {
@@ -151,3 +238,38 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .landing-fade-in { animation: none; }
 }
+
+.surface-header {
+  background: var(--color-header-bg);
+  border-color: var(--color-border);
+}
+
+.theme-transition {
+  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+
+/* Semantic tone utilities (theme-aware) */
+.tone-success {
+  background-color: var(--tone-success-bg);
+  color: var(--tone-success-fg);
+  border-color: var(--tone-success-border);
+}
+.tone-warning {
+  background-color: var(--tone-warning-bg);
+  color: var(--tone-warning-fg);
+  border-color: var(--tone-warning-border);
+}
+.tone-danger {
+  background-color: var(--tone-danger-bg);
+  color: var(--tone-danger-fg);
+  border-color: var(--tone-danger-border);
+}
+.tone-info {
+  background-color: var(--tone-info-bg);
+  color: var(--tone-info-fg);
+  border-color: var(--tone-info-border);
+}
+.tone-ring-success { --tw-ring-color: var(--tone-success-ring); }
+.tone-ring-warning { --tw-ring-color: var(--tone-warning-ring); }
+.tone-ring-danger { --tw-ring-color: var(--tone-danger-ring); }
+.tone-ring-info { --tw-ring-color: var(--tone-info-ring); }

@@ -13,17 +13,17 @@ export function Accordion({ title, defaultOpen = false, children }: AccordionPro
   const [open, setOpen] = useState(defaultOpen);
 
   return (
-    <div className="border-b border-gray-200 py-1">
+    <div className="border-b border-[var(--color-border)] py-1">
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
         className="flex w-full items-center justify-between gap-3 py-3 text-left transition hover:opacity-90"
         aria-expanded={open}
       >
-        <span className="font-medium text-gray-900">{title}</span>
+        <span className="font-medium text-[var(--color-text)]">{title}</span>
         <svg
           className={classNames(
-            'h-5 w-5 shrink-0 text-gray-500 transition-transform duration-200 ease-out',
+            'h-5 w-5 shrink-0 text-[var(--color-text-secondary)] transition-transform duration-200 ease-out',
             open && 'rotate-180'
           )}
           fill="none"
@@ -42,7 +42,7 @@ export function Accordion({ title, defaultOpen = false, children }: AccordionPro
         )}
       >
         <div className="overflow-hidden">
-          <div className="pb-4 pt-0 text-sm text-gray-600">{children}</div>
+          <div className="pb-4 pt-0 text-sm text-[var(--color-text-secondary)]">{children}</div>
         </div>
       </div>
     </div>

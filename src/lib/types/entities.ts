@@ -124,9 +124,20 @@ export type InsuranceLink = 'drone' | 'operator';
 export interface Insurance {
   id: string;
   userId: string;
+  /**
+   * Who the policy is issued to (holder entity): a specific drone registry
+   * entry or an operator. Coverage of aircraft is always via `droneIds`
+   * (and `Drone.insuranceId` reverse refs) — one policy may cover many drones.
+   */
   link: InsuranceLink;
+  /** @deprecated Prefer `droneIds[0]`; kept for older documents. */
   droneId: string | null;
   operatorId: string | null;
+  /**
+   * Drones covered by this policy (0..n). Source of truth alongside
+   * `Drone.insuranceId` pointing back here.
+   */
+  droneIds: string[];
 
   // Legacy-compatible shape — `computePolicyStatus()` from
   // src/lib/utils/index.ts works on this directly.
@@ -206,6 +217,48 @@ export interface DocumentRef {
   updatedAt: string;
 }
 
+// ─── Authorization / permit (daily, nullaosta, hourly, …) ─────────────────
+
+export type AuthorizationKind =
+  | 'daily'
+  | 'nullaosta'
+  | 'hourly_nullaosta'
+  | 'temporary'
+  | 'other';
+
+export const AUTHORIZATION_KINDS: AuthorizationKind[] = [
+  'daily',
+  'nullaosta',
+  'hourly_nullaosta',
+  'temporary',
+  'other',
+];
+
+export interface Authorization {
+  id: string;
+  userId: string;
+  kind: AuthorizationKind;
+  label: string;
+  /** Issuing authority (ENAC, comune, aeroporto, …). */
+  issuedBy: string;
+  /** Optional area / zone description. */
+  area: string;
+  validFrom: string;
+  /** End of validity (date or datetime ISO). Empty = open-ended. */
+  validTo: string;
+  fileUrl: string;
+  fileName: string;
+  fileSize: number;
+  mimeType: string;
+  verificationStatus: VerificationStatus;
+  notes: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** Included archive capacity in megabytes (purchasable add-ons raise this). */
+export const BASE_ARCHIVE_MB = 30;
+
 // ─── Slots (per-user purchasable / grantable counts) ───────────────────────
 
 export type SlotKind =
@@ -213,6 +266,8 @@ export type SlotKind =
   | 'drone'
   | 'operator'
   | 'pdf'
+  | 'permit'
+  | 'archive'
   | 'nfc_badge'
   | 'personalization';
 
@@ -222,6 +277,13 @@ export interface Slots {
   drone: number;
   operator: number;
   pdf: number;
+  /** Active authorizations / permits (non-expired). */
+  permit: number;
+  /**
+   * Extra archive packs (each pack ≈ BASE_ARCHIVE_MB).
+   * Total archive MB ≈ BASE_ARCHIVE_MB + archive * BASE_ARCHIVE_MB.
+   */
+  archive: number;
   nfc_badge: number;
   personalization: number;
   createdAt: string;
@@ -231,12 +293,21 @@ export interface Slots {
 /** Base plan caps included with every account (see PRD §4). */
 export const BASE_SLOTS: Pick<
   Slots,
-  'certificate' | 'drone' | 'operator' | 'pdf' | 'nfc_badge' | 'personalization'
+  | 'certificate'
+  | 'drone'
+  | 'operator'
+  | 'pdf'
+  | 'permit'
+  | 'archive'
+  | 'nfc_badge'
+  | 'personalization'
 > = {
   certificate: 1,
   drone: 1,
   operator: 1,
   pdf: 1,
+  permit: 3,
+  archive: 0,
   nfc_badge: 0,
   personalization: 0,
 };
@@ -290,6 +361,36 @@ export interface Report {
   emailNotified: boolean;
   pushNotified: boolean;
   createdAt: string;
+}
+
+// ─── Support chat (user ↔ admin) ───────────────────────────────────────────
+
+export type SupportThreadStatus = 'open' | 'closed';
+export type SupportMessageSender = 'user' | 'admin';
+
+/** One support conversation per user (`userId` is the thread id). */
+export interface SupportThread {
+  userId: string;
+  subject: string;
+  status: SupportThreadStatus;
+  lastMessageAt: string;
+  lastMessagePreview: string;
+  userUnreadCount: number;
+  adminUnreadCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SupportMessage {
+  id: string;
+  /** Same as `SupportThread.userId`. */
+  threadId: string;
+  sender: SupportMessageSender;
+  senderUid: string;
+  body: string;
+  createdAt: string;
+  readByUser: boolean;
+  readByAdmin: boolean;
 }
 
 // ─── Public drone snapshot (PR-SEC-1) ──────────────────────────────────────
@@ -391,5 +492,17 @@ export const CERTIFICATE_KINDS: { value: CertificateKind; labelKey: string }[] =
 ];
 
 export const SLOT_KINDS: SlotKind[] = [
-  'certificate', 'drone', 'operator', 'pdf', 'nfc_badge', 'personalization',
+  'certificate',
+  'drone',
+  'operator',
+  'pdf',
+  'permit',
+  'archive',
+  'nfc_badge',
+  'personalization',
 ];
+
+/** Total archive capacity in MB for a slots doc. */
+export function archiveCapacityMb(slots: Pick<Slots, 'archive'>): number {
+  return BASE_ARCHIVE_MB + Math.max(0, slots.archive) * BASE_ARCHIVE_MB;
+}

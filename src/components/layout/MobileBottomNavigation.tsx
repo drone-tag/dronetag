@@ -22,7 +22,7 @@ export function MobileBottomNavigation() {
   return (
     <>
       <nav
-        className="fixed right-0 bottom-0 left-0 z-40 border-t border-[var(--color-border)] bg-white/95 backdrop-blur-md lg:hidden"
+        className="surface-header fixed right-0 bottom-0 left-0 z-40 border-t backdrop-blur-md lg:hidden"
         style={{ paddingBottom: 'var(--safe-bottom)' }}
         aria-label={t('account.nav.mobile')}
       >
@@ -35,7 +35,7 @@ export function MobileBottomNavigation() {
                 <Link
                   href={item.href}
                   className={classNames(
-                    'tap-44 flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-lg px-0.5 py-1 text-[9px] font-medium leading-none transition-colors sm:text-[10px]',
+                    'tap-44 flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-lg px-0.5 py-1 text-[10px] font-medium leading-tight transition-colors sm:text-[11px]',
                     active
                       ? 'text-[var(--color-action)]'
                       : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text)]',
@@ -52,7 +52,7 @@ export function MobileBottomNavigation() {
             <button
               type="button"
               className={classNames(
-                'tap-44 flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-lg px-0.5 py-1 text-[9px] font-medium leading-none transition-colors sm:text-[10px]',
+                'tap-44 flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-lg px-0.5 py-1 text-[10px] font-medium leading-tight transition-colors sm:text-[11px]',
                 overflowActive || moreOpen
                   ? 'text-[var(--color-action)]'
                   : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text)]',

@@ -38,6 +38,8 @@ function slotsFromRaw(userId: string, raw: Record<string, unknown>): Slots {
     drone: num('drone'),
     operator: num('operator'),
     pdf: num('pdf'),
+    permit: typeof raw.permit === 'number' ? raw.permit : 3,
+    archive: typeof raw.archive === 'number' ? raw.archive : 0,
     nfc_badge: num('nfc_badge'),
     personalization: num('personalization'),
     createdAt: str('createdAt'),
@@ -102,7 +104,10 @@ export async function grantSlot(
  */
 export async function setSlots(
   userId: string,
-  counts: Pick<Slots, 'certificate' | 'drone' | 'operator' | 'pdf' | 'nfc_badge' | 'personalization'>,
+  counts: Pick<
+    Slots,
+    'certificate' | 'drone' | 'operator' | 'pdf' | 'permit' | 'archive' | 'nfc_badge' | 'personalization'
+  >,
 ): Promise<void> {
   if (DEMO_MODE) {
     const cur = await demo.ensureSlots(userId);

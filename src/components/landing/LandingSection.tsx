@@ -11,7 +11,7 @@ type LandingSectionProps = {
 
 const bgClasses = {
   default: 'bg-[var(--color-app-bg)]',
-  white: 'bg-white',
+  white: 'bg-[var(--color-card)]',
   navy: 'bg-[var(--color-navy)] text-white',
 };
 

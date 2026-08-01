@@ -9,12 +9,12 @@ import { describePolicyStatus } from '@/lib/utils';
 type BadgeVariant = 'green' | 'yellow' | 'red' | 'gray' | 'blue' | 'orange';
 
 const variantStyles: Record<BadgeVariant, string> = {
-  green: 'bg-emerald-50 text-emerald-700 ring-emerald-600/20',
-  yellow: 'bg-amber-50 text-amber-700 ring-amber-600/20',
-  red: 'bg-red-50 text-red-700 ring-red-600/20',
-  gray: 'bg-gray-50 text-gray-600 ring-gray-500/20',
-  blue: 'bg-blue-50 text-blue-700 ring-blue-600/20',
-  orange: 'bg-orange-50 text-orange-700 ring-orange-600/20',
+  green: 'bg-[var(--tone-success-bg)] text-[var(--tone-success-fg)] ring-[var(--tone-success-ring)]',
+  yellow: 'bg-[var(--tone-warning-bg)] text-[var(--tone-warning-fg)] ring-[var(--tone-warning-ring)]',
+  red: 'bg-[var(--tone-danger-bg)] text-[var(--tone-danger-fg)] ring-[var(--tone-danger-ring)]',
+  gray: 'bg-[var(--color-hover)] text-[var(--color-text-secondary)] ring-[var(--color-border)]',
+  blue: 'bg-[var(--tone-info-bg)] text-[var(--tone-info-fg)] ring-[var(--tone-info-ring)]',
+  orange: 'bg-[var(--tone-warning-bg)] text-[var(--tone-warning-fg)] ring-[var(--tone-warning-ring)]',
 };
 
 function Dot({ className }: { className?: string }) {
@@ -33,10 +33,10 @@ const policyVariant: Record<PolicyStatus, BadgeVariant> = {
 };
 
 const policyDotColor: Record<PolicyStatus, string> = {
-  valid: 'bg-emerald-500',
-  expiring: 'bg-orange-500',
-  expired: 'bg-red-500',
-  missing: 'bg-gray-400',
+  valid: 'bg-[var(--color-valid)]',
+  expiring: 'bg-[var(--color-expiring)]',
+  expired: 'bg-[var(--color-expired)]',
+  missing: 'bg-[var(--color-text-secondary)]',
 };
 
 export function PolicyStatusBadge({ status }: { status: PolicyStatus }) {
@@ -58,10 +58,10 @@ export function PolicyStatusBadge({ status }: { status: PolicyStatus }) {
 // ─── Policy Status Detail (badge + descriptive text) ─────────────────────────
 
 const descTextColor: Record<PolicyStatus, string> = {
-  valid: 'text-emerald-600',
-  expiring: 'text-orange-600',
-  expired: 'text-red-600',
-  missing: 'text-gray-400',
+  valid: 'text-[var(--tone-success-fg)]',
+  expiring: 'text-[var(--tone-warning-fg)]',
+  expired: 'text-[var(--tone-danger-fg)]',
+  missing: 'text-[var(--color-text-secondary)]',
 };
 
 /**
@@ -100,10 +100,10 @@ const verificationVariant: Record<VerificationStatus, BadgeVariant> = {
 };
 
 const verificationDotColor: Record<VerificationStatus, string> = {
-  verified: 'bg-emerald-500',
-  pending: 'bg-amber-500',
-  unverified: 'bg-gray-400',
-  rejected: 'bg-red-500',
+  verified: 'bg-[var(--color-valid)]',
+  pending: 'bg-[var(--color-expiring)]',
+  unverified: 'bg-[var(--color-text-secondary)]',
+  rejected: 'bg-[var(--color-expired)]',
 };
 
 export function VerificationBadge({ status }: { status: VerificationStatus }) {

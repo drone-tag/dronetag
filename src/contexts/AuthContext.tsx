@@ -1,34 +1,10 @@
 'use client';
 
-/**
- * Auth context — PR-SEC-2 hardening.
- *
- * Closes:
- *   V-028: admin status now comes EXCLUSIVELY from the Firebase
- *          custom claim `admin == true`. The previous client-side
- *          email allowlist (NEXT_PUBLIC_ADMIN_EMAILS) has been
- *          removed.
- *   V-030: tokens are forcibly refreshed on every auth-state change
- *          and on a 5-minute interval so a freshly-promoted admin
- *          does not need to sign out and back in.
- *
- * Side effects:
- *   • Mirrors the current ID token to a `__dronetag_idt` cookie so
- *     the Next.js proxy (Node.js runtime) can verify it via
- *     firebase-admin and gate `/admin/*` before rendering. Cookie is
- *     scoped to the same origin, `Secure` on https, `SameSite=Strict`,
- *     and short-lived (matching the token's 1-hour life).
- *   • Posts to `/api/session` after sign-in so the server can also
- *     stash an HttpOnly companion cookie when configured (PR-SEC-3+
- *     long-lived session cookies). The endpoint is best-effort: if
- *     Firebase Admin isn't configured server-side, the POST returns
- *     204 and the proxy falls back to the JS-readable cookie.
- */
-
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import type { User } from 'firebase/auth';
 import { onAuthChange } from '@/lib/firebase/auth';
 import { DEMO_MODE } from '@/lib/firebase/config';
+import { DEMO_PERSONA_EVENT, getDemoPersona } from '@/lib/demo/personas';
 
 const TOKEN_COOKIE = '__dronetag_idt';
 const REFRESH_INTERVAL_MS = 5 * 60 * 1000;
@@ -36,27 +12,30 @@ const REFRESH_INTERVAL_MS = 5 * 60 * 1000;
 interface AuthContextType {
   user: User | null;
   loading: boolean;
-  /** True iff the live Firebase ID token includes the `admin` custom claim. */
   isAdmin: boolean;
 }
 
-const AuthContext = createContext<AuthContextType>({ user: null, loading: true, isAdmin: false });
+const AuthContext = createContext<AuthContextType>({
+  user: null,
+  loading: true,
+  isAdmin: false,
+});
 
 function setIdTokenCookie(token: string | null): void {
   if (typeof document === 'undefined') return;
-  const secure = typeof window !== 'undefined' && window.location.protocol === 'https:'
-    ? '; Secure'
-    : '';
+  const secure =
+    typeof window !== 'undefined' && window.location.protocol === 'https:'
+      ? '; Secure'
+      : '';
   if (!token) {
     document.cookie = `${TOKEN_COOKIE}=; path=/; max-age=0; SameSite=Strict${secure}`;
     return;
   }
-  // 55 minutes — slightly less than the token's 60-minute TTL so the cookie
-  // expires before the token does. Refresh interval (5min) keeps it warm.
   document.cookie = `${TOKEN_COOKIE}=${token}; path=/; max-age=${55 * 60}; SameSite=Strict${secure}`;
 }
 
 async function postSessionCookie(token: string): Promise<void> {
+  if (DEMO_MODE) return;
   try {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 3000);
@@ -69,11 +48,12 @@ async function postSessionCookie(token: string): Promise<void> {
     });
     clearTimeout(timer);
   } catch {
-    // Best-effort. The proxy still has the JS-readable cookie.
+    /* best-effort */
   }
 }
 
 async function clearSessionCookie(): Promise<void> {
+  if (DEMO_MODE) return;
   try {
     await fetch('/api/session', { method: 'DELETE', credentials: 'same-origin' });
   } catch {
@@ -85,6 +65,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [claimsReady, setClaimsReady] = useState(false);
   const refreshTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
@@ -95,65 +76,86 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setIsAdmin(false);
         setIdTokenCookie(null);
         void clearSessionCookie();
+        setClaimsReady(true);
         return;
       }
-      // Fast path: read cached token first so redirects and admin gates unblock quickly.
-      // A background force-refresh picks up newly granted custom claims.
+
+      if (DEMO_MODE) {
+        setIsAdmin(getDemoPersona().isAdmin);
+        setIdTokenCookie(null);
+        setClaimsReady(true);
+        return;
+      }
+
       const token = await u.getIdToken(forceRefresh);
       const tokenResult = await u.getIdTokenResult(forceRefresh);
       if (cancelled) return;
       setIsAdmin(tokenResult.claims.admin === true);
       setIdTokenCookie(token);
       void postSessionCookie(token);
+      setClaimsReady(true);
     }
 
     let initialAuthEvent = true;
 
     const unsubscribe = onAuthChange((u) => {
       setUser(u);
-      if (!cancelled) setLoading(false);
       void (async () => {
         try {
           await applyClaims(u, false);
-          if (u && initialAuthEvent) {
+          if (u && initialAuthEvent && !DEMO_MODE) {
             initialAuthEvent = false;
-            void applyClaims(u, true).catch((err) => {
-              console.warn('[auth] background claims refresh failed', err);
-            });
+            void applyClaims(u, true).catch(() => undefined);
           }
         } catch (err) {
           console.warn('[auth] claims apply failed', err);
+          if (!cancelled) setClaimsReady(true);
+        } finally {
+          if (!cancelled) setLoading(false);
         }
       })();
     });
 
-    // Safety net: if Firebase auth never fires (blocked storage, offline), unblock UI.
     const loadingTimeout = setTimeout(() => {
-      if (!cancelled) setLoading(false);
+      if (!cancelled) {
+        setLoading(false);
+        setClaimsReady(true);
+      }
     }, 2500);
 
-    // V-030: periodic refresh keeps `isAdmin` in sync with the latest
-    // server-side claims and rotates the cookie before it expires.
     refreshTimerRef.current = setInterval(async () => {
-      const fbAuth = (await import('@/lib/firebase/auth')).getCurrentUser?.();
-      if (!fbAuth) return;
+      if (DEMO_MODE) return;
+      const current = (await import('@/lib/firebase/auth')).getCurrentUser?.();
+      if (!current) return;
       try {
-        await applyClaims(fbAuth, true);
-      } catch (err) {
-        console.warn('[auth] periodic refresh failed', err);
+        await applyClaims(current, true);
+      } catch {
+        /* ignore */
       }
     }, REFRESH_INTERVAL_MS);
+
+    function onPersonaChange() {
+      if (!DEMO_MODE) return;
+      window.location.assign(getDemoPersona().isAdmin ? '/admin' : '/account');
+    }
+    window.addEventListener(DEMO_PERSONA_EVENT, onPersonaChange);
 
     return () => {
       cancelled = true;
       clearTimeout(loadingTimeout);
       unsubscribe();
       if (refreshTimerRef.current) clearInterval(refreshTimerRef.current);
+      window.removeEventListener(DEMO_PERSONA_EVENT, onPersonaChange);
     };
   }, []);
 
+  const resolvedAdmin = DEMO_MODE ? getDemoPersona().isAdmin : isAdmin;
+  const resolvedLoading = loading || (Boolean(user) && !claimsReady && !DEMO_MODE);
+
   return (
-    <AuthContext.Provider value={{ user, loading, isAdmin: DEMO_MODE ? Boolean(user) : isAdmin }}>
+    <AuthContext.Provider
+      value={{ user, loading: resolvedLoading, isAdmin: resolvedAdmin }}
+    >
       {children}
     </AuthContext.Provider>
   );

@@ -26,7 +26,7 @@ export function NfcBadgeSection() {
         <ul className="mt-5 space-y-2.5">
           {BENEFIT_KEYS.map((key) => (
             <li key={key} className="flex items-start gap-2.5 text-sm text-[var(--color-text)]">
-              <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
+              <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[var(--tone-success-bg)] text-[var(--tone-success-fg)]">
                 <LandingIcons.check className="h-3 w-3" />
               </span>
               {t(key)}
@@ -38,7 +38,7 @@ export function NfcBadgeSection() {
       <div className="flex min-w-0 items-center justify-center gap-3 sm:gap-5">
         {/* Badge mockup */}
         <div className="flex shrink-0 flex-col items-center gap-2">
-          <div className="relative flex h-24 w-24 items-center justify-center rounded-2xl border-2 border-[var(--color-border)] bg-white shadow-[var(--shadow-card)] sm:h-28 sm:w-28">
+          <div className="relative flex h-24 w-24 items-center justify-center rounded-2xl border-2 border-[var(--color-border)] bg-[var(--color-card)] shadow-[var(--shadow-card)] sm:h-28 sm:w-28">
             <Image src="/logo.png?v=3" alt="" width={64} height={64} className="h-12 w-12 sm:h-14 sm:w-14" unoptimized aria-hidden />
             <span className="absolute -bottom-2 rounded-full bg-[var(--color-navy)] px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white">
               NFC
@@ -55,7 +55,7 @@ export function NfcBadgeSection() {
         {/* Mini phone */}
         <div className="w-[9.5rem] shrink-0 rounded-[1.25rem] border-4 border-[var(--color-navy)] bg-[var(--color-navy)] p-0.5 shadow-[var(--shadow-card)] sm:w-[10.5rem]">
           <div className="overflow-hidden rounded-[0.875rem] bg-[var(--color-app-bg)] p-2.5">
-            <div className="rounded-xl border border-[var(--color-border)] bg-white p-2.5">
+            <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] p-2.5">
               <div className="flex items-center gap-2">
                 <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--color-navy)] text-[10px] font-bold text-white">
                   MB

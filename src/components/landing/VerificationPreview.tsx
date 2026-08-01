@@ -11,13 +11,13 @@ function CheckRow({ label, value, status }: { label: string; value: string; stat
       <span className="flex items-center gap-2 text-right text-xs font-medium text-[var(--color-text)]">
         {value}
         {status === 'valid' ? (
-          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-medium text-emerald-700 ring-1 ring-inset ring-emerald-600/20">
+          <span className="inline-flex items-center gap-1 rounded-full bg-[var(--tone-success-bg)] px-2 py-0.5 text-[10px] font-medium text-[var(--tone-success-fg)] ring-1 ring-inset ring-[var(--tone-success-ring)]">
             <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" aria-hidden />
             OK
           </span>
         ) : null}
         {status === 'active' ? (
-          <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-medium text-blue-700 ring-1 ring-inset ring-blue-600/20">
+          <span className="inline-flex items-center gap-1 rounded-full bg-[var(--tone-info-bg)] px-2 py-0.5 text-[10px] font-medium text-[var(--tone-info-fg)] ring-1 ring-inset ring-[var(--tone-info-ring)]">
             2
           </span>
         ) : null}
@@ -31,7 +31,7 @@ export function VerificationPreview() {
 
   return (
     <div className="grid items-start gap-6 lg:grid-cols-[1fr_1.1fr] lg:gap-10">
-      <div className="min-w-0 lg:sticky lg:top-[calc(var(--header-height)+1.5rem)]">
+      <div className="min-w-0 lg:sticky lg:top-[calc(var(--app-header-offset)+1.5rem)]">
         <h2 className="text-xl font-bold tracking-tight text-[var(--color-navy)] sm:text-2xl lg:text-[1.75rem]">
           {t('home.verify.title')}
         </h2>
@@ -48,7 +48,7 @@ export function VerificationPreview() {
         </ul>
       </div>
 
-      <div className="min-w-0 rounded-2xl border border-[var(--color-border)] bg-white p-4 shadow-[var(--shadow-card)] sm:p-5">
+      <div className="min-w-0 rounded-2xl border border-[var(--color-border)] bg-[var(--color-card)] p-4 shadow-[var(--shadow-card)] sm:p-5">
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-center gap-3">
             <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[var(--color-navy)] text-sm font-bold text-white">

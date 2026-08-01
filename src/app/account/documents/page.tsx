@@ -26,6 +26,7 @@ import { Modal } from '@/components/ui/Modal';
 import { Textarea } from '@/components/ui/Textarea';
 import { UploadField } from '@/components/ui/UploadField';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { VerificationBadge } from '@/components/ui/StatusBadge';
 import { ConfirmDialog } from '@/components/account/ConfirmDialog';
 import { EntityListShell } from '@/components/account/EntityListShell';
 import { FormErrorBanner } from '@/components/account/FormErrorBanner';
@@ -88,8 +89,8 @@ export default function AccountDocumentsPage() {
 
   if (loading) {
     return (
-      <div className="mt-8 flex items-center gap-3 text-sm text-gray-500">
-        <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-gray-600" />
+      <div className="mt-8 flex items-center gap-3 text-sm text-[var(--color-text-secondary)]">
+        <div className="h-4 w-4 animate-spin rounded-full border-2 border-[var(--color-border)] border-t-gray-600" />
         {t('common.loading')}
       </div>
     );
@@ -112,7 +113,7 @@ export default function AccountDocumentsPage() {
         fileName: pendingFile?.name ?? target?.fileName ?? '',
         fileSize: pendingFile?.size ?? target?.fileSize ?? 0,
         mimeType: pendingFile?.type ?? target?.mimeType ?? '',
-        verificationStatus: target?.verificationStatus ?? 'unverified',
+        verificationStatus: target?.verificationStatus ?? 'pending',
         notes: form.notes,
       };
 
@@ -192,20 +193,23 @@ export default function AccountDocumentsPage() {
                       ]}
                       extra={
                         !d.fileUrl ? (
-                          <span className="text-[11px] text-gray-400">{t('entity.noPdfAttached')}</span>
+                          <span className="text-[11px] text-[var(--color-text-secondary)]">{t('entity.noPdfAttached')}</span>
                         ) : null
                       }
                     />
                   }
                 >
-                  <h3 className="text-sm font-semibold text-gray-900 sm:text-base">
-                    {d.label || t('doc.kind.other')}
-                  </h3>
+                  <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+                    <h3 className="text-sm font-semibold text-[var(--color-text)] sm:text-base">
+                      {d.label || t('doc.kind.other')}
+                    </h3>
+                    <VerificationBadge status={d.verificationStatus} />
+                  </div>
                   {d.fileName ? (
-                    <p className="mt-1 truncate font-mono text-[10px] text-gray-500 sm:text-[11px]">{d.fileName}</p>
+                    <p className="mt-1 truncate font-mono text-[10px] text-[var(--color-text-secondary)] sm:text-[11px]">{d.fileName}</p>
                   ) : null}
                   {d.notes ? (
-                    <p className="mt-1 line-clamp-2 text-[11px] text-gray-500 sm:text-xs">{d.notes}</p>
+                    <p className="mt-1 line-clamp-2 text-[11px] text-[var(--color-text-secondary)] sm:text-xs">{d.notes}</p>
                   ) : null}
                 </EntityListRow>
               </Card>
@@ -323,7 +327,7 @@ function DocFormModal({
       <form onSubmit={handleSubmit} noValidate className="space-y-4">
         <FormErrorBanner show={Object.keys(errors).length > 0} />
 
-        <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+        <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-hover)] p-4">
           <UploadField
             label={t('doc.field.file')}
             accept={FILE_ACCEPT}
@@ -335,7 +339,9 @@ function DocFormModal({
           />
           {errors.file ? (
             <p className="mt-2 text-xs text-red-600">{errors.file}</p>
-          ) : null}
+          ) : (
+            <p className="mt-2 text-[11px] text-[var(--color-text-secondary)]">{t('account.verification.documentUploadHint')}</p>
+          )}
         </div>
 
         <Input

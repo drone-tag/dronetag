@@ -95,6 +95,24 @@ export function computeCertificateStatus(cert: {
   return 'valid';
 }
 
+/** Authorization / permit validity from validTo (empty = open-ended / valid). */
+export function computeAuthorizationStatus(auth: {
+  validFrom: string;
+  validTo: string;
+}): PolicyStatus {
+  if (!auth.validFrom && !auth.validTo) return 'missing';
+  if (!auth.validTo) return 'valid';
+
+  const now = new Date();
+  const expiry = new Date(auth.validTo);
+  if (Number.isNaN(expiry.getTime())) return 'missing';
+  if (expiry < now) return 'expired';
+
+  const daysLeft = Math.ceil((expiry.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+  if (daysLeft <= EXPIRING_THRESHOLD_DAYS) return 'expiring';
+  return 'valid';
+}
+
 export function daysUntilExpiry(dateIso: string): number | null {
   if (!dateIso) return null;
   const now = new Date();

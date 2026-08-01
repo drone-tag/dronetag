@@ -20,16 +20,11 @@ export function EmptyState({
   icon?: ReactNode;
   title: string;
   description?: string;
-  /**
-   * Optional 2–3 next-step suggestions that make the empty page feel
-   * actionable during demos. Rendered as a small numbered list under the
-   * description. Keep each hint short (≤ 60 chars) and copy-driven.
-   */
   hints?: string[];
   action?: ReactNode;
 }) {
   return (
-    <div className="flex flex-col items-center rounded-[var(--radius-card)] border border-dashed border-[var(--color-border)] bg-white px-4 py-6 text-center sm:px-6 sm:py-8">
+    <div className="flex flex-col items-center rounded-[var(--radius-card)] border border-dashed border-[var(--color-border)] bg-[var(--color-card)] px-4 py-6 text-center sm:px-6 sm:py-8">
       <div className="mb-2 flex h-10 w-10 items-center justify-center rounded-2xl bg-[var(--color-action-light)] text-[var(--color-action)] sm:mb-3 sm:h-11 sm:w-11">
         {icon ?? <DefaultIcon />}
       </div>
@@ -41,7 +36,7 @@ export function EmptyState({
         <ol className="mt-2 grid w-full max-w-sm gap-1 text-left sm:mt-3">
           {hints.map((h, i) => (
             <li key={i} className="flex items-start gap-2 text-xs text-[var(--color-text-secondary)]">
-              <span className="mt-0.5 inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-gray-100 text-[10px] font-semibold text-gray-600">
+              <span className="mt-0.5 inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-[var(--color-hover)] text-[10px] font-semibold text-[var(--color-text-secondary)]">
                 {i + 1}
               </span>
               <span className="leading-snug">{h}</span>

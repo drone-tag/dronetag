@@ -24,7 +24,7 @@ export function FormErrorBanner({ show, message, className }: FormErrorBannerPro
     <div
       role="alert"
       className={classNames(
-        'flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2.5 text-sm text-red-800',
+        'flex items-start gap-2 rounded-lg border border-[var(--tone-danger-border)] bg-[var(--tone-danger-bg)] px-3 py-2.5 text-sm text-[var(--tone-danger-fg)]',
         className,
       )}
     >

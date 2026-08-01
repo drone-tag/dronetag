@@ -137,8 +137,8 @@ export default function DroneDetailPage() {
 
   if (loading) {
     return (
-      <div className="mt-8 flex items-center gap-3 text-sm text-gray-500">
-        <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-gray-600" />
+      <div className="mt-8 flex items-center gap-3 text-sm text-[var(--color-text-secondary)]">
+        <div className="h-4 w-4 animate-spin rounded-full border-2 border-[var(--color-border)] border-t-gray-600" />
         {t('common.loading')}
       </div>
     );
@@ -147,7 +147,7 @@ export default function DroneDetailPage() {
   if (!drone || !form) {
     return (
       <div className="mt-8">
-        <p className="text-sm text-gray-500">{t('profile.notFound')}</p>
+        <p className="text-sm text-[var(--color-text-secondary)]">{t('profile.notFound')}</p>
         <div className="mt-4">
           <Button href="/account/drones" variant="ghost">
             {t('drone.backToList')}
@@ -213,7 +213,7 @@ export default function DroneDetailPage() {
 
   const isLocked = isDroneDataLocked(drone);
   const isPublic = drone.status === 'active' && drone.visibility === 'public';
-  const droneInsurances = insurances.filter((i) => i.link === 'drone');
+  const droneInsurances = insurances;
   const defaultOperator = operators.find((o) => o.id === drone.defaultOperatorId);
   const linkedInsurance = insurances.find((i) => i.id === drone.insuranceId);
   const classLabel = t(
@@ -224,7 +224,7 @@ export default function DroneDetailPage() {
     <div className="space-y-4 sm:space-y-5">
       <Link
         href="/account/drones"
-        className="tap-44 inline-flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-700 sm:text-sm"
+        className="tap-44 inline-flex items-center gap-1.5 text-xs text-[var(--color-text-secondary)] hover:text-[var(--color-text)] sm:text-sm"
       >
         <svg viewBox="0 0 20 20" fill="currentColor" className="h-3.5 w-3.5" aria-hidden>
           <path fillRule="evenodd" d="M9.78 4.22a.75.75 0 010 1.06L7.06 8h7.69a.75.75 0 010 1.5H7.06l2.72 2.72a.75.75 0 11-1.06 1.06l-4-4a.75.75 0 010-1.06l4-4a.75.75 0 011.06 0z" clipRule="evenodd" />
@@ -234,16 +234,16 @@ export default function DroneDetailPage() {
 
       <header className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between sm:gap-3">
         <div className="min-w-0">
-          <h2 className="text-lg font-semibold leading-snug text-gray-900 sm:text-xl">
+          <h2 className="text-lg font-semibold leading-snug text-[var(--color-text)] sm:text-xl">
             {[drone.manufacturer, drone.model].filter(Boolean).join(' ').trim() || drone.slug}
           </h2>
-          <p className="mt-0.5 truncate text-[11px] text-gray-500 sm:text-xs">
+          <p className="mt-0.5 truncate text-[11px] text-[var(--color-text-secondary)] sm:text-xs">
             {t('drone.field.slug')}: <code className="font-mono">{drone.slug}</code>
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-2">
           {!isLocked && savedAt && !dirty ? (
-            <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-medium text-emerald-700 ring-1 ring-inset ring-emerald-600/20 sm:px-2.5 sm:py-1 sm:text-xs">
+            <span className="rounded-full bg-[var(--tone-success-bg)] px-2 py-0.5 text-[10px] font-medium text-[var(--tone-success-fg)] ring-1 ring-inset ring-[var(--tone-success-ring)] sm:px-2.5 sm:py-1 sm:text-xs">
               {t('account.saved')}
             </span>
           ) : null}
@@ -262,12 +262,12 @@ export default function DroneDetailPage() {
 
       {isLocked ? (
         <div className="space-y-5">
-          <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-relaxed text-amber-900">
+          <div className="rounded-lg border border-[var(--tone-warning-border)] bg-[var(--tone-warning-bg)] px-4 py-3 text-sm leading-relaxed text-[var(--tone-warning-fg)]">
             {t('drone.locked.hint')}
           </div>
 
           <Card padding="md">
-            <h3 className="mb-4 text-sm font-semibold text-gray-900">{t('drone.detail.basics')}</h3>
+            <h3 className="mb-4 text-sm font-semibold text-[var(--color-text)]">{t('drone.detail.basics')}</h3>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <ReadOnlyField label={t('drone.field.manufacturer')} value={drone.manufacturer} />
               <ReadOnlyField label={t('drone.field.model')} value={drone.model} />
@@ -282,7 +282,7 @@ export default function DroneDetailPage() {
           </Card>
 
           <Card padding="md">
-            <h3 className="mb-4 text-sm font-semibold text-gray-900">{t('drone.detail.linked')}</h3>
+            <h3 className="mb-4 text-sm font-semibold text-[var(--color-text)]">{t('drone.detail.linked')}</h3>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <ReadOnlyField label={t('drone.field.linkedPilot')} value={pilotDisplayName(pilot)} />
               <ReadOnlyField
@@ -306,7 +306,7 @@ export default function DroneDetailPage() {
           <FormErrorBanner show={Boolean(errors.submit) || Object.keys(errors).length > 0} message={errors.submit} />
 
           <Card padding="md">
-            <h3 className="mb-4 text-sm font-semibold text-gray-900">{t('drone.detail.basics')}</h3>
+            <h3 className="mb-4 text-sm font-semibold text-[var(--color-text)]">{t('drone.detail.basics')}</h3>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <Input
                 label={t('drone.field.manufacturer')} name="manufacturer" required
@@ -344,13 +344,13 @@ export default function DroneDetailPage() {
           </Card>
 
           <Card padding="md">
-            <h3 className="mb-4 text-sm font-semibold text-gray-900">{t('drone.detail.linked')}</h3>
+            <h3 className="mb-4 text-sm font-semibold text-[var(--color-text)]">{t('drone.detail.linked')}</h3>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <div className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5">
-                <p className="text-xs font-medium uppercase tracking-wider text-gray-500">
+              <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-hover)] px-3 py-2.5">
+                <p className="text-xs font-medium uppercase tracking-wider text-[var(--color-text-secondary)]">
                   {t('drone.field.linkedPilot')}
                 </p>
-                <p className="mt-0.5 text-sm text-gray-900">{pilotDisplayName(pilot)}</p>
+                <p className="mt-0.5 text-sm text-[var(--color-text)]">{pilotDisplayName(pilot)}</p>
               </div>
               <Select
                 label={t('drone.field.defaultOperator')} name="defaultOperatorId" required

@@ -18,7 +18,7 @@ type AudienceCardProps = {
 const accentClasses = {
   blue: 'bg-[var(--color-action-light)] text-[var(--color-action)]',
   navy: 'bg-[var(--color-navy)]/10 text-[var(--color-navy)]',
-  green: 'bg-emerald-50 text-emerald-700',
+  green: 'bg-[var(--tone-success-bg)] text-[var(--tone-success-fg)]',
 };
 
 export function AudienceCard({ titleKey, descKey, ctaKey, href, icon, accent = 'blue' }: AudienceCardProps) {
@@ -27,7 +27,7 @@ export function AudienceCard({ titleKey, descKey, ctaKey, href, icon, accent = '
   return (
     <Link
       href={href}
-      className="group tap-44 flex min-h-[8.5rem] flex-col rounded-2xl border border-[var(--color-border)] bg-white p-4 shadow-[var(--shadow-card)] transition hover:border-[var(--color-action)]/30 hover:shadow-md sm:min-h-[9.5rem] sm:p-5"
+      className="group tap-44 flex min-h-[8.5rem] flex-col rounded-2xl border border-[var(--color-border)] bg-[var(--color-card)] p-4 shadow-[var(--shadow-card)] transition hover:border-[var(--color-action)]/30 hover:shadow-md sm:min-h-[9.5rem] sm:p-5"
     >
       <div className="flex items-start justify-between gap-3">
         <span className={classNames('flex h-10 w-10 shrink-0 items-center justify-center rounded-xl', accentClasses[accent])}>

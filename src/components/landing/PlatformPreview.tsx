@@ -6,8 +6,8 @@ import { Button } from '@/components/ui/Button';
 
 function StatusPill({ label, variant }: { label: string; variant: 'green' | 'orange' }) {
   const styles = variant === 'green'
-    ? 'bg-emerald-50 text-emerald-700 ring-emerald-600/20'
-    : 'bg-amber-50 text-amber-700 ring-amber-600/20';
+    ? 'bg-[var(--tone-success-bg)] text-[var(--tone-success-fg)] ring-[var(--tone-success-ring)]'
+    : 'bg-[var(--tone-warning-bg)] text-[var(--tone-warning-fg)] ring-[var(--tone-warning-ring)]';
   const dot = variant === 'green' ? 'bg-emerald-500' : 'bg-amber-500';
   return (
     <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium ring-1 ring-inset ${styles}`}>
@@ -27,7 +27,7 @@ export function PlatformPreview() {
         <div className="overflow-hidden rounded-[1.25rem] bg-[var(--color-app-bg)]">
           {/* Profile card */}
           <div className="space-y-2.5 p-3">
-            <div className="rounded-2xl border border-[var(--color-border)] bg-white p-3 shadow-[var(--shadow-card)]">
+            <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-card)] p-3 shadow-[var(--shadow-card)]">
               <div className="flex items-start gap-2.5">
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--color-navy)] text-xs font-bold text-white">
                   MB

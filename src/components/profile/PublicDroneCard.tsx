@@ -26,36 +26,36 @@ import { ReportFoundDroneForm } from './ReportFoundDroneForm';
 
 const policyConfig: Record<PolicyStatus, { ring: string; text: string; dot: string; bg: string }> = {
   valid: {
-    ring: 'ring-emerald-600/20',
-    text: 'text-emerald-700',
-    dot: 'bg-emerald-500',
-    bg: 'bg-emerald-50',
+    ring: 'ring-[var(--tone-success-ring)]',
+    text: 'text-[var(--tone-success-fg)]',
+    dot: 'bg-[var(--color-valid)]',
+    bg: 'bg-[var(--tone-success-bg)]',
   },
   expiring: {
-    ring: 'ring-amber-600/20',
-    text: 'text-amber-700',
-    dot: 'bg-amber-500',
-    bg: 'bg-amber-50',
+    ring: 'ring-[var(--tone-warning-ring)]',
+    text: 'text-[var(--tone-warning-fg)]',
+    dot: 'bg-[var(--color-expiring)]',
+    bg: 'bg-[var(--tone-warning-bg)]',
   },
   expired: {
-    ring: 'ring-red-600/20',
-    text: 'text-red-700',
-    dot: 'bg-red-500',
-    bg: 'bg-red-50',
+    ring: 'ring-[var(--tone-danger-ring)]',
+    text: 'text-[var(--tone-danger-fg)]',
+    dot: 'bg-[var(--color-expired)]',
+    bg: 'bg-[var(--tone-danger-bg)]',
   },
   missing: {
-    ring: 'ring-gray-500/20',
-    text: 'text-gray-600',
-    dot: 'bg-gray-400',
-    bg: 'bg-gray-100',
+    ring: 'ring-[var(--color-border)]',
+    text: 'text-[var(--color-text-secondary)]',
+    dot: 'bg-[var(--color-text-secondary)]',
+    bg: 'bg-[var(--color-hover)]',
   },
 };
 
 const verificationConfig: Record<VerificationStatus, { bg: string; text: string; dot: string }> = {
-  verified: { bg: 'bg-emerald-50', text: 'text-emerald-700', dot: 'bg-emerald-500' },
-  pending: { bg: 'bg-amber-50', text: 'text-amber-700', dot: 'bg-amber-500' },
-  unverified: { bg: 'bg-gray-100', text: 'text-gray-600', dot: 'bg-gray-400' },
-  rejected: { bg: 'bg-red-50', text: 'text-red-700', dot: 'bg-red-500' },
+  verified: { bg: 'bg-[var(--tone-success-bg)]', text: 'text-[var(--tone-success-fg)]', dot: 'bg-[var(--color-valid)]' },
+  pending: { bg: 'bg-[var(--tone-warning-bg)]', text: 'text-[var(--tone-warning-fg)]', dot: 'bg-[var(--color-expiring)]' },
+  unverified: { bg: 'bg-[var(--color-hover)]', text: 'text-[var(--color-text-secondary)]', dot: 'bg-[var(--color-text-secondary)]' },
+  rejected: { bg: 'bg-[var(--tone-danger-bg)]', text: 'text-[var(--tone-danger-fg)]', dot: 'bg-[var(--color-expired)]' },
 };
 
 const droneClassLabelKey: Record<DroneClass, string> = {
@@ -104,6 +104,19 @@ function insuranceBannerKey(status: PolicyStatus): string {
   }
 }
 
+function userBadgeKey(status: VerificationStatus): string {
+  switch (status) {
+    case 'verified':
+      return 'publicDrone.userVerified';
+    case 'pending':
+      return 'publicDrone.userPending';
+    case 'rejected':
+      return 'publicDrone.userRejected';
+    default:
+      return 'publicDrone.userUnverified';
+  }
+}
+
 function certificateBadgeKey(status: VerificationStatus): string {
   switch (status) {
     case 'verified':
@@ -146,7 +159,7 @@ export function PublicDroneCard({ snapshot, language }: PublicDroneCardProps) {
     LANGUAGES.find((l) => l.value === language)?.label ?? language.toUpperCase();
 
   return (
-    <div className="overflow-hidden rounded-none border-y border-gray-200 bg-white shadow-none sm:rounded-xl sm:border sm:shadow-lg">
+    <div className="overflow-hidden rounded-none border-y border-[var(--color-border)] bg-[var(--color-card)] shadow-none sm:rounded-xl sm:border sm:shadow-lg">
       {/* ── Banner + identity ─────────────────────────────────────────── */}
       <div className="relative">
         <div className="relative h-32 w-full overflow-hidden sm:h-36">
@@ -171,12 +184,12 @@ export function PublicDroneCard({ snapshot, language }: PublicDroneCardProps) {
               alt=""
               referrerPolicy="no-referrer"
               loading="lazy"
-              className="absolute right-3 top-3 h-9 w-9 rounded-lg border border-white/20 bg-white object-contain p-0.5 shadow-lg sm:right-4 sm:top-4 sm:h-11 sm:w-11"
+              className="absolute right-3 top-3 h-9 w-9 rounded-lg border border-white/20 bg-[var(--color-card)] object-contain p-0.5 shadow-lg sm:right-4 sm:top-4 sm:h-11 sm:w-11"
             />
           ) : null}
         </div>
 
-        <div className="border-b border-gray-100 bg-white px-4 py-4 sm:px-6 sm:py-5">
+        <div className="border-b border-[var(--color-border)] bg-[var(--color-card)] px-4 py-4 sm:px-6 sm:py-5">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
             {hasUrl(snapshot.profilePhotoUrl) ? (
               // eslint-disable-next-line @next/next/no-img-element
@@ -185,7 +198,7 @@ export function PublicDroneCard({ snapshot, language }: PublicDroneCardProps) {
                 alt=""
                 referrerPolicy="no-referrer"
                 loading="lazy"
-                className="h-[5.5rem] w-[5.5rem] shrink-0 rounded-2xl border-[3px] border-white bg-gray-50 object-cover shadow-md sm:h-24 sm:w-24"
+                className="h-[5.5rem] w-[5.5rem] shrink-0 rounded-2xl border-[3px] border-white bg-[var(--color-hover)] object-cover shadow-md sm:h-24 sm:w-24"
               />
             ) : (
               <div
@@ -197,16 +210,13 @@ export function PublicDroneCard({ snapshot, language }: PublicDroneCardProps) {
             )}
 
             <div className="min-w-0 flex-1 sm:pb-0.5">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-gray-400">
-                {t('publicDrone.eyebrow')}
-              </p>
-              <p className="mt-0.5 text-[11px] font-semibold uppercase tracking-wide text-sky-700">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-sky-700">
                 {t(holderRoleKey(snapshot.holderKind))}
               </p>
-              <h1 className="mt-0.5 text-[1.35rem] font-bold leading-tight tracking-tight text-gray-900 sm:text-2xl">
+              <h1 className="mt-0.5 text-[1.35rem] font-bold leading-tight tracking-tight text-[var(--color-text)] sm:text-2xl">
                 {snapshot.holderDisplayName}
               </h1>
-              <p className="mt-1 text-sm font-medium text-gray-600 sm:text-base">
+              <p className="mt-1 text-sm font-medium text-[var(--color-text-secondary)] sm:text-base">
                 {[snapshot.manufacturer, snapshot.model].filter(Boolean).join(' ').trim() ||
                   t('common.notAvailable')}
               </p>
@@ -217,9 +227,15 @@ export function PublicDroneCard({ snapshot, language }: PublicDroneCardProps) {
 
       {/* ── Status row ─ outdoors-readable badges ─────────────────────── */}
       <div className="flex flex-col gap-2 px-4 py-3 sm:flex-row sm:flex-wrap sm:items-center sm:px-6">
-        <span className="inline-flex w-full items-center gap-2 rounded-full bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700 ring-1 ring-inset ring-emerald-600/20 sm:w-auto sm:py-1.5 sm:text-sm">
-          <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-emerald-500" aria-hidden />
-          {t('publicDrone.userVerified')}
+        <span
+          className={classNames(
+            'inline-flex w-full items-center gap-2 rounded-full px-3 py-2 text-xs font-semibold ring-1 ring-inset sm:w-auto sm:py-1.5 sm:text-sm',
+            verification.bg,
+            verification.text,
+          )}
+        >
+          <span className={classNames('h-2.5 w-2.5 shrink-0 rounded-full', verification.dot)} aria-hidden />
+          {t(userBadgeKey(snapshot.verificationStatus))}
         </span>
         <span
           className={classNames(
@@ -280,7 +296,7 @@ export function PublicDroneCard({ snapshot, language }: PublicDroneCardProps) {
               href={snapshot.insurancePdfUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="tap-44 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm font-medium text-gray-700 shadow-sm transition active:bg-gray-50 sm:w-auto sm:justify-start sm:px-3 sm:py-2 sm:text-xs"
+              className="tap-44 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-card)] px-4 py-3 text-sm font-medium text-[var(--color-text)] shadow-sm transition active:bg-[var(--color-hover)] sm:w-auto sm:justify-start sm:px-3 sm:py-2 sm:text-xs"
             >
               <IconExternal />
               {t('publicDrone.viewPolicyPdf')}
@@ -312,7 +328,7 @@ export function PublicDroneCard({ snapshot, language }: PublicDroneCardProps) {
       {/* ── CTA stack — primary "Report" gets a full-width tall tap target
           on its own row so police / finders can hit it outdoors with gloves
           or one-thumb. (STAGING-OPS-1) ────────────────────────────────── */}
-      <div className="safe-pb border-t border-gray-200 bg-white px-4 py-4 sm:px-6 sm:py-5">
+      <div className="safe-pb border-t border-[var(--color-border)] bg-[var(--color-card)] px-4 py-4 sm:px-6 sm:py-5">
         <Button onClick={() => setReportOpen(true)} fullWidth size="lg" className="tap-44">
           <IconLifebuoy />
           {t('publicDrone.reportFound')}
@@ -326,14 +342,14 @@ export function PublicDroneCard({ snapshot, language }: PublicDroneCardProps) {
       </div>
 
       {/* ── Footer / disclaimer ───────────────────────────────────────── */}
-      <footer className="border-t border-gray-200 bg-gray-50/80 px-4 py-4 text-xs leading-relaxed text-gray-500 sm:px-6 sm:py-5">
-        <p className="text-[11px] font-semibold text-gray-700">{t('legal.notOfficial')}</p>
+      <footer className="border-t border-[var(--color-border)] bg-[var(--color-hover)]/80 px-4 py-4 text-xs leading-relaxed text-[var(--color-text-secondary)] sm:px-6 sm:py-5">
+        <p className="text-[11px] font-semibold text-[var(--color-text)]">{t('legal.notOfficial')}</p>
         <p className="mt-1.5">{t('legal.platformDisclaimer')}</p>
         <p className="mt-3 flex items-center justify-between">
-          <span className="text-[10px] font-medium uppercase tracking-wider text-gray-400">
+          <span className="text-[10px] font-medium uppercase tracking-wider text-[var(--color-text-secondary)]">
             {t('public.poweredBy')}
           </span>
-          <span className="font-mono text-[10px] text-gray-400">{snapshot.slug}</span>
+          <span className="font-mono text-[10px] text-[var(--color-text-secondary)]">{snapshot.slug}</span>
         </p>
       </footer>
 
@@ -359,15 +375,15 @@ function Section({
   children: ReactNode;
 }) {
   return (
-    <section className="border-t border-gray-200">
+    <section className="border-t border-[var(--color-border)]">
       <div className="flex items-center gap-2.5 px-4 pt-4 sm:px-6 sm:pt-5">
         <span
-          className="flex h-5 w-5 shrink-0 items-center justify-center text-gray-400"
+          className="flex h-5 w-5 shrink-0 items-center justify-center text-[var(--color-text-secondary)]"
           aria-hidden
         >
           {icon}
         </span>
-        <h2 className="text-[11px] font-bold uppercase tracking-[0.08em] text-gray-400">{title}</h2>
+        <h2 className="text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--color-text-secondary)]">{title}</h2>
       </div>
       <dl className="px-4 pb-4 pt-2 sm:px-6 sm:pb-5 sm:pt-3">{children}</dl>
     </section>
@@ -377,13 +393,13 @@ function Section({
 function DataRow({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
   if (!value) return null;
   return (
-    <div className="border-b border-gray-100 py-3 last:border-b-0 sm:flex sm:items-baseline sm:justify-between sm:gap-4 sm:py-2.5">
-      <dt className="text-xs font-medium uppercase tracking-wide text-gray-400 sm:shrink-0 sm:text-[13px] sm:normal-case sm:tracking-normal sm:text-gray-500">
+    <div className="border-b border-[var(--color-border)] py-3 last:border-b-0 sm:flex sm:items-baseline sm:justify-between sm:gap-4 sm:py-2.5">
+      <dt className="text-xs font-medium uppercase tracking-wide text-[var(--color-text-secondary)] sm:shrink-0 sm:text-[13px] sm:normal-case sm:tracking-normal sm:text-[var(--color-text-secondary)]">
         {label}
       </dt>
       <dd
         className={classNames(
-          'mt-1 text-[15px] font-medium leading-snug text-gray-900 sm:mt-0 sm:text-right sm:text-[13px]',
+          'mt-1 text-[15px] font-medium leading-snug text-[var(--color-text)] sm:mt-0 sm:text-right sm:text-[13px]',
           mono && 'font-mono tracking-tight break-all sm:break-normal',
         )}
       >

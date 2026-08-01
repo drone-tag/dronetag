@@ -13,6 +13,7 @@ import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { listAuthorizations } from '@/lib/firebase/authorizations';
 import { listCertificates } from '@/lib/firebase/certificates';
 import { listDocuments } from '@/lib/firebase/documents';
 import { listDronesByUser } from '@/lib/firebase/drones';
@@ -25,6 +26,7 @@ import {
   type Slots,
   type SlotKind,
 } from '@/lib/types/entities';
+import { computeAuthorizationStatus, computeCertificateStatus } from '@/lib/utils';
 import { Card } from '@/components/ui/Card';
 
 type Usage = Record<SlotKind, number>;
@@ -34,6 +36,7 @@ const SLOT_ORDER: SlotKind[] = [
   'operator',
   'certificate',
   'pdf',
+  'permit',
   'nfc_badge',
   'personalization',
 ];
@@ -55,6 +58,8 @@ export function PlanSlotsSummary() {
     operator: 0,
     certificate: 0,
     pdf: 0,
+    permit: 0,
+    archive: 0,
     nfc_badge: 0,
     personalization: 0,
   });
@@ -66,22 +71,26 @@ export function PlanSlotsSummary() {
     let cancelled = false;
     (async () => {
       try {
-        const [s, drones, operators, certificates, documents, planList] = await Promise.all([
-          ensureSlots(user.uid),
-          listDronesByUser(user.uid),
-          listOperators(user.uid),
-          listCertificates(user.uid),
-          listDocuments(user.uid),
-          listPlans(),
-        ]);
+        const [s, drones, operators, certificates, documents, authorizations, planList] =
+          await Promise.all([
+            ensureSlots(user.uid),
+            listDronesByUser(user.uid),
+            listOperators(user.uid),
+            listCertificates(user.uid),
+            listDocuments(user.uid),
+            listAuthorizations(user.uid),
+            listPlans(),
+          ]);
         if (cancelled) return;
         setSlots(s);
         setUsage({
           drone: drones.length,
           operator: operators.length,
-          certificate: certificates.length,
+          certificate: certificates.filter((c) => computeCertificateStatus(c) !== 'expired').length,
           pdf: documents.length,
-          nfc_badge: 0, // physical badge purchases tracked outside this app for now
+          permit: authorizations.filter((a) => computeAuthorizationStatus(a) !== 'expired').length,
+          archive: 0,
+          nfc_badge: 0,
           personalization: 0,
         });
         setPlans(planList);
@@ -105,7 +114,7 @@ export function PlanSlotsSummary() {
   if (loading || !slots) {
     return (
       <Card padding="md">
-        <p className="text-sm text-gray-500">{t('common.loading')}</p>
+        <p className="text-sm text-[var(--color-text-secondary)]">{t('common.loading')}</p>
       </Card>
     );
   }
@@ -113,8 +122,8 @@ export function PlanSlotsSummary() {
   return (
     <Card padding="md">
       <header>
-        <h2 className="text-base font-semibold text-gray-900">{t('account.plan.title')}</h2>
-        <p className="mt-0.5 text-xs text-gray-500">{t('account.plan.subtitle')}</p>
+        <h2 className="text-base font-semibold text-[var(--color-text)]">{t('account.plan.title')}</h2>
+        <p className="mt-0.5 text-xs text-[var(--color-text-secondary)]">{t('account.plan.subtitle')}</p>
       </header>
 
       <ul className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
@@ -127,14 +136,14 @@ export function PlanSlotsSummary() {
           return (
             <li
               key={k}
-              className="flex items-center justify-between rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm"
+              className="flex items-center justify-between rounded-lg border border-[var(--color-border)] bg-[var(--color-card)] px-3 py-2.5 text-sm"
             >
               <div>
-                <p className="font-medium text-gray-900">
+                <p className="font-medium text-[var(--color-text)]">
                   {t(`admin.slots.kind.${k}`)}
                 </p>
                 {plan ? (
-                  <p className="text-[11px] text-gray-500">
+                  <p className="text-[11px] text-[var(--color-text-secondary)]">
                     {plan.label} · <span className="font-mono">{formatPrice(plan)}</span>
                   </p>
                 ) : null}
@@ -142,8 +151,8 @@ export function PlanSlotsSummary() {
               <span
                 className={
                   atCap
-                    ? 'rounded-full bg-amber-50 px-2.5 py-0.5 text-[11px] font-semibold tabular-nums text-amber-700 ring-1 ring-inset ring-amber-600/20'
-                    : 'rounded-full bg-gray-50 px-2.5 py-0.5 text-[11px] font-semibold tabular-nums text-gray-700 ring-1 ring-inset ring-gray-500/20'
+                    ? 'rounded-full bg-[var(--tone-warning-bg)] px-2.5 py-0.5 text-[11px] font-semibold tabular-nums text-[var(--tone-warning-fg)] ring-1 ring-inset ring-[var(--tone-warning-ring)]'
+                    : 'rounded-full bg-[var(--color-hover)] px-2.5 py-0.5 text-[11px] font-semibold tabular-nums text-[var(--color-text)] ring-1 ring-inset ring-[var(--color-border)]'
                 }
               >
                 {used} / {cap}
@@ -153,9 +162,9 @@ export function PlanSlotsSummary() {
         })}
       </ul>
 
-      <p className="mt-4 text-xs text-gray-500">
+      <p className="mt-4 text-xs text-[var(--color-text-secondary)]">
         {t('account.plan.contactAdmin')}.{' '}
-        <Link href="/account/profile" className="text-blue-600 underline-offset-2 hover:underline">
+        <Link href="/account/profile" className="text-[var(--color-action)] underline-offset-2 hover:underline">
           {t('account.plan.empty')}
         </Link>
       </p>

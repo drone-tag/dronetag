@@ -17,7 +17,7 @@ export function LandingHero() {
   const { user, dashboardHref } = useLandingAuth();
 
   return (
-    <section className="overflow-x-safe border-b border-[var(--color-border)] bg-white pt-6 pb-10 sm:pt-8 sm:pb-14 lg:pb-16">
+    <section className="overflow-x-safe border-b border-[var(--color-border)] bg-[var(--color-card)] pt-6 pb-10 sm:pt-8 sm:pb-14 lg:pb-16">
       <div className="mx-auto grid max-w-[72rem] items-center gap-8 px-4 sm:px-5 lg:grid-cols-2 lg:gap-10 lg:px-6">
         <div className="min-w-0">
           <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--color-action)]">

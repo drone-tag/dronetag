@@ -5,10 +5,14 @@ import { type ButtonHTMLAttributes, type ReactNode } from 'react';
 import { classNames } from '@/lib/utils';
 
 const variantClasses = {
-  primary: 'bg-[var(--color-action)] hover:bg-blue-700 text-white disabled:hover:bg-[var(--color-action)]',
-  secondary: 'bg-white border border-[var(--color-border)] hover:bg-gray-50 text-[var(--color-text)] disabled:hover:bg-white',
-  danger: 'bg-[var(--color-expired)] hover:bg-red-700 text-white disabled:hover:bg-[var(--color-expired)]',
-  ghost: 'bg-transparent hover:bg-gray-100 text-[var(--color-text-secondary)] disabled:hover:bg-transparent',
+  primary:
+    'bg-[var(--color-action)] hover:bg-[var(--color-action-hover)] text-white disabled:hover:bg-[var(--color-action)]',
+  secondary:
+    'bg-[var(--color-card)] border border-[var(--color-border)] hover:bg-[var(--color-hover)] text-[var(--color-text)] disabled:hover:bg-[var(--color-card)]',
+  danger:
+    'bg-[var(--color-expired)] hover:opacity-90 text-white disabled:hover:bg-[var(--color-expired)]',
+  ghost:
+    'bg-transparent hover:bg-[var(--color-hover)] text-[var(--color-text-secondary)] disabled:hover:bg-transparent',
 } as const;
 
 const sizeClasses = {

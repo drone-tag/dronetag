@@ -108,19 +108,19 @@ export default function AdminDronesListPage() {
       </div>
 
       {loading ? (
-        <div className="mt-6 flex items-center gap-3 text-sm text-gray-500">
-          <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-gray-600" />
+        <div className="mt-6 flex items-center gap-3 text-sm text-[var(--color-text-secondary)]">
+          <div className="h-4 w-4 animate-spin rounded-full border-2 border-[var(--color-border)] border-t-gray-600" />
           {t('common.loading')}
         </div>
       ) : filtered.length === 0 ? (
         <Card className="mt-6 text-center" padding="lg">
-          <p className="text-sm text-gray-500">{t('common.noResults')}</p>
+          <p className="text-sm text-[var(--color-text-secondary)]">{t('common.noResults')}</p>
         </Card>
       ) : (
         <Card className="mt-6 overflow-x-auto" padding="none">
           <table className="w-full min-w-[1100px] border-collapse text-left text-sm">
             <thead>
-              <tr className="border-b border-gray-200 bg-slate-50/80">
+              <tr className="border-b border-[var(--color-border)] bg-slate-50/80">
                 <th className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
                   {t('admin.drones.col.drone')}
                 </th>
@@ -138,7 +138,7 @@ export default function AdminDronesListPage() {
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-[var(--color-border)]">
               {filtered.map((d) => {
                 const overrideActive = isActiveOperatorOverride(d);
                 const owner = accountsByUid.get(d.userId);
@@ -148,30 +148,30 @@ export default function AdminDronesListPage() {
                     <td className="px-4 py-3.5">
                       <Link
                         href={`/admin/drones/${d.id}`}
-                        className="font-medium text-gray-900 hover:underline"
+                        className="font-medium text-[var(--color-text)] hover:underline"
                       >
                         {[d.manufacturer, d.model].filter(Boolean).join(' ').trim() || d.slug}
                       </Link>
-                      <p className="mt-0.5 font-mono text-xs text-gray-500">{d.slug}</p>
+                      <p className="mt-0.5 font-mono text-xs text-[var(--color-text-secondary)]">{d.slug}</p>
                     </td>
                     <td className="px-4 py-3.5">
                       {owner ? (
                         <Link
                           href={`/admin/users/${owner.uid}`}
-                          className="text-sm text-gray-700 hover:underline"
+                          className="text-sm text-[var(--color-text)] hover:underline"
                         >
                           {accountDisplayName(owner)}
                         </Link>
                       ) : (
-                        <span className="text-xs text-gray-400">—</span>
+                        <span className="text-xs text-[var(--color-text-secondary)]">—</span>
                       )}
                     </td>
                     <td className="px-4 py-3.5">
                       <span
                         className={
                           isPublic
-                            ? 'rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700 ring-1 ring-inset ring-emerald-600/20'
-                            : 'rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-medium text-gray-600'
+                            ? 'rounded-full bg-[var(--tone-success-bg)] px-2 py-0.5 text-[11px] font-medium text-[var(--tone-success-fg)] ring-1 ring-inset ring-[var(--tone-success-ring)]'
+                            : 'rounded-full bg-[var(--color-hover)] px-2 py-0.5 text-[11px] font-medium text-[var(--color-text-secondary)]'
                         }
                       >
                         {t(`status.${d.status}`)} · {t(`visibility.${d.visibility}`)}
@@ -179,18 +179,18 @@ export default function AdminDronesListPage() {
                     </td>
                     <td className="px-4 py-3.5">
                       {overrideActive ? (
-                        <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-700 ring-1 ring-inset ring-amber-600/20">
+                        <span className="rounded-full bg-[var(--tone-warning-bg)] px-2 py-0.5 text-[11px] font-medium text-[var(--tone-warning-fg)] ring-1 ring-inset ring-[var(--tone-warning-ring)]">
                           {t('activeOp.label.activeOverride')}
                         </span>
                       ) : (
-                        <span className="text-xs text-gray-400">—</span>
+                        <span className="text-xs text-[var(--color-text-secondary)]">—</span>
                       )}
                     </td>
                     <td className="px-4 py-3.5">
                       <div className="flex flex-wrap items-center gap-1.5">
                         <Link
                           href={`/admin/drones/${d.id}`}
-                          className="rounded-md bg-gray-100 px-2.5 py-1.5 text-xs font-medium text-gray-700 transition hover:bg-gray-200"
+                          className="rounded-md bg-[var(--color-hover)] px-2.5 py-1.5 text-xs font-medium text-[var(--color-text)] transition hover:bg-[var(--color-hover)]"
                         >
                           {t('admin.drones.openInAdmin')}
                         </Link>

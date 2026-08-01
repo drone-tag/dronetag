@@ -51,10 +51,10 @@ function PageSpinner({ label }: { label: string }) {
   return (
     <div className="flex min-h-[40vh] flex-col items-center justify-center gap-4 px-4 py-8 sm:min-h-[50vh]" role="status">
       <div className="relative h-10 w-10">
-        <div className="absolute inset-0 rounded-full border-2 border-gray-200" />
-        <div className="absolute inset-0 animate-spin rounded-full border-2 border-transparent border-t-slate-600" />
+        <div className="absolute inset-0 rounded-full border-2 border-[var(--color-border)]" />
+        <div className="absolute inset-0 animate-spin rounded-full border-2 border-transparent border-t-[var(--color-action)]" />
       </div>
-      <p className="text-sm text-gray-400">{label}</p>
+      <p className="text-sm text-[var(--color-text-secondary)]">{label}</p>
     </div>
   );
 }
@@ -62,11 +62,11 @@ function PageSpinner({ label }: { label: string }) {
 function UnavailableState({ title, description }: { title: string; description: string }) {
   return (
     <div className="mx-auto max-w-md px-4 py-6 sm:px-0">
-      <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+      <div className="overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] shadow-sm">
         <div className="flex flex-col items-center px-8 pb-10 pt-12 text-center">
-          <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-gray-100">
+          <div className="mb-5 flex h-16 w-16 justify-center rounded-full bg-[var(--color-hover)] items-center">
             <svg
-              className="h-8 w-8 text-gray-400"
+              className="h-8 w-8 text-[var(--color-text-secondary)]"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -80,11 +80,11 @@ function UnavailableState({ title, description }: { title: string; description: 
               />
             </svg>
           </div>
-          <h2 className="text-lg font-semibold text-gray-900">{title}</h2>
-          <p className="mt-2 text-sm leading-relaxed text-gray-500">{description}</p>
+          <h2 className="text-lg font-semibold text-[var(--color-text)]">{title}</h2>
+          <p className="mt-2 text-sm leading-relaxed text-[var(--color-text-secondary)]">{description}</p>
         </div>
-        <div className="border-t border-gray-100 bg-gray-50/80 px-8 py-4 text-center">
-          <p className="text-[10px] font-medium tracking-wide text-gray-300">
+        <div className="border-t border-[var(--color-border)] bg-[var(--color-hover)]/80 px-8 py-4 text-center">
+          <p className="text-[10px] font-medium tracking-wide text-[var(--color-text-secondary)]">
             Powered by DroneTag
           </p>
         </div>

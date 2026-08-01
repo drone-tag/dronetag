@@ -140,7 +140,7 @@ export default function SignupPage() {
 
   if (user) {
     return (
-      <div className="flex min-h-[calc(100dvh-var(--header-height)-var(--safe-top))] items-center justify-center bg-[var(--color-app-bg)] px-4">
+      <div className="flex min-h-[calc(100dvh-var(--app-header-offset))] items-center justify-center bg-[var(--color-app-bg)] px-4">
         <div className="flex items-center gap-3">
           <div className="h-5 w-5 animate-spin rounded-full border-2 border-[var(--color-border)] border-t-[var(--color-action)]" />
           <p className="text-sm text-[var(--color-text-secondary)]">{t('common.loading')}</p>
@@ -211,7 +211,7 @@ export default function SignupPage() {
           placeholder="+39 333 1234567"
         />
 
-        <fieldset className="space-y-2 rounded-lg border border-[var(--color-border)] bg-gray-50 p-4">
+        <fieldset className="space-y-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-hover)] p-4">
           <legend className="px-1 text-sm font-medium text-[var(--color-text)]">
             {t('signup.otp.chooseChannels')}
           </legend>
@@ -260,8 +260,8 @@ export default function SignupPage() {
         />
 
         {error ? (
-          <div className="flex items-start gap-2 rounded-lg bg-red-50 px-3 py-2.5" role="alert">
-            <p className="text-sm text-red-700">{error}</p>
+          <div className="flex items-start gap-2 rounded-lg bg-[var(--tone-danger-bg)] px-3 py-2.5" role="alert">
+            <p className="text-sm text-[var(--tone-danger-fg)]">{error}</p>
           </div>
         ) : null}
 

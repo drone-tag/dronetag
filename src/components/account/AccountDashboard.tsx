@@ -10,19 +10,37 @@ import { listDocuments } from '@/lib/firebase/documents';
 import { listDronesByUser } from '@/lib/firebase/drones';
 import { listInsurances } from '@/lib/firebase/insurances';
 import { listOperators } from '@/lib/firebase/operators';
-import { computeCertificateStatus, computePolicyStatus, formatDate } from '@/lib/utils';
+import { computeCertificateStatus, computePolicyStatus, daysUntilExpiry, formatDate } from '@/lib/utils';
 import { operatorDisplayName } from '@/lib/utils/entities';
 import { getPublicProfileUrl } from '@/lib/utils';
 import { Card } from '@/components/ui/Card';
-import { PolicyStatusBadge } from '@/components/ui/StatusBadge';
+import { PolicyStatusBadge, VerificationBadge } from '@/components/ui/StatusBadge';
 import { ResponsivePageHeader } from '@/components/ui/ResponsivePageHeader';
-import type { Certificate, Drone, Insurance, Operator } from '@/lib/types/entities';
+import { CoverdroneCta } from '@/components/account/CoverdroneCta';
+import { UserAvatar } from '@/components/ui/UserAvatar';
+import type { Certificate, DocumentRef, Drone, Insurance, Operator } from '@/lib/types/entities';
+import type { PolicyStatus, VerificationStatus } from '@/lib/types';
 
-function initials(name: string): string {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  if (parts.length === 0) return '?';
-  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-  return `${parts[0][0] ?? ''}${parts[parts.length - 1][0] ?? ''}`.toUpperCase();
+type ExpiryAlert = {
+  id: string;
+  href: string;
+  kind: 'certificate' | 'insurance';
+  label: string;
+  status: Extract<PolicyStatus, 'expiring' | 'expired'>;
+  expiresAt: string;
+  daysLeft: number;
+};
+
+type VerifyAlert = {
+  id: string;
+  href: string;
+  kind: 'certificate' | 'insurance' | 'document' | 'drone';
+  label: string;
+  status: Extract<VerificationStatus, 'pending' | 'unverified' | 'rejected'>;
+};
+
+function needsAdminReview(status: VerificationStatus): boolean {
+  return status === 'pending' || status === 'unverified';
 }
 
 function QuickAction({ href, label, desc, icon }: { href: string; label: string; desc: string; icon: ReactNode }) {
@@ -43,8 +61,9 @@ export function AccountDashboard() {
   const [drones, setDrones] = useState<Drone[]>([]);
   const [certificates, setCertificates] = useState<Certificate[]>([]);
   const [insurances, setInsurances] = useState<Insurance[]>([]);
-  const [documents, setDocuments] = useState<{ id: string }[]>([]);
+  const [documents, setDocuments] = useState<DocumentRef[]>([]);
   const [displayName, setDisplayName] = useState('');
+  const [profilePhotoUrl, setProfilePhotoUrl] = useState('');
 
   useEffect(() => {
     if (!user) return;
@@ -69,6 +88,7 @@ export function AccountDashboard() {
           ? [acct.firstName, acct.lastName].filter(Boolean).join(' ').trim()
           : user.displayName ?? user.email ?? '';
         setDisplayName(name);
+        setProfilePhotoUrl(acct?.profilePhotoUrl ?? '');
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -79,15 +99,128 @@ export function AccountDashboard() {
   const stats = useMemo(() => {
     const validCerts = certificates.filter((c) => computeCertificateStatus(c) === 'valid').length;
     const expiringCerts = certificates.filter((c) => computeCertificateStatus(c) === 'expiring').length;
+    const pendingCerts = certificates.filter((c) => needsAdminReview(c.verificationStatus)).length;
+    const rejectedCerts = certificates.filter((c) => c.verificationStatus === 'rejected').length;
     const validIns = insurances.filter((i) => computePolicyStatus(i) === 'valid').length;
     const expiringIns = insurances.filter((i) => computePolicyStatus(i) === 'expiring').length;
     const expiredIns = insurances.filter((i) => computePolicyStatus(i) === 'expired').length;
+    const pendingIns = insurances.filter((i) => needsAdminReview(i.verificationStatus)).length;
+    const rejectedIns = insurances.filter((i) => i.verificationStatus === 'rejected').length;
     const publicDrone = drones.find((d) => d.status === 'active' && d.visibility === 'public');
     const completeness = Math.round(
       ([operators.length > 0, drones.length > 0, certificates.length > 0, insurances.length > 0, documents.length > 0].filter(Boolean).length / 5) * 100,
     );
-    return { validCerts, expiringCerts, validIns, expiringIns, expiredIns, publicDrone, completeness };
+    return {
+      validCerts,
+      expiringCerts,
+      pendingCerts,
+      rejectedCerts,
+      validIns,
+      expiringIns,
+      expiredIns,
+      pendingIns,
+      rejectedIns,
+      publicDrone,
+      completeness,
+    };
   }, [operators, drones, certificates, insurances, documents]);
+
+  const expiryAlerts = useMemo(() => {
+    const alerts: ExpiryAlert[] = [];
+
+    for (const c of certificates) {
+      const status = computeCertificateStatus(c);
+      if (status !== 'expiring' && status !== 'expired') continue;
+      const daysLeft = daysUntilExpiry(c.expiresAt) ?? 0;
+      alerts.push({
+        id: `cert-${c.id}`,
+        href: '/account/certificates',
+        kind: 'certificate',
+        label: c.registrationNumber || c.label || c.kind,
+        status,
+        expiresAt: c.expiresAt,
+        daysLeft,
+      });
+    }
+
+    for (const i of insurances) {
+      const status = computePolicyStatus(i);
+      if (status !== 'expiring' && status !== 'expired') continue;
+      const daysLeft = daysUntilExpiry(i.expiryDate) ?? 0;
+      alerts.push({
+        id: `ins-${i.id}`,
+        href: '/account/insurances',
+        kind: 'insurance',
+        label: i.provider || i.policyNumber || '—',
+        status,
+        expiresAt: i.expiryDate,
+        daysLeft,
+      });
+    }
+
+    return alerts.sort((a, b) => {
+      if (a.status !== b.status) return a.status === 'expired' ? -1 : 1;
+      return a.daysLeft - b.daysLeft;
+    });
+  }, [certificates, insurances]);
+
+  const verifyAlerts = useMemo(() => {
+    const alerts: VerifyAlert[] = [];
+    for (const c of certificates) {
+      if (c.verificationStatus !== 'pending' && c.verificationStatus !== 'unverified' && c.verificationStatus !== 'rejected') {
+        continue;
+      }
+      alerts.push({
+        id: `v-cert-${c.id}`,
+        href: '/account/certificates',
+        kind: 'certificate',
+        label: c.registrationNumber || c.label || c.kind,
+        status: c.verificationStatus,
+      });
+    }
+    for (const i of insurances) {
+      if (i.verificationStatus !== 'pending' && i.verificationStatus !== 'unverified' && i.verificationStatus !== 'rejected') {
+        continue;
+      }
+      alerts.push({
+        id: `v-ins-${i.id}`,
+        href: '/account/insurances',
+        kind: 'insurance',
+        label: i.provider || i.policyNumber || '—',
+        status: i.verificationStatus,
+      });
+    }
+    for (const d of documents) {
+      if (d.verificationStatus !== 'pending' && d.verificationStatus !== 'unverified' && d.verificationStatus !== 'rejected') {
+        continue;
+      }
+      alerts.push({
+        id: `v-doc-${d.id}`,
+        href: '/account/documents',
+        kind: 'document',
+        label: d.label || d.fileName || d.kind,
+        status: d.verificationStatus,
+      });
+    }
+    for (const d of drones) {
+      if (d.verificationStatus !== 'pending' && d.verificationStatus !== 'unverified' && d.verificationStatus !== 'rejected') {
+        continue;
+      }
+      if (d.status === 'draft') continue;
+      alerts.push({
+        id: `v-drn-${d.id}`,
+        href: `/account/drones/${d.id}`,
+        kind: 'drone',
+        label: [d.manufacturer, d.model].filter(Boolean).join(' ') || d.slug,
+        status: d.verificationStatus,
+      });
+    }
+    return alerts.sort((a, b) => {
+      if (a.status === 'rejected' && b.status !== 'rejected') return -1;
+      if (b.status === 'rejected' && a.status !== 'rejected') return 1;
+      return 0;
+    });
+  }, [certificates, insurances, documents, drones]);
 
   if (loading) {
     return (
@@ -112,11 +245,131 @@ export function AccountDashboard() {
         title={t('account.dashboard.greeting', { name: firstName })}
         subtitle={t('account.dashboard.subtitle')}
         actions={
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--color-navy)] text-xs font-bold text-white sm:h-11 sm:w-11 sm:text-sm" aria-hidden>
-            {initials(displayName)}
-          </div>
+          <UserAvatar
+            name={displayName}
+            photoUrl={profilePhotoUrl}
+            className="h-10 w-10 shrink-0 sm:h-11 sm:w-11"
+            textClassName="bg-[var(--color-navy)] text-xs text-white sm:text-sm"
+          />
         }
       />
+
+      {verifyAlerts.length > 0 ? (
+        <div
+          className="rounded-xl border border-[var(--color-action)]/25 bg-[var(--color-action-light)] px-3 py-2.5"
+          role="status"
+        >
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-[var(--color-action)]">
+            {t('account.dashboard.verifyAlerts')}
+          </p>
+          <p className="mt-1 text-[11px] leading-relaxed text-[var(--color-text-secondary)]">
+            {t('account.dashboard.verifyHint')}
+          </p>
+          <ul className="mt-1.5 space-y-1">
+            {verifyAlerts.map((alert) => (
+              <li key={alert.id}>
+                <Link
+                  href={alert.href}
+                  className="flex items-center gap-2 rounded-lg px-1 py-1 text-xs transition-colors hover:bg-[var(--color-card)]/70"
+                >
+                  <span
+                    className={
+                      alert.status === 'rejected'
+                        ? 'h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--color-expired)]'
+                        : 'h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--color-expiring)]'
+                    }
+                    aria-hidden
+                  />
+                  <span className="min-w-0 flex-1 truncate text-[var(--color-text)]">
+                    <span className="text-[var(--color-text-secondary)]">
+                      {alert.kind === 'certificate'
+                        ? t('account.tab.certificates')
+                        : alert.kind === 'insurance'
+                          ? t('account.tab.insurances')
+                          : alert.kind === 'document'
+                            ? t('account.tab.documents')
+                            : t('account.tab.drones')}
+                      {' · '}
+                    </span>
+                    {alert.label}
+                  </span>
+                  <span
+                    className={
+                      alert.status === 'rejected'
+                        ? 'shrink-0 font-medium text-[var(--color-expired)]'
+                        : 'shrink-0 font-medium text-[var(--color-expiring)]'
+                    }
+                  >
+                    {alert.status === 'rejected'
+                      ? t('account.dashboard.verifyRejected')
+                      : t('account.dashboard.verifyWaiting')}
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+          <p className="mt-2 border-t border-[var(--color-action)]/15 pt-2 text-[11px]">
+            <Link href="/account/support" className="font-semibold text-[var(--color-action)] underline-offset-2 hover:underline">
+              {t('support.nav')}
+            </Link>
+          </p>
+        </div>
+      ) : null}
+
+      {expiryAlerts.length > 0 ? (
+        <div
+          className="rounded-xl border border-[var(--color-expiring)]/30 bg-[color-mix(in_srgb,var(--color-expiring)_10%,transparent)] px-3 py-2.5"
+          role="status"
+        >
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-[var(--color-expiring)]">
+            {t('account.dashboard.expiryAlerts')}
+          </p>
+          <ul className="mt-1.5 space-y-1">
+            {expiryAlerts.map((alert) => (
+              <li key={alert.id}>
+                <Link
+                  href={alert.href}
+                  className="flex items-center gap-2 rounded-lg px-1 py-1 text-xs transition-colors hover:bg-[var(--color-card)]/70"
+                >
+                  <span
+                    className={
+                      alert.status === 'expired'
+                        ? 'h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--color-expired)]'
+                        : 'h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--color-expiring)]'
+                    }
+                    aria-hidden
+                  />
+                  <span className="min-w-0 flex-1 truncate text-[var(--color-text)]">
+                    <span className="text-[var(--color-text-secondary)]">
+                      {alert.kind === 'certificate'
+                        ? t('account.tab.certificates')
+                        : t('account.tab.insurances')}
+                      {' · '}
+                    </span>
+                    {alert.label}
+                  </span>
+                  <span
+                    className={
+                      alert.status === 'expired'
+                        ? 'shrink-0 font-medium text-[var(--color-expired)]'
+                        : 'shrink-0 font-medium text-[var(--color-expiring)]'
+                    }
+                  >
+                    {alert.status === 'expired'
+                      ? t('account.dashboard.expiryExpired')
+                      : t('account.dashboard.expiryInDays', { days: Math.max(alert.daysLeft, 0) })}
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+          {expiryAlerts.some((a) => a.kind === 'insurance') ? (
+            <div className="mt-2 border-t border-[var(--color-expiring)]/20 pt-2">
+              <CoverdroneCta compact />
+            </div>
+          ) : null}
+        </div>
+      ) : null}
 
       <Card padding="md">
         <div className="flex flex-wrap items-start justify-between gap-3">
@@ -124,22 +377,49 @@ export function AccountDashboard() {
             <h2 className="text-sm font-semibold text-[var(--color-text)]">{t('account.dashboard.credentialsStatus')}</h2>
             <p className="mt-1 text-xs text-[var(--color-text-secondary)]">{t('account.dashboard.completeness', { pct: stats.completeness })}</p>
           </div>
-          <div className="h-2 w-full max-w-xs overflow-hidden rounded-full bg-gray-100 sm:w-48">
+          <div className="h-2 w-full max-w-xs overflow-hidden rounded-full bg-[var(--color-hover)] sm:w-48">
             <div className="h-full rounded-full bg-[var(--color-action)] transition-all" style={{ width: `${stats.completeness}%` }} role="progressbar" aria-valuenow={stats.completeness} aria-valuemin={0} aria-valuemax={100} />
           </div>
         </div>
         <ul className="mt-4 grid gap-2 sm:grid-cols-2">
-          <li className="flex items-center justify-between rounded-xl bg-gray-50 px-3 py-2.5 text-xs">
+          <li className="flex items-center justify-between gap-2 rounded-xl bg-[var(--color-hover)] px-3 py-2.5 text-xs">
             <span className="text-[var(--color-text-secondary)]">{t('account.tab.certificates')}</span>
-            <span className="font-medium text-[var(--color-text)]">
-              {stats.validCerts} {t('policy.valid')}
-              {stats.expiringCerts > 0 ? ` / ${stats.expiringCerts} ${t('policy.expiring')}` : ''}
+            <span className="flex flex-wrap items-center justify-end gap-1">
+              {stats.rejectedCerts > 0 ? (
+                <VerificationBadge status="rejected" />
+              ) : stats.pendingCerts > 0 ? (
+                <VerificationBadge status="pending" />
+              ) : null}
+              <PolicyStatusBadge
+                status={
+                  stats.expiringCerts > 0
+                    ? 'expiring'
+                    : stats.validCerts > 0
+                      ? 'valid'
+                      : 'missing'
+                }
+              />
             </span>
           </li>
-          <li className="flex items-center justify-between rounded-xl bg-gray-50 px-3 py-2.5 text-xs">
+          <li className="flex items-center justify-between gap-2 rounded-xl bg-[var(--color-hover)] px-3 py-2.5 text-xs">
             <span className="text-[var(--color-text-secondary)]">{t('account.tab.insurances')}</span>
-            <span className="font-medium text-[var(--color-text)]">
-              {stats.expiredIns > 0 ? t('policy.expired') : stats.expiringIns > 0 ? t('policy.expiring') : stats.validIns > 0 ? t('policy.valid') : t('policy.missing')}
+            <span className="flex flex-wrap items-center justify-end gap-1">
+              {stats.rejectedIns > 0 ? (
+                <VerificationBadge status="rejected" />
+              ) : stats.pendingIns > 0 ? (
+                <VerificationBadge status="pending" />
+              ) : null}
+              <PolicyStatusBadge
+                status={
+                  stats.expiredIns > 0
+                    ? 'expired'
+                    : stats.expiringIns > 0
+                      ? 'expiring'
+                      : stats.validIns > 0
+                        ? 'valid'
+                        : 'missing'
+                }
+              />
             </span>
           </li>
         </ul>
@@ -157,9 +437,12 @@ export function AccountDashboard() {
 
       <DashboardSection title={t('account.tab.drones')} href="/account/drones" seeAll={t('account.dashboard.seeAll')} empty={drones.length === 0} emptyLabel={t('drone.list.empty')}>
         {drones.slice(0, 2).map((d) => (
-          <Link key={d.id} href={`/account/drones/${d.id}`} className="app-card block p-4 transition hover:border-[var(--color-action)]/30">
-            <p className="font-semibold text-[var(--color-text)]">{[d.manufacturer, d.model].filter(Boolean).join(' ') || d.slug}</p>
-            <p className="mt-1 text-xs text-[var(--color-text-secondary)]">{d.classMarking}</p>
+          <Link key={d.id} href={`/account/drones/${d.id}`} className="app-card flex items-center justify-between gap-2 p-4 transition hover:border-[var(--color-action)]/30">
+            <div className="min-w-0">
+              <p className="font-semibold text-[var(--color-text)]">{[d.manufacturer, d.model].filter(Boolean).join(' ') || d.slug}</p>
+              <p className="mt-1 text-xs text-[var(--color-text-secondary)]">{d.classMarking}</p>
+            </div>
+            <VerificationBadge status={d.verificationStatus} />
           </Link>
         ))}
       </DashboardSection>
@@ -171,7 +454,10 @@ export function AccountDashboard() {
               <p className="truncate text-sm font-semibold text-[var(--color-text)]">{c.registrationNumber || c.kind}</p>
               {c.expiresAt ? <p className="text-xs text-[var(--color-text-secondary)]">{formatDate(c.expiresAt)}</p> : null}
             </div>
-            <PolicyStatusBadge status={computeCertificateStatus(c)} />
+            <span className="flex shrink-0 flex-col items-end gap-1 sm:flex-row sm:items-center">
+              <VerificationBadge status={c.verificationStatus} />
+              <PolicyStatusBadge status={computeCertificateStatus(c)} />
+            </span>
           </div>
         ))}
       </DashboardSection>
@@ -183,7 +469,10 @@ export function AccountDashboard() {
               <p className="truncate text-sm font-semibold text-[var(--color-text)]">{i.provider}</p>
               <p className="font-mono text-xs text-[var(--color-text-secondary)]">{i.policyNumber}</p>
             </div>
-            <PolicyStatusBadge status={computePolicyStatus(i)} />
+            <span className="flex shrink-0 flex-col items-end gap-1 sm:flex-row sm:items-center">
+              <VerificationBadge status={i.verificationStatus} />
+              <PolicyStatusBadge status={computePolicyStatus(i)} />
+            </span>
           </div>
         ))}
       </DashboardSection>
@@ -211,7 +500,7 @@ function DashboardSection({ title, href, seeAll, empty, emptyLabel, children }: 
         <Link href={href} className="text-xs font-medium text-[var(--color-action)] hover:underline">{seeAll}</Link>
       </div>
       {empty ? (
-        <p className="rounded-xl border border-dashed border-[var(--color-border)] bg-white px-3 py-4 text-center text-xs text-[var(--color-text-secondary)] sm:px-4 sm:py-6">{emptyLabel}</p>
+        <p className="rounded-xl border border-dashed border-[var(--color-border)] bg-[var(--color-card)] px-3 py-4 text-center text-xs text-[var(--color-text-secondary)] sm:px-4 sm:py-6">{emptyLabel}</p>
       ) : (
         <div className="space-y-2">{children}</div>
       )}

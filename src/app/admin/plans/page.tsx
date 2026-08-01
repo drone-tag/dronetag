@@ -139,8 +139,8 @@ export default function AdminPlansPage() {
       </div>
 
       {loading ? (
-        <div className="mt-6 flex items-center gap-3 text-sm text-gray-500">
-          <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-gray-600" />
+        <div className="mt-6 flex items-center gap-3 text-sm text-[var(--color-text-secondary)]">
+          <div className="h-4 w-4 animate-spin rounded-full border-2 border-[var(--color-border)] border-t-gray-600" />
           {t('common.loading')}
         </div>
       ) : plans.length === 0 ? (
@@ -153,7 +153,7 @@ export default function AdminPlansPage() {
         <Card className="mt-6 overflow-x-auto" padding="none">
           <table className="w-full min-w-[820px] border-collapse text-left text-sm">
             <thead>
-              <tr className="border-b border-gray-200 bg-slate-50/80">
+              <tr className="border-b border-[var(--color-border)] bg-slate-50/80">
                 <th className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
                   {t('admin.plans.col.label')}
                 </th>
@@ -171,32 +171,32 @@ export default function AdminPlansPage() {
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-[var(--color-border)]">
               {plans.map((p) => (
                 <tr key={p.id} className="transition hover:bg-slate-50/60">
                   <td className="px-4 py-3.5">
-                    <p className="font-medium text-gray-900">{p.label || '—'}</p>
+                    <p className="font-medium text-[var(--color-text)]">{p.label || '—'}</p>
                     {p.description ? (
-                      <p className="mt-0.5 text-xs text-gray-500">{p.description}</p>
+                      <p className="mt-0.5 text-xs text-[var(--color-text-secondary)]">{p.description}</p>
                     ) : null}
-                    <p className="mt-1 text-[10px] text-gray-400">
+                    <p className="mt-1 text-[10px] text-[var(--color-text-secondary)]">
                       {p.updatedAt ? formatDate(p.updatedAt) : '—'}
                     </p>
                   </td>
                   <td className="px-4 py-3.5">
-                    <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wider text-gray-700">
+                    <span className="rounded-full bg-[var(--color-hover)] px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wider text-[var(--color-text)]">
                       {t(`admin.slots.kind.${p.slotKind}`)}
                     </span>
                   </td>
-                  <td className="px-4 py-3.5 font-mono text-sm text-gray-900">
+                  <td className="px-4 py-3.5 font-mono text-sm text-[var(--color-text)]">
                     {formatPrice(p)}
                   </td>
                   <td className="px-4 py-3.5">
                     <span
                       className={
                         p.active
-                          ? 'rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wider text-emerald-700 ring-1 ring-inset ring-emerald-600/20'
-                          : 'rounded-full bg-gray-50 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wider text-gray-600 ring-1 ring-inset ring-gray-500/20'
+                          ? 'rounded-full bg-[var(--tone-success-bg)] px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wider text-[var(--tone-success-fg)] ring-1 ring-inset ring-[var(--tone-success-ring)]'
+                          : 'rounded-full bg-[var(--color-hover)] px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wider text-[var(--color-text-secondary)] ring-1 ring-inset ring-[var(--color-border)]'
                       }
                     >
                       {p.active ? t('admin.plans.col.active') : '—'}

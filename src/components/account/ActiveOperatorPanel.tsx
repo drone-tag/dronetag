@@ -143,10 +143,10 @@ export function ActiveOperatorPanel({
     <Card padding="md">
       <header className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h3 className="text-sm font-semibold text-gray-900">
+          <h3 className="text-sm font-semibold text-[var(--color-text)]">
             {t('activeOp.section.title')}
           </h3>
-          <p className="mt-0.5 max-w-prose text-xs text-gray-500">
+          <p className="mt-0.5 max-w-prose text-xs text-[var(--color-text-secondary)]">
             {t('activeOp.section.subtitle')}
           </p>
         </div>
@@ -173,11 +173,11 @@ export function ActiveOperatorPanel({
       <FormErrorBanner show={Boolean(error)} message={error ?? undefined} />
 
       {alternativeOperators.length === 0 ? (
-        <div className="mt-2 rounded-lg border border-dashed border-gray-300 bg-gray-50 px-4 py-4">
-          <p className="text-sm font-medium text-gray-700">
+        <div className="mt-2 rounded-lg border border-dashed border-[var(--color-border)] bg-[var(--color-hover)] px-4 py-4">
+          <p className="text-sm font-medium text-[var(--color-text)]">
             {t('activeOp.empty.noAlternativeTitle')}
           </p>
-          <p className="mt-1 text-xs text-gray-500">
+          <p className="mt-1 text-xs text-[var(--color-text-secondary)]">
             {t('activeOp.empty.noAlternativeDesc')}
           </p>
         </div>
@@ -185,7 +185,7 @@ export function ActiveOperatorPanel({
 
       {overrideActive ? (
         <div
-          className="mb-4 flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 px-3.5 py-3 text-sm text-amber-800"
+          className="mb-4 flex items-start gap-3 rounded-lg border border-[var(--tone-warning-border)] bg-[var(--tone-warning-bg)] px-3.5 py-3 text-sm text-[var(--tone-warning-fg)]"
           role="status"
         >
           <svg viewBox="0 0 20 20" fill="currentColor" className="mt-0.5 h-4 w-4 shrink-0" aria-hidden>
@@ -216,7 +216,7 @@ export function ActiveOperatorPanel({
       </dl>
 
       {overrideActive ? (
-        <div className="mt-4 rounded-lg border border-gray-200 bg-gray-50/60 p-3.5 text-xs text-gray-600">
+        <div className="mt-4 rounded-lg border border-[var(--color-border)] bg-[var(--color-hover)] p-3.5 text-xs text-[var(--color-text-secondary)]">
           <dl className="grid grid-cols-1 gap-x-6 gap-y-1.5 sm:grid-cols-2">
             {drone.activeOperatorSetAt ? (
               <Pair label={t('activeOp.label.setAt')} value={formatDateTime(drone.activeOperatorSetAt)} />
@@ -226,10 +226,10 @@ export function ActiveOperatorPanel({
             ) : null}
             {drone.activeOperatorReason ? (
               <div className="sm:col-span-2">
-                <dt className="font-semibold uppercase tracking-wider text-[10px] text-gray-400">
+                <dt className="font-semibold uppercase tracking-wider text-[10px] text-[var(--color-text-secondary)]">
                   {t('activeOp.label.reason')}
                 </dt>
-                <dd className="mt-0.5 whitespace-pre-wrap leading-relaxed text-gray-700">
+                <dd className="mt-0.5 whitespace-pre-wrap leading-relaxed text-[var(--color-text)]">
                   {drone.activeOperatorReason}
                 </dd>
               </div>
@@ -279,18 +279,18 @@ function SlotTile({
     <div
       className={[
         'rounded-lg border px-3 py-2.5',
-        highlight ? 'border-blue-200 bg-blue-50' : 'border-gray-200 bg-white',
+        highlight ? 'border-[var(--tone-info-border)] bg-[var(--tone-info-bg)]' : 'border-[var(--color-border)] bg-[var(--color-card)]',
         muted ? 'opacity-70' : '',
       ].join(' ')}
     >
-      <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-500">
+      <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--color-text-secondary)]">
         {label}
       </p>
       <p
         className={
           highlight
             ? 'mt-1 text-sm font-semibold text-blue-900'
-            : 'mt-1 text-sm font-medium text-gray-900'
+            : 'mt-1 text-sm font-medium text-[var(--color-text)]'
         }
       >
         {name}
@@ -302,8 +302,8 @@ function SlotTile({
 function Pair({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <dt className="font-semibold uppercase tracking-wider text-[10px] text-gray-400">{label}</dt>
-      <dd className="mt-0.5 text-gray-700">{value}</dd>
+      <dt className="font-semibold uppercase tracking-wider text-[10px] text-[var(--color-text-secondary)]">{label}</dt>
+      <dd className="mt-0.5 text-[var(--color-text)]">{value}</dd>
     </div>
   );
 }
@@ -316,7 +316,7 @@ function Countdown({ until, now }: { until: string | null; now: Date }) {
   const remaining = target - now.getTime();
   if (remaining <= 0) {
     return (
-      <p className="mt-0.5 text-xs text-amber-900/70">
+      <p className="mt-0.5 text-xs text-[var(--tone-warning-fg)]/80">
         {t('activeOp.countdown.expired')}
       </p>
     );
@@ -328,7 +328,7 @@ function Countdown({ until, now }: { until: string | null; now: Date }) {
     hours > 0
       ? t('activeOp.countdown.hours', { hours, minutes: remMinutes })
       : t('activeOp.countdown.minutes', { minutes });
-  return <p className="mt-0.5 text-xs text-amber-900/80">{text}</p>;
+  return <p className="mt-0.5 text-xs text-[var(--tone-warning-fg)]/90">{text}</p>;
 }
 
 // ─── Switch modal ──────────────────────────────────────────────────────────
@@ -377,7 +377,7 @@ function SwitchModal({
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={t('activeOp.modal.title')}>
       <form onSubmit={handleSubmit} noValidate className="space-y-4">
-        <p className="text-sm text-gray-600">{t('activeOp.modal.subtitle')}</p>
+        <p className="text-sm text-[var(--color-text-secondary)]">{t('activeOp.modal.subtitle')}</p>
 
         <FormErrorBanner show={Object.values(errors).some(Boolean)} />
 
@@ -403,14 +403,14 @@ function SwitchModal({
             rows={3}
             maxLength={500}
           />
-          <p className="mt-1 text-xs text-gray-500">{t('activeOp.modal.field.reasonHint')}</p>
+          <p className="mt-1 text-xs text-[var(--color-text-secondary)]">{t('activeOp.modal.field.reasonHint')}</p>
         </div>
 
-        <p className="rounded-lg bg-blue-50 px-3 py-2.5 text-xs leading-relaxed text-blue-800">
+        <p className="rounded-lg bg-[var(--tone-info-bg)] px-3 py-2.5 text-xs leading-relaxed text-[var(--tone-info-fg)]">
           {t('activeOp.modal.duration')}
         </p>
 
-        <label className="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5">
+        <label className="flex items-start gap-3 rounded-lg border border-[var(--tone-warning-border)] bg-[var(--tone-warning-bg)] px-3 py-2.5">
           <input
             type="checkbox"
             checked={responsibility}
@@ -420,10 +420,10 @@ function SwitchModal({
                 setErrors((prev) => ({ ...prev, responsibility: undefined }));
               }
             }}
-            className="mt-0.5 h-4 w-4 rounded border-amber-400 text-amber-700 focus:ring-amber-500"
+            className="mt-0.5 h-4 w-4 rounded border-[var(--tone-warning-border)] text-[var(--tone-warning-fg)] focus:ring-[var(--color-expiring)]"
             aria-describedby="responsibility-help"
           />
-          <span id="responsibility-help" className="text-xs leading-relaxed text-amber-900">
+          <span id="responsibility-help" className="text-xs leading-relaxed text-[var(--tone-warning-fg)]">
             {t('activeOp.modal.responsibility')}
           </span>
         </label>

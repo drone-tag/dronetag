@@ -1,13 +1,16 @@
 import type { Metadata, Viewport } from 'next';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { LanguageProvider } from '@/contexts/LanguageContext';
+import { ThemeProvider } from '@/contexts/ThemeContext';
 import { AppShell } from '@/components/layout/AppShell';
 import { AuthRoutePrefetch } from '@/components/auth/AuthRoutePrefetch';
 import { ServiceWorkerCleanup } from '@/components/system/ServiceWorkerCleanup';
+import { DEMO_MODE } from '@/lib/firebase/config';
 import './globals.css';
 
-/** Bump when replacing brand assets so browsers skip stale caches. */
 const BRAND_ASSET_VERSION = '3';
+
+const themeBootScript = `(function(){try{var k='dronetag-theme';var t=localStorage.getItem(k);var dark=t==='dark'||(t!=='light'&&window.matchMedia('(prefers-color-scheme: dark)').matches);var v=dark?'dark':'light';document.documentElement.setAttribute('data-theme',v);document.documentElement.style.colorScheme=v;var l=localStorage.getItem('dronetag-language');if(l==='en'||l==='it'||l==='de'||l==='es'||l==='fr'){document.documentElement.lang=l;}else{document.documentElement.lang='it';}}catch(e){}})();`;
 
 export const metadata: Metadata = {
   title: 'DroneTag — Drone Identification Platform',
@@ -37,7 +40,10 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: '#050f24',
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#f6f8fc' },
+    { media: '(prefers-color-scheme: dark)', color: '#0b1220' },
+  ],
   width: 'device-width',
   initialScale: 1,
   viewportFit: 'cover',
@@ -49,15 +55,20 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body className="antialiased">
+    <html lang="it" data-demo={DEMO_MODE ? 'true' : undefined} suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeBootScript }} />
+      </head>
+      <body className="theme-transition antialiased">
         <ServiceWorkerCleanup />
-        <AuthProvider>
-          <LanguageProvider>
-            <AuthRoutePrefetch />
-            <AppShell>{children}</AppShell>
-          </LanguageProvider>
-        </AuthProvider>
+        <ThemeProvider>
+          <AuthProvider>
+            <LanguageProvider>
+              <AuthRoutePrefetch />
+              <AppShell>{children}</AppShell>
+            </LanguageProvider>
+          </AuthProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

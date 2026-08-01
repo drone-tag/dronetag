@@ -13,6 +13,13 @@ npm run grant-admin -- <email> [--revoke]      # PR-SEC-2 V-028
 npm run backfill-public                         # PR-SEC-1
 ```
 
+After shipping `permit` / `archive` slot fields:
+
+```bash
+npx tsx --env-file=.env.local scripts/backfill-slots-permit-archive.ts --dry-run
+npx tsx --env-file=.env.local scripts/backfill-slots-permit-archive.ts
+```
+
 ## Required env vars
 
 ```

@@ -140,8 +140,8 @@ export async function uploadAccountBranding(
   file: File,
 ): Promise<string> {
   if (DEMO_MODE) {
-    await new Promise((r) => setTimeout(r, 300));
-    return URL.createObjectURL(file);
+    await new Promise((r) => setTimeout(r, 200));
+    return compressImageForDemo(file);
   }
 
   const form = new FormData();
@@ -157,6 +157,36 @@ export async function uploadAccountBranding(
   }
   if (!body.url) throw new Error(`upload ${kind} failed: missing url`);
   return body.url;
+}
+
+/** Shrink photos for demo localStorage (full camera JPEGs blow the quota). */
+async function compressImageForDemo(file: File, maxEdge = 640, quality = 0.82): Promise<string> {
+  try {
+    const bitmap = await createImageBitmap(file);
+    const scale = Math.min(1, maxEdge / Math.max(bitmap.width, bitmap.height));
+    const w = Math.max(1, Math.round(bitmap.width * scale));
+    const h = Math.max(1, Math.round(bitmap.height * scale));
+    const canvas = document.createElement('canvas');
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) throw new Error('no_canvas');
+    ctx.drawImage(bitmap, 0, 0, w, h);
+    bitmap.close();
+    const dataUrl = canvas.toDataURL('image/jpeg', quality);
+    if (!dataUrl.startsWith('data:image/')) throw new Error('bad_data_url');
+    return dataUrl;
+  } catch {
+    // HEIC / decode failures — fall back to raw data URL
+    const dataUrl = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result ?? ''));
+      reader.onerror = () => reject(new Error('demo_image_read_failed'));
+      reader.readAsDataURL(file);
+    });
+    if (!dataUrl) throw new Error('demo_image_read_failed');
+    return dataUrl;
+  }
 }
 
 export async function uploadAccountProfilePhoto(_uid: string, file: File): Promise<string> {

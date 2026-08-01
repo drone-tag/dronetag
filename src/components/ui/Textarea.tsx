@@ -42,7 +42,7 @@ export function Textarea({
     <div className={classNames('w-full', className)}>
       <label
         htmlFor={textareaId}
-        className="mb-1.5 block text-sm font-medium text-gray-700"
+        className="mb-1.5 block text-sm font-medium text-[var(--color-text)]"
       >
         {label}
         {required ? (
@@ -66,8 +66,8 @@ export function Textarea({
           fieldBase,
           error
             ? 'border-red-500 focus:border-red-500 focus:ring-red-500/20'
-            : 'border-gray-300',
-          disabled && 'cursor-not-allowed bg-gray-50 opacity-70'
+            : 'border-[var(--color-border)]',
+          disabled && 'cursor-not-allowed bg-[var(--color-hover)] opacity-70'
         )}
         {...rest}
       />

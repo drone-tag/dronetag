@@ -87,7 +87,7 @@ export function GoogleAuthButton({ disabled = false, onError, onSignedUp }: Goog
       loading={loading}
       disabled={disabled || loading}
       onClick={handleClick}
-      className="min-h-[2.75rem] border-[var(--color-border)] bg-white font-medium text-[var(--color-text)]"
+      className="min-h-[2.75rem] border-[var(--color-border)] bg-[var(--color-card)] font-medium text-[var(--color-text)]"
     >
       {!loading ? <GoogleIcon /> : null}
       {t('auth.google')}

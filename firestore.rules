@@ -18,9 +18,9 @@ rules_version = '2';
 //
 // PR-SEC-2 hardening (this revision):
 //   • V-004 — privileged creates on `drones`, `operators`,
-//     `certificates`, `documents`, `insurances` are now deny-from-client.
-//     The `createX` Cloud Functions (Node.js, firebase-admin) bypass
-//     rules and enforce slot quotas server-side.
+//     `certificates`, `documents`, `insurances`, `authorizations` are
+//     deny-from-client. Creates go through Next.js Admin-SDK API routes
+//     (and/or Cloud Functions where still deployed) which enforce quotas.
 //   • V-005/V-006 — anonymous `reports` create is also deny-from-client.
 //     The `submitReport` Cloud Function looks up the drone server-side,
 //     derives the trustworthy ownerUserId, and applies an IP+slug
@@ -279,11 +279,30 @@ service cloud.firestore {
       allow update, delete: if isAdmin();
     }
 
+    // ─── Authorizations / permits ───────────────────────────────────────
+    match /authorizations/{authId} {
+      allow read: if isSignedIn() && request.auth.uid == resource.data.userId;
+      allow read: if isAdmin();
+      allow create: if false; // → POST /api/entities/authorizations
+      allow update: if isSignedIn()
+                       && request.auth.uid == resource.data.userId
+                       && request.resource.data.userId == resource.data.userId
+                       && request.resource.data.diff(resource.data).affectedKeys()
+                            .hasOnly([
+                              'kind','label','issuedBy','area',
+                              'validFrom','validTo',
+                              'fileUrl','fileName','fileSize','mimeType',
+                              'notes',
+                              'updatedAt'
+                            ]);
+      allow delete: if isSignedIn() && request.auth.uid == resource.data.userId;
+      allow update, delete: if isAdmin();
+    }
+
     // ─── Slots — read by owner+admin, write by admin only ───────────────
-    // TODO V-004: full quota enforcement requires a Cloud Function that
-    // wraps create operations on drones/operators/certificates/documents
-    // and checks against this doc transactionally. Until then, slot caps
-    // are enforced client-side only.
+    // TODO V-004: slot caps for authorizations/certificates are enforced
+    // in Next API (`src/lib/server/quota.ts`) counting only non-expired
+    // rows. Admin grants still write `slots/{uid}` directly.
     match /slots/{uid} {
       allow read: if isSignedIn() && request.auth.uid == uid;
       allow read, write: if isAdmin();

@@ -38,7 +38,7 @@ function FullscreenPdf({ url, onClose, label }: { url: string; onClose: () => vo
         <span className="text-sm font-medium text-white">{label}</span>
         <div className="flex items-center gap-2">
           <a href={url} target="_blank" rel="noopener noreferrer"
-            className="rounded-md bg-white/10 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-white/20">
+            className="rounded-md bg-[var(--color-card)]/10 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-[var(--color-card)]/20">
             <svg viewBox="0 0 20 20" fill="currentColor" className="mr-1.5 inline h-3.5 w-3.5">
               <path d="M10.75 2.75a.75.75 0 00-1.5 0v8.614L6.295 8.235a.75.75 0 10-1.09 1.03l4.25 4.5a.75.75 0 001.09 0l4.25-4.5a.75.75 0 00-1.09-1.03l-2.955 3.129V2.75z" />
               <path d="M3.5 12.75a.75.75 0 00-1.5 0v2.5A2.75 2.75 0 004.75 18h10.5A2.75 2.75 0 0018 15.25v-2.5a.75.75 0 00-1.5 0v2.5c0 .69-.56 1.25-1.25 1.25H4.75c-.69 0-1.25-.56-1.25-1.25v-2.5z" />
@@ -46,7 +46,7 @@ function FullscreenPdf({ url, onClose, label }: { url: string; onClose: () => vo
             Download
           </a>
           <button type="button" onClick={onClose}
-            className="rounded-md bg-white/10 p-1.5 text-white transition hover:bg-white/20" aria-label="Close">
+            className="rounded-md bg-[var(--color-card)]/10 p-1.5 text-white transition hover:bg-[var(--color-card)]/20" aria-label="Close">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="h-5 w-5">
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
             </svg>
@@ -104,10 +104,10 @@ function insuranceForStatus(ins: PublicProfile['insurance']) {
 // ─── Verification badge ─────────────────────────────────────────────────────
 
 const verificationConfig: Record<VerificationStatus, { bg: string; dot: string; ring: string }> = {
-  verified: { bg: 'bg-emerald-50', dot: 'bg-emerald-500', ring: 'ring-emerald-600/20 text-emerald-700' },
-  pending: { bg: 'bg-amber-50', dot: 'bg-amber-500', ring: 'ring-amber-600/20 text-amber-700' },
-  unverified: { bg: 'bg-gray-100', dot: 'bg-gray-400', ring: 'ring-gray-500/20 text-gray-600' },
-  rejected: { bg: 'bg-red-50', dot: 'bg-red-500', ring: 'ring-red-600/20 text-red-700' },
+  verified: { bg: 'bg-[var(--tone-success-bg)]', dot: 'bg-[var(--color-valid)]', ring: 'ring-[var(--tone-success-ring)] text-[var(--tone-success-fg)]' },
+  pending: { bg: 'bg-[var(--tone-warning-bg)]', dot: 'bg-[var(--color-expiring)]', ring: 'ring-[var(--tone-warning-ring)] text-[var(--tone-warning-fg)]' },
+  unverified: { bg: 'bg-[var(--color-hover)]', dot: 'bg-[var(--color-text-secondary)]', ring: 'ring-[var(--color-border)] text-[var(--color-text-secondary)]' },
+  rejected: { bg: 'bg-[var(--tone-danger-bg)]', dot: 'bg-[var(--color-expired)]', ring: 'ring-[var(--tone-danger-ring)] text-[var(--tone-danger-fg)]' },
 };
 
 function VerificationChip({ status, label }: { status: VerificationStatus; label: string }) {
@@ -123,10 +123,10 @@ function VerificationChip({ status, label }: { status: VerificationStatus; label
 // ─── Insurance status chip ──────────────────────────────────────────────────
 
 const policyConfig: Record<PolicyStatus, { bg: string; text: string; ring: string }> = {
-  valid: { bg: 'bg-emerald-50', text: 'text-emerald-700', ring: 'ring-emerald-600/20' },
-  expiring: { bg: 'bg-amber-50', text: 'text-amber-700', ring: 'ring-amber-600/20' },
-  expired: { bg: 'bg-red-50', text: 'text-red-700', ring: 'ring-red-600/20' },
-  missing: { bg: 'bg-gray-100', text: 'text-gray-600', ring: 'ring-gray-500/20' },
+  valid: { bg: 'bg-[var(--tone-success-bg)]', text: 'text-[var(--tone-success-fg)]', ring: 'ring-[var(--tone-success-ring)]' },
+  expiring: { bg: 'bg-[var(--tone-warning-bg)]', text: 'text-[var(--tone-warning-fg)]', ring: 'ring-[var(--tone-warning-ring)]' },
+  expired: { bg: 'bg-[var(--tone-danger-bg)]', text: 'text-[var(--tone-danger-fg)]', ring: 'ring-[var(--tone-danger-ring)]' },
+  missing: { bg: 'bg-[var(--color-hover)]', text: 'text-[var(--color-text-secondary)]', ring: 'ring-[var(--color-border)]' },
 };
 
 function PolicyChip({ status, label }: { status: PolicyStatus; label: string }) {
@@ -142,10 +142,10 @@ function PolicyChip({ status, label }: { status: PolicyStatus; label: string }) 
 
 function Section({ id, title, icon, children }: { id?: string; title: string; icon: ReactNode; children: ReactNode }) {
   return (
-    <section id={id} className="border-t border-gray-200">
+    <section id={id} className="border-t border-[var(--color-border)]">
       <div className="flex items-center gap-2.5 px-6 pb-1 pt-5">
-        <span className="flex h-5 w-5 shrink-0 items-center justify-center text-gray-400" aria-hidden>{icon}</span>
-        <h2 className="text-[11px] font-bold uppercase tracking-[0.08em] text-gray-400">{title}</h2>
+        <span className="flex h-5 w-5 shrink-0 items-center justify-center text-[var(--color-text-secondary)]" aria-hidden>{icon}</span>
+        <h2 className="text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--color-text-secondary)]">{title}</h2>
       </div>
       <div className="px-6 pb-6 pt-3">{children}</div>
     </section>
@@ -155,9 +155,9 @@ function Section({ id, title, icon, children }: { id?: string; title: string; ic
 function DataRow({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
   if (!value) return null;
   return (
-    <div className="flex items-baseline justify-between gap-4 border-b border-gray-100 py-2.5 last:border-b-0">
-      <dt className="shrink-0 text-[13px] text-gray-500">{label}</dt>
-      <dd className={classNames('text-right text-[13px] font-medium text-gray-900', mono && 'font-mono tracking-tight')}>{value}</dd>
+    <div className="flex items-baseline justify-between gap-4 border-b border-[var(--color-border)] py-2.5 last:border-b-0">
+      <dt className="shrink-0 text-[13px] text-[var(--color-text-secondary)]">{label}</dt>
+      <dd className={classNames('text-right text-[13px] font-medium text-[var(--color-text)]', mono && 'font-mono tracking-tight')}>{value}</dd>
     </div>
   );
 }
@@ -212,10 +212,10 @@ const ico = {
 
 function InsuranceBanner({ status, message }: { status: PolicyStatus; message: string }) {
   const styles: Record<PolicyStatus, string> = {
-    valid: 'border-emerald-200 bg-emerald-50 text-emerald-800',
-    expiring: 'border-amber-200 bg-amber-50 text-amber-800',
-    expired: 'border-red-200 bg-red-50 text-red-800',
-    missing: 'border-gray-200 bg-gray-50 text-gray-600',
+    valid: 'border-[var(--tone-success-border)] bg-[var(--tone-success-bg)] text-[var(--tone-success-fg)]',
+    expiring: 'border-[var(--tone-warning-border)] bg-[var(--tone-warning-bg)] text-[var(--tone-warning-fg)]',
+    expired: 'border-[var(--tone-danger-border)] bg-[var(--tone-danger-bg)] text-[var(--tone-danger-fg)]',
+    missing: 'border-[var(--color-border)] bg-[var(--color-hover)] text-[var(--color-text-secondary)]',
   };
   const iconMap: Record<PolicyStatus, ReactNode> = {
     valid: ico.check,
@@ -268,7 +268,7 @@ export function PublicProfileCard({ profile }: PublicProfileCardProps) {
   const policyDescription = t(policySummary.descriptionKey, policySummary.descriptionParams);
 
   return (
-    <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-lg">
+    <div className="overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] shadow-lg">
 
       {/* ═══════════════════════════════════════════════════════════════════
           1. HEADER — publicFields: name, operator code, photo, logo, banner
@@ -298,7 +298,7 @@ export function PublicProfileCard({ profile }: PublicProfileCardProps) {
               alt=""
               referrerPolicy="no-referrer"
               loading="lazy"
-              className="absolute right-4 top-4 h-10 w-10 rounded-lg border border-white/20 bg-white object-contain p-0.5 shadow-lg sm:h-12 sm:w-12"
+              className="absolute right-4 top-4 h-10 w-10 rounded-lg border border-white/20 bg-[var(--color-card)] object-contain p-0.5 shadow-lg sm:h-12 sm:w-12"
             />
           ) : null}
 
@@ -321,7 +321,7 @@ export function PublicProfileCard({ profile }: PublicProfileCardProps) {
               alt=""
               referrerPolicy="no-referrer"
               loading="lazy"
-              className="h-20 w-20 rounded-xl border-[3px] border-white bg-white object-cover shadow-lg"
+              className="h-20 w-20 rounded-xl border-[3px] border-white bg-[var(--color-card)] object-cover shadow-lg"
             />
           ) : (
             <div className="flex h-20 w-20 items-center justify-center rounded-xl border-[3px] border-white bg-slate-800 text-lg font-bold tracking-wide text-white shadow-lg" aria-hidden>
@@ -385,12 +385,12 @@ export function PublicProfileCard({ profile }: PublicProfileCardProps) {
       <Section title={t('public.insuranceCoverage')} icon={ico.shield}>
         <div className="space-y-4">
           <InsuranceBanner status={policyStatus} message={insuranceBannerMessage()} />
-          <p className="text-xs font-medium text-gray-500">{policyDescription}</p>
+          <p className="text-xs font-medium text-[var(--color-text-secondary)]">{policyDescription}</p>
 
           {hasInsurance ? (
-            <div className="rounded-lg border border-gray-200 bg-gray-50/60">
-              <div className="border-b border-gray-200 px-4 py-2.5">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-gray-400">{t('public.policyDetails')}</p>
+            <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-hover)]">
+              <div className="border-b border-[var(--color-border)] px-4 py-2.5">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--color-text-secondary)]">{t('public.policyDetails')}</p>
               </div>
               <dl className="px-4 py-1">
                 <DataRow label={t('profile.provider')} value={val(ins.provider) || na} />
@@ -402,15 +402,15 @@ export function PublicProfileCard({ profile }: PublicProfileCardProps) {
           ) : null}
 
           {/* Policy document — only rendered if the projection included the URL */}
-          <div className="rounded-lg border border-gray-200 bg-gray-50/60">
-            <div className="border-b border-gray-200 px-4 py-2.5">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-gray-400">{t('public.policyDocument')}</p>
+          <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-hover)]">
+            <div className="border-b border-[var(--color-border)] px-4 py-2.5">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--color-text-secondary)]">{t('public.policyDocument')}</p>
             </div>
             {hasPdf ? (
               <div className="p-4">
                 {/* Clickable PDF thumbnail — opens fullscreen viewer */}
                 <button type="button" onClick={() => setPdfOpen(true)}
-                  className="group relative w-full overflow-hidden rounded-lg border border-gray-200 bg-gray-100 transition hover:border-gray-300 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-400">
+                  className="group relative w-full overflow-hidden rounded-lg border border-[var(--color-border)] bg-[var(--color-hover)] transition hover:border-[var(--color-border)] hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-400">
                   {/* V-018: sandboxed inline preview thumbnail. */}
                   <iframe title={t('profile.viewPolicy')} src={ins.pdfUrl}
                     className="pointer-events-none h-[200px] w-full border-0"
@@ -419,7 +419,7 @@ export function PublicProfileCard({ profile }: PublicProfileCardProps) {
                     referrerPolicy="no-referrer"
                     loading="lazy" />
                   <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition group-hover:bg-black/30">
-                    <span className="flex items-center gap-2 rounded-full bg-white/90 px-4 py-2 text-sm font-semibold text-gray-800 opacity-0 shadow-lg transition group-hover:opacity-100">
+                    <span className="flex items-center gap-2 rounded-full bg-[var(--color-card)]/90 px-4 py-2 text-sm font-semibold text-[var(--color-text)] opacity-0 shadow-lg transition group-hover:opacity-100">
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="h-4 w-4">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9m11.25-5.25v4.5m0-4.5h-4.5m4.5 0L15 9m-11.25 11.25v-4.5m0 4.5h4.5m-4.5 0L9 15m11.25 5.25v-4.5m0 4.5h-4.5m4.5 0L15 15" />
                       </svg>
@@ -441,13 +441,13 @@ export function PublicProfileCard({ profile }: PublicProfileCardProps) {
               </div>
             ) : (
               <div className="flex flex-col items-center gap-2 px-6 py-8 text-center">
-                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gray-100 text-gray-400">
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[var(--color-hover)] text-[var(--color-text-secondary)]">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="h-6 w-6">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
                   </svg>
                 </div>
-                <p className="text-sm font-medium text-gray-500">{t('public.policyNotAvailable')}</p>
-                <p className="text-xs text-gray-400">{t('public.policyNotAvailableHint')}</p>
+                <p className="text-sm font-medium text-[var(--color-text-secondary)]">{t('public.policyNotAvailable')}</p>
+                <p className="text-xs text-[var(--color-text-secondary)]">{t('public.policyNotAvailableHint')}</p>
               </div>
             )}
           </div>
@@ -460,10 +460,10 @@ export function PublicProfileCard({ profile }: PublicProfileCardProps) {
       {hasQr ? (
         <Section title={t('public.qrVerification')} icon={ico.qr}>
           <div className="flex flex-col items-center gap-3">
-            <div className="rounded-xl border border-gray-200 bg-white p-3 shadow-sm">
+            <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] p-3 shadow-sm">
               <QRPreview url={assets.qrCodeUrl} size={180} />
             </div>
-            <p className="text-xs text-gray-400">{t('public.scanToVerify')}</p>
+            <p className="text-xs text-[var(--color-text-secondary)]">{t('public.scanToVerify')}</p>
           </div>
         </Section>
       ) : null}
@@ -482,11 +482,11 @@ export function PublicProfileCard({ profile }: PublicProfileCardProps) {
             <DataRow label={t('field.publishedAt')} value={formatDateTime(profile.publishedAt)} />
           ) : null}
         </dl>
-        <div className="mt-4 rounded-lg border border-gray-100 bg-gray-50/80 px-4 py-3">
-          <dl className="space-y-1.5 text-[12px] text-gray-400">
+        <div className="mt-4 rounded-lg border border-[var(--color-border)] bg-[var(--color-hover)]/80 px-4 py-3">
+          <dl className="space-y-1.5 text-[12px] text-[var(--color-text-secondary)]">
             <div className="flex justify-between gap-4">
               <dt>{t('public.profileReference')}</dt>
-              <dd className="font-mono text-gray-500">{profile.slug}</dd>
+              <dd className="font-mono text-[var(--color-text-secondary)]">{profile.slug}</dd>
             </div>
           </dl>
         </div>
@@ -495,12 +495,12 @@ export function PublicProfileCard({ profile }: PublicProfileCardProps) {
       {/* ═══════════════════════════════════════════════════════════════════
           FOOTER
           ═══════════════════════════════════════════════════════════════════ */}
-      <footer className="border-t border-gray-200 bg-gray-50/80 px-6 py-5">
-        <p className="text-[11px] leading-relaxed text-gray-400">{t('profile.disclaimer')}</p>
-        <p className="mt-2 text-[11px] text-gray-400">{t('public.latestRecord')}</p>
+      <footer className="border-t border-[var(--color-border)] bg-[var(--color-hover)]/80 px-6 py-5">
+        <p className="text-[11px] leading-relaxed text-[var(--color-text-secondary)]">{t('profile.disclaimer')}</p>
+        <p className="mt-2 text-[11px] text-[var(--color-text-secondary)]">{t('public.latestRecord')}</p>
         <div className="mt-4 flex items-center justify-between">
-          <p className="text-[10px] font-medium tracking-wide text-gray-300">{t('public.poweredBy')}</p>
-          <p className="text-[10px] text-gray-300">DroneTag &copy; {new Date().getFullYear()}</p>
+          <p className="text-[10px] font-medium tracking-wide text-[var(--color-border)]">{t('public.poweredBy')}</p>
+          <p className="text-[10px] text-[var(--color-border)]">DroneTag &copy; {new Date().getFullYear()}</p>
         </div>
       </footer>
     </div>

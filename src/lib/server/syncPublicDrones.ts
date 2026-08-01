@@ -122,12 +122,19 @@ function pilotFromRaw(uid: string, raw: Record<string, unknown>): Pilot {
 }
 
 function insuranceFromRaw(id: string, raw: Record<string, unknown>): Insurance {
+  const droneId = optStr(raw, 'droneId');
+  const droneIds = Array.isArray(raw.droneIds)
+    ? raw.droneIds.filter((x): x is string => typeof x === 'string' && x.trim().length > 0)
+    : droneId
+      ? [droneId]
+      : [];
   return {
     id,
     userId: str(raw, 'userId'),
     link: (str(raw, 'link') || 'drone') as Insurance['link'],
-    droneId: optStr(raw, 'droneId'),
+    droneId: droneIds[0] ?? droneId,
     operatorId: optStr(raw, 'operatorId'),
+    droneIds,
     provider: str(raw, 'provider'),
     policyNumber: str(raw, 'policyNumber'),
     holderName: str(raw, 'holderName'),

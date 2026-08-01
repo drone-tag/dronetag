@@ -229,7 +229,7 @@ export function ReportFoundDroneForm({
         <SuccessPanel onClose={onClose} />
       ) : (
         <form id="report-found-form" onSubmit={handleSubmit} noValidate className="space-y-4 pb-1">
-          <p className="text-sm leading-relaxed text-gray-600">{t('reportFound.subtitle')}</p>
+          <p className="text-sm leading-relaxed text-[var(--color-text-secondary)]">{t('reportFound.subtitle')}</p>
 
           <FormErrorBanner show={Boolean(submitError)} message={submitError ?? undefined} />
 
@@ -275,10 +275,10 @@ export function ReportFoundDroneForm({
               }
               maxLength={500}
             />
-            <p className="text-xs text-gray-500">{t('reportFound.field.locationTextHint')}</p>
+            <p className="text-xs text-[var(--color-text-secondary)]">{t('reportFound.field.locationTextHint')}</p>
           </div>
 
-          <div className="rounded-xl border border-gray-200 bg-gray-50/60 p-4">
+          <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-hover)] p-4">
             {location ? (
               <div className="space-y-3">
                 <div className="flex items-start gap-2 text-sm text-emerald-700">
@@ -296,7 +296,7 @@ export function ReportFoundDroneForm({
                   </svg>
                   <div className="min-w-0">
                     <p className="font-medium">{t('reportFound.geolocation.added')}</p>
-                    <p className="mt-0.5 break-all font-mono text-xs text-gray-600">
+                    <p className="mt-0.5 break-all font-mono text-xs text-[var(--color-text-secondary)]">
                       {t('inbox.locationCoords', {
                         lat: location.lat.toFixed(5),
                         lng: location.lng.toFixed(5),
@@ -318,7 +318,7 @@ export function ReportFoundDroneForm({
               </div>
             ) : (
               <div className="space-y-3">
-                <p className="text-sm text-gray-600">{t('reportFound.geolocation.add')}</p>
+                <p className="text-sm text-[var(--color-text-secondary)]">{t('reportFound.geolocation.add')}</p>
                 <Button
                   variant="secondary"
                   onClick={captureLocation}
@@ -350,7 +350,7 @@ export function ReportFoundDroneForm({
             </label>
           </div>
 
-          <p className="rounded-lg bg-blue-50 px-3 py-2.5 text-xs leading-relaxed text-blue-800">
+          <p className="rounded-lg bg-[var(--tone-info-bg)] px-3 py-2.5 text-xs leading-relaxed text-[var(--tone-info-fg)]">
             {t('reportFound.privacy')}
           </p>
         </form>
@@ -373,8 +373,8 @@ function SuccessPanel({ onClose }: { onClose: () => void }) {
             />
           </svg>
         </div>
-        <h3 className="text-base font-semibold text-gray-900">{t('reportFound.successTitle')}</h3>
-        <p className="text-sm text-gray-600">{t('reportFound.successBody')}</p>
+        <h3 className="text-base font-semibold text-[var(--color-text)]">{t('reportFound.successTitle')}</h3>
+        <p className="text-sm text-[var(--color-text-secondary)]">{t('reportFound.successBody')}</p>
       </div>
       <div className="flex justify-center pt-2">
         <Button onClick={onClose} fullWidth size="lg" className="tap-44 sm:w-auto">

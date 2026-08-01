@@ -13,7 +13,7 @@ export function FeatureCard({ titleKey, descKey, icon }: FeatureCardProps) {
   const { t } = useLanguage();
 
   return (
-    <div className="group rounded-2xl border border-[var(--color-border)] bg-white p-4 transition hover:border-[var(--color-action)]/25 hover:shadow-[var(--shadow-card)] sm:p-5">
+    <div className="group rounded-2xl border border-[var(--color-border)] bg-[var(--color-card)] p-4 transition hover:border-[var(--color-action)]/25 hover:shadow-[var(--shadow-card)] sm:p-5">
       <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--color-action-light)] text-[var(--color-action)] transition group-hover:bg-[var(--color-action)] group-hover:text-white">
         {icon}
       </span>

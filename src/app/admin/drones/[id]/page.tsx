@@ -140,8 +140,8 @@ export default function AdminDroneDetailPage() {
   if (loading) {
     return (
       <div className="mx-auto max-w-[1400px] px-4 py-8 sm:px-6 lg:px-8">
-        <div className="flex items-center gap-3 text-sm text-gray-500">
-          <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-gray-600" />
+        <div className="flex items-center gap-3 text-sm text-[var(--color-text-secondary)]">
+          <div className="h-4 w-4 animate-spin rounded-full border-2 border-[var(--color-border)] border-t-gray-600" />
           {t('common.loading')}
         </div>
       </div>
@@ -151,10 +151,10 @@ export default function AdminDroneDetailPage() {
   if (!drone || !form) {
     return (
       <div className="mx-auto max-w-[1400px] px-4 py-8 sm:px-6 lg:px-8">
-        <Link href="/admin/drones" className="text-sm text-gray-500 hover:text-gray-700">
+        <Link href="/admin/drones" className="text-sm text-[var(--color-text-secondary)] hover:text-[var(--color-text)]">
           ← {t('admin.drones.title')}
         </Link>
-        <p className="mt-4 text-sm text-gray-500">{t('profile.notFound')}</p>
+        <p className="mt-4 text-sm text-[var(--color-text-secondary)]">{t('profile.notFound')}</p>
       </div>
     );
   }
@@ -207,17 +207,17 @@ export default function AdminDroneDetailPage() {
     <div className="mx-auto max-w-[1400px] px-4 py-8 sm:px-6 lg:px-8 space-y-5">
       <Link
         href="/admin/drones"
-        className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700"
+        className="inline-flex items-center gap-1.5 text-sm text-[var(--color-text-secondary)] hover:text-[var(--color-text)]"
       >
         ← {t('admin.drones.title')}
       </Link>
 
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
-          <h2 className="text-xl font-semibold text-gray-900">
+          <h2 className="text-xl font-semibold text-[var(--color-text)]">
             {[drone.manufacturer, drone.model].filter(Boolean).join(' ').trim() || drone.slug}
           </h2>
-          <p className="mt-1 text-xs text-gray-500">
+          <p className="mt-1 text-xs text-[var(--color-text-secondary)]">
             {t('drone.field.slug')}: <code className="font-mono">{drone.slug}</code>
             {owner ? (
               <>
@@ -230,11 +230,11 @@ export default function AdminDroneDetailPage() {
             ) : null}
             {pilot ? <> · {t('drone.field.linkedPilot')}: {pilotDisplayName(pilot)}</> : null}
           </p>
-          <p className="mt-1 text-xs text-gray-400">{t('admin.drones.adminEdit.subtitle')}</p>
+          <p className="mt-1 text-xs text-[var(--color-text-secondary)]">{t('admin.drones.adminEdit.subtitle')}</p>
         </div>
         <div className="flex shrink-0 items-center gap-2">
           {savedAt && !dirty ? (
-            <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700 ring-1 ring-inset ring-emerald-600/20">
+            <span className="rounded-full bg-[var(--tone-success-bg)] px-2.5 py-1 text-xs font-medium text-[var(--tone-success-fg)] ring-1 ring-inset ring-[var(--tone-success-ring)]">
               {t('account.saved')}
             </span>
           ) : null}
@@ -260,7 +260,7 @@ export default function AdminDroneDetailPage() {
         <FormErrorBanner show={Boolean(error)} message={error ?? undefined} />
 
         <Card padding="md">
-          <h3 className="mb-4 text-sm font-semibold text-gray-900">{t('drone.detail.basics')}</h3>
+          <h3 className="mb-4 text-sm font-semibold text-[var(--color-text)]">{t('drone.detail.basics')}</h3>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Input label={t('drone.field.manufacturer')} name="manufacturer"
               value={form.manufacturer} onChange={(e) => setField('manufacturer', e.target.value)} />
@@ -284,7 +284,7 @@ export default function AdminDroneDetailPage() {
         </Card>
 
         <Card padding="md">
-          <h3 className="mb-4 text-sm font-semibold text-gray-900">{t('drone.detail.linked')}</h3>
+          <h3 className="mb-4 text-sm font-semibold text-[var(--color-text)]">{t('drone.detail.linked')}</h3>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Select
               label={t('drone.field.defaultOperator')} name="defaultOperatorId"
@@ -310,7 +310,7 @@ export default function AdminDroneDetailPage() {
         </Card>
 
         <Card padding="md">
-          <h3 className="mb-4 text-sm font-semibold text-gray-900">{t('drone.detail.publish')}</h3>
+          <h3 className="mb-4 text-sm font-semibold text-[var(--color-text)]">{t('drone.detail.publish')}</h3>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <Select
               label={t('drone.field.status')} name="status"
@@ -347,8 +347,8 @@ export default function AdminDroneDetailPage() {
               ]}
             />
             <div className="sm:col-span-3">
-              <p className="mb-1.5 text-sm font-medium text-gray-700">{t('drone.publicUrl')}</p>
-              <code className="block overflow-x-auto rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 font-mono text-xs text-gray-700">
+              <p className="mb-1.5 text-sm font-medium text-[var(--color-text)]">{t('drone.publicUrl')}</p>
+              <code className="block overflow-x-auto rounded-lg border border-[var(--color-border)] bg-[var(--color-hover)] px-3 py-2 font-mono text-xs text-[var(--color-text)]">
                 {getPublicProfileUrl(drone.slug)}
               </code>
             </div>

@@ -76,6 +76,16 @@ firebase deploy --only functions
 Verify `bootstrapSlots` is listed under Functions → "All functions" with the
 correct revision tag.
 
+After deploying rules + functions that introduce `permit` / `archive` slot
+fields, backfill legacy accounts once:
+
+```bash
+npx tsx --env-file=.env.local scripts/backfill-slots-permit-archive.ts --dry-run
+npx tsx --env-file=.env.local scripts/backfill-slots-permit-archive.ts
+```
+
+(Use production service-account env when targeting `dronetag-prod`.)
+
 ---
 
 ## 3. App Check (production enforcement)

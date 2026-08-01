@@ -43,7 +43,7 @@ export function PasswordInput({
     <div className={classNames('w-full', className)}>
       <label
         htmlFor={inputId}
-        className="mb-1.5 block text-sm font-medium text-gray-700"
+        className="mb-1.5 block text-sm font-medium text-[var(--color-text)]"
       >
         {label}
         {required ? (
@@ -68,8 +68,8 @@ export function PasswordInput({
             inputBase,
             error
               ? 'border-red-500 focus:border-red-500 focus:ring-red-500/20'
-              : 'border-gray-300',
-            disabled && 'cursor-not-allowed bg-gray-50 opacity-70',
+              : 'border-[var(--color-border)]',
+            disabled && 'cursor-not-allowed bg-[var(--color-hover)] opacity-70',
           )}
           {...rest}
         />
@@ -78,7 +78,7 @@ export function PasswordInput({
           tabIndex={-1}
           disabled={disabled}
           onClick={() => setVisible((v) => !v)}
-          className="absolute top-1/2 right-2.5 -translate-y-1/2 rounded-md p-1 text-gray-500 transition hover:bg-gray-100 hover:text-gray-800 disabled:opacity-50"
+          className="absolute top-1/2 right-2.5 -translate-y-1/2 rounded-md p-1 text-[var(--color-text-secondary)] transition hover:bg-[var(--color-hover)] hover:text-[var(--color-text)] disabled:opacity-50"
           aria-label={visible ? t('common.hidePassword') : t('common.showPassword')}
         >
           {visible ? (

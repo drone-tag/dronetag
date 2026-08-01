@@ -238,7 +238,7 @@ export function PWAClient() {
       {/* ── Chrome / Edge install prompt ─────────────────────────── */}
       {showChromeInstall ? (
         <div
-          className="pointer-events-auto safe-bottom-4 fixed right-4 z-[60] max-w-xs rounded-xl border border-gray-200 bg-white p-3 shadow-lg sm:safe-bottom-6 sm:right-6"
+          className="pointer-events-auto safe-bottom-4 fixed right-4 z-[60] max-w-xs rounded-xl border border-gray-200 bg-[var(--color-card)] p-3 shadow-lg sm:safe-bottom-6 sm:right-6"
           role="region"
           aria-label={t('pwa.appName')}
         >
@@ -268,12 +268,12 @@ export function PWAClient() {
       {/* ── iOS Safari Add-to-Home-Screen tip ────────────────────── */}
       {showIosHint ? (
         <div
-          className="pointer-events-auto safe-bottom-4 fixed left-4 right-4 z-[60] mx-auto max-w-md rounded-xl border border-gray-200 bg-white p-3 shadow-lg sm:safe-bottom-6"
+          className="pointer-events-auto safe-bottom-4 fixed left-4 right-4 z-[60] mx-auto max-w-md rounded-xl border border-gray-200 bg-[var(--color-card)] p-3 shadow-lg sm:safe-bottom-6"
           role="region"
           aria-label={t('pwa.iosHint.title')}
         >
           <div className="flex items-start gap-2.5">
-            <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-blue-50 text-blue-600">
+            <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--tone-info-bg)] text-[var(--tone-info-fg)]">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="h-4 w-4" aria-hidden>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v12m0 0l-4-4m4 4l4-4M4 20h16" />
               </svg>

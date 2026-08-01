@@ -16,7 +16,7 @@ export function AuthPageLayout({ title, subtitle, children, footer }: AuthPageLa
   const { t } = useLanguage();
 
   return (
-    <div className="flex min-h-[calc(100dvh-var(--header-height)-var(--safe-top))] items-center justify-center bg-[var(--color-app-bg)] px-4 py-8 sm:py-12">
+    <div className="flex min-h-[calc(100dvh-var(--app-header-offset))] items-center justify-center bg-[var(--color-app-bg)] px-4 py-8 sm:py-12">
       <div className="w-full max-w-md">
         <div className="mb-8 text-center">
           <Link href="/" className="mx-auto mb-4 inline-flex items-center gap-2">
@@ -33,7 +33,7 @@ export function AuthPageLayout({ title, subtitle, children, footer }: AuthPageLa
           ) : null}
         </div>
 
-        <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-white p-5 shadow-[var(--shadow-card)] sm:p-6">
+        <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-card)] p-5 shadow-[var(--shadow-card)] sm:p-6">
           {children}
         </div>
 

@@ -1,7 +1,7 @@
 /**
- * createInsurance — owner-only callable. Cross-checks the linked
- * drone or operator belongs to the caller. verificationStatus forced
- * to 'unverified' (V-003).
+ * createInsurance — owner-only callable. One policy may cover many drones
+ * (`droneIds`); each listed drone gets `insuranceId` set. verificationStatus
+ * forced to 'unverified' (V-003).
  */
 
 import { onCall, HttpsError } from 'firebase-functions/v2/https';
@@ -17,13 +17,24 @@ import {
 interface Input {
   link?: string;
   droneId?: string | null;
+  droneIds?: string[];
   operatorId?: string | null;
   provider?: string;
   policyNumber?: string;
+  holderName?: string;
   issueDate?: string;
   expiryDate?: string;
   notes?: string;
   pdfUrl?: string;
+}
+
+function normalizeDroneIds(droneIds: unknown, droneId: string | null): string[] {
+  const fromArray = Array.isArray(droneIds)
+    ? droneIds.filter((id): id is string => typeof id === 'string' && id.trim().length > 0)
+    : [];
+  if (fromArray.length > 0) return [...new Set(fromArray.map((id) => id.trim()))];
+  if (droneId) return [droneId];
+  return [];
 }
 
 export const createInsurance = onCall<Input>(async (request) => {
@@ -47,12 +58,20 @@ export const createInsurance = onCall<Input>(async (request) => {
     throw new HttpsError('invalid-argument', 'expiryDate must be on or after issueDate.');
   }
 
-  const droneId = link === 'drone' && typeof request.data.droneId === 'string' ? request.data.droneId : null;
-  const operatorId = link === 'operator' && typeof request.data.operatorId === 'string' ? request.data.operatorId : null;
+  const legacyDroneId =
+    typeof request.data.droneId === 'string' && request.data.droneId.trim()
+      ? request.data.droneId.trim()
+      : null;
+  const droneIds = normalizeDroneIds(request.data.droneIds, legacyDroneId);
+  const droneId = droneIds[0] ?? null;
+  const operatorId =
+    link === 'operator' && typeof request.data.operatorId === 'string'
+      ? request.data.operatorId
+      : null;
 
   const db = getFirestore();
-  if (droneId) {
-    const ds = await db.collection('drones').doc(droneId).get();
+  for (const id of droneIds) {
+    const ds = await db.collection('drones').doc(id).get();
     if (!ds.exists || (ds.data() as { userId?: string }).userId !== ctx.uid) {
       throw new HttpsError('failed-precondition', 'Linked drone does not belong to caller.');
     }
@@ -64,20 +83,18 @@ export const createInsurance = onCall<Input>(async (request) => {
     }
   }
 
-  // No quota: insurance is a sub-resource of operators/drones; their
-  // quotas already cap how many insurances a user can effectively use.
-
-  // V-019: PDF URL must point at Firebase Storage (or a configured
-  // trusted host); otherwise reject with a clear list of allowed hosts.
   const pdfUrl = sanitizeAllowedUrl(request.data.pdfUrl, 'pdfUrl');
-
-  const ref = await db.collection('insurances').add({
+  const batch = db.batch();
+  const ref = db.collection('insurances').doc();
+  batch.set(ref, {
     userId: ctx.uid,
     link,
     droneId,
+    droneIds,
     operatorId,
     provider,
     policyNumber,
+    holderName: cleanString(request.data.holderName, 200),
     issueDate,
     expiryDate,
     notes: cleanString(request.data.notes, 4000),
@@ -85,7 +102,17 @@ export const createInsurance = onCall<Input>(async (request) => {
     verificationStatus: 'unverified',
     createdAt: nowIso(),
     updatedAt: nowIso(),
+    dataLockedAt: nowIso(),
   });
+
+  for (const id of droneIds) {
+    batch.update(db.collection('drones').doc(id), {
+      insuranceId: ref.id,
+      updatedAt: nowIso(),
+    });
+  }
+
+  await batch.commit();
 
   return { id: ref.id };
 });

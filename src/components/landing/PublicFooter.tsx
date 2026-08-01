@@ -9,7 +9,7 @@ export function PublicFooter() {
   const year = new Date().getFullYear();
 
   return (
-    <footer className="border-t border-[var(--color-border)] bg-white">
+    <footer className="border-t border-[var(--color-border)] bg-[var(--color-card)]">
       <div className="mx-auto max-w-[72rem] px-4 py-8 sm:px-5 lg:px-6">
         <div className="grid gap-6 sm:grid-cols-[1.2fr_1fr] sm:gap-8 lg:grid-cols-[1.5fr_1fr_1fr]">
           <div>
@@ -25,6 +25,11 @@ export function PublicFooter() {
           <div>
             <p className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-secondary)]">{t('home.footer.legal')}</p>
             <ul className="mt-2 space-y-1.5">
+              <li>
+                <Link href="/pricing" className="text-xs text-[var(--color-text)] hover:text-[var(--color-action)]">
+                  {t('nav.pricing')}
+                </Link>
+              </li>
               <li>
                 <Link href="mailto:info@drone-tag.com" className="text-xs text-[var(--color-text)] hover:text-[var(--color-action)]">
                   {t('home.footer.privacy')}
@@ -60,7 +65,7 @@ export function LandingDisclaimer() {
 
   return (
     <div className="mx-auto max-w-[72rem] px-4 pb-6 sm:px-5 lg:px-6">
-      <div className="rounded-xl border border-[var(--color-border)] bg-white/80 px-4 py-3 text-xs leading-relaxed text-[var(--color-text-secondary)]">
+      <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-card)]/80 px-4 py-3 text-xs leading-relaxed text-[var(--color-text-secondary)]">
         <p>{t('legal.platformDisclaimer')}</p>
       </div>
     </div>

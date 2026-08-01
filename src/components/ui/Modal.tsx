@@ -8,7 +8,6 @@ export interface ModalProps {
   onClose: () => void;
   title: string;
   children: ReactNode;
-  /** Sticky footer (e.g. form actions) — stays visible above the keyboard on mobile. */
   footer?: ReactNode;
 }
 
@@ -52,28 +51,31 @@ export function Modal({ isOpen, onClose, title, children, footer }: ModalProps) 
       <button
         ref={backdropRef}
         type="button"
-        className="absolute inset-0 bg-gray-900/40 backdrop-blur-sm opacity-0 transition-opacity duration-200"
+        className="absolute inset-0 bg-black/45 backdrop-blur-sm opacity-0 transition-opacity duration-200"
         aria-label="Close dialog"
         onClick={onClose}
       />
       <div
         ref={panelRef}
         className={classNames(
-          'relative z-10 flex w-full max-w-lg flex-col rounded-t-2xl border border-gray-100 bg-white shadow-xl sm:rounded-xl',
+          'relative z-10 flex w-full max-w-lg flex-col rounded-t-2xl border border-[var(--color-border)] bg-[var(--color-card)] shadow-xl sm:rounded-xl',
           'max-h-[min(92dvh,100dvh)] sm:max-h-[min(85dvh,40rem)]',
           'translate-y-2 scale-[0.98] opacity-0 transition-all duration-200 ease-out',
         )}
       >
-        <div className="mx-auto mt-2.5 h-1 w-12 shrink-0 rounded-full bg-gray-300/80 sm:hidden" aria-hidden />
+        <div className="mx-auto mt-2.5 h-1 w-12 shrink-0 rounded-full bg-[var(--color-border)] sm:hidden" aria-hidden />
 
-        <div className="flex shrink-0 items-start justify-between gap-3 border-b border-gray-100 px-4 py-3 sm:px-6 sm:py-4">
-          <h2 id={titleId} className="min-w-0 flex-1 pr-1 text-sm font-semibold leading-snug text-gray-900 sm:text-lg">
+        <div className="flex shrink-0 items-start justify-between gap-3 border-b border-[var(--color-border)] px-4 py-3 sm:px-6 sm:py-4">
+          <h2
+            id={titleId}
+            className="min-w-0 flex-1 pr-1 text-sm font-semibold leading-snug text-[var(--color-text)] sm:text-lg"
+          >
             {title}
           </h2>
           <button
             type="button"
             onClick={onClose}
-            className="tap-44 -mr-2 inline-flex items-center justify-center rounded-lg p-1.5 text-gray-500 transition hover:bg-gray-100 hover:text-gray-800"
+            className="tap-44 -mr-2 inline-flex items-center justify-center rounded-lg p-1.5 text-[var(--color-text-secondary)] transition hover:bg-[var(--color-hover)] hover:text-[var(--color-text)]"
             aria-label="Close"
           >
             <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" aria-hidden>
@@ -87,7 +89,7 @@ export function Modal({ isOpen, onClose, title, children, footer }: ModalProps) 
         </div>
 
         {footer ? (
-          <div className="safe-pb shrink-0 border-t border-gray-100 bg-white px-4 py-3 sm:px-6 sm:py-4">
+          <div className="safe-pb shrink-0 border-t border-[var(--color-border)] bg-[var(--color-card)] px-4 py-3 sm:px-6 sm:py-4">
             {footer}
           </div>
         ) : null}

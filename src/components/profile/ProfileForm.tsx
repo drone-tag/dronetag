@@ -65,7 +65,7 @@ function FormSection({ title, description, children, defaultOpen = false }: {
 }) {
   return (
     <Accordion title={title} defaultOpen={defaultOpen}>
-      {description ? <p className="mb-4 text-sm text-gray-500">{description}</p> : null}
+      {description ? <p className="mb-4 text-sm text-[var(--color-text-secondary)]">{description}</p> : null}
       {children}
     </Accordion>
   );
@@ -262,9 +262,9 @@ export function ProfileForm({ initialData, onSave }: ProfileFormProps) {
 
       {/* ── Public Data Section ────────────────────────────────────── */}
       <Card>
-        <div className="mb-4 border-b border-gray-200 pb-3">
-          <h2 className="text-sm font-semibold text-gray-900">{t('form.publicDataTitle')}</h2>
-          <p className="text-xs text-gray-500">{t('form.publicDataSubtitle')}</p>
+        <div className="mb-4 border-b border-[var(--color-border)] pb-3">
+          <h2 className="text-sm font-semibold text-[var(--color-text)]">{t('form.publicDataTitle')}</h2>
+          <p className="text-xs text-[var(--color-text-secondary)]">{t('form.publicDataSubtitle')}</p>
         </div>
         <div className="space-y-1">
           <FormSection title={t('form.person')} description={t('form.person.desc')} defaultOpen>
@@ -322,7 +322,7 @@ export function ProfileForm({ initialData, onSave }: ProfileFormProps) {
                 <UploadField label={t('field.policyPdf')} accept=".pdf"
                   currentUrl={pdfObjUrl || formData.insurance.pdfUrl}
                   onUpload={(f) => handleFileSelect(f, setPdfFile, setPdfObjUrl, pdfObjUrl)} preview={false} />
-                <p className="mt-1 text-[11px] text-gray-400">{t('form.pdfHint')}</p>
+                <p className="mt-1 text-[11px] text-[var(--color-text-secondary)]">{t('form.pdfHint')}</p>
               </div>
               {pdfPreview ? (
                 <PDFPreview url={pdfPreview} label={t('field.policyPdf')} />
@@ -347,9 +347,9 @@ export function ProfileForm({ initialData, onSave }: ProfileFormProps) {
 
       {/* ── Media & Assets ─────────────────────────────────────────── */}
       <Card>
-        <div className="mb-4 border-b border-gray-200 pb-3">
-          <h2 className="text-sm font-semibold text-gray-900">{t('form.mediaTitle')}</h2>
-          <p className="text-xs text-gray-500">{t('form.mediaSubtitle')}</p>
+        <div className="mb-4 border-b border-[var(--color-border)] pb-3">
+          <h2 className="text-sm font-semibold text-[var(--color-text)]">{t('form.mediaTitle')}</h2>
+          <p className="text-xs text-[var(--color-text-secondary)]">{t('form.mediaSubtitle')}</p>
         </div>
         <div className="space-y-1">
           <FormSection title={t('field.photo')} description={t('form.photoHint')}>
@@ -369,9 +369,9 @@ export function ProfileForm({ initialData, onSave }: ProfileFormProps) {
 
       {/* ── Verification & Access Links ────────────────────────────── */}
       <Card>
-        <div className="mb-4 border-b border-gray-200 pb-3">
-          <h2 className="text-sm font-semibold text-gray-900">{t('form.verificationLinks')}</h2>
-          <p className="text-xs text-gray-500">{t('form.verificationLinks.desc')}</p>
+        <div className="mb-4 border-b border-[var(--color-border)] pb-3">
+          <h2 className="text-sm font-semibold text-[var(--color-text)]">{t('form.verificationLinks')}</h2>
+          <p className="text-xs text-[var(--color-text-secondary)]">{t('form.verificationLinks.desc')}</p>
         </div>
         <VerificationLinksPanel
           slug={formData.slug}
@@ -385,9 +385,9 @@ export function ProfileForm({ initialData, onSave }: ProfileFormProps) {
 
       {/* ── Admin Section ──────────────────────────────────────────── */}
       <Card>
-        <div className="mb-4 border-b border-gray-200 pb-3">
-          <h2 className="text-sm font-semibold text-gray-900">{t('form.adminTitle')}</h2>
-          <p className="text-xs text-gray-500">{t('form.adminSubtitle')}</p>
+        <div className="mb-4 border-b border-[var(--color-border)] pb-3">
+          <h2 className="text-sm font-semibold text-[var(--color-text)]">{t('form.adminTitle')}</h2>
+          <p className="text-xs text-[var(--color-text-secondary)]">{t('form.adminSubtitle')}</p>
         </div>
         <div className="space-y-1">
           <FormSection title={t('form.statusAndAccess')} description={t('form.statusAndAccess.desc')} defaultOpen>
@@ -407,7 +407,7 @@ export function ProfileForm({ initialData, onSave }: ProfileFormProps) {
               </Button>
             </div>
             {formData.visibility === 'public' && formData.slug ? (
-              <p className="mt-2 text-xs text-gray-400">{t('form.publicUrlPreview')} <code className="rounded bg-gray-100 px-1.5 py-0.5 font-mono text-gray-600">/u/{formData.slug}</code></p>
+              <p className="mt-2 text-xs text-[var(--color-text-secondary)]">{t('form.publicUrlPreview')} <code className="rounded bg-[var(--color-hover)] px-1.5 py-0.5 font-mono text-[var(--color-text-secondary)]">/u/{formData.slug}</code></p>
             ) : null}
             {!formData.slug && formData.visibility === 'public' ? (
               <p className="mt-2 text-xs text-amber-500">{t('form.validation.slugRequired')}</p>
@@ -437,7 +437,7 @@ export function ProfileForm({ initialData, onSave }: ProfileFormProps) {
       </Card>
 
       {/* ── Submit bar ─────────────────────────────────────────────── */}
-      <div className="sticky bottom-0 z-10 -mx-4 border-t border-gray-200 bg-white/95 px-4 py-3 shadow-[0_-4px_12px_rgba(0,0,0,0.04)] backdrop-blur-sm sm:-mx-6 sm:px-6">
+      <div className="sticky bottom-0 z-10 -mx-4 border-t border-[var(--color-border)] bg-[var(--color-card)]/95 px-4 py-3 shadow-[0_-4px_12px_rgba(0,0,0,0.04)] backdrop-blur-sm sm:-mx-6 sm:px-6">
         <div className="flex items-center justify-between gap-4">
           <div className="min-w-0">
             {submitError ? (
@@ -459,7 +459,7 @@ export function ProfileForm({ initialData, onSave }: ProfileFormProps) {
           </div>
           <div className="flex shrink-0 items-center gap-3">
             {isEdit && initialData?.id ? (
-              <span className="hidden text-[11px] text-gray-400 sm:block">{t('form.profileId')} <code className="font-mono">{initialData.id.slice(0, 8)}…</code></span>
+              <span className="hidden text-[11px] text-[var(--color-text-secondary)] sm:block">{t('form.profileId')} <code className="font-mono">{initialData.id.slice(0, 8)}…</code></span>
             ) : null}
             <Button type="submit" loading={saving} disabled={saving} size="md">
               {saving ? t('form.saving') : t('common.save')}

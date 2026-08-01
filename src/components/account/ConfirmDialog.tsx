@@ -53,17 +53,17 @@ export function ConfirmDialog({
     <Modal isOpen={isOpen} onClose={onClose} title={title}>
       <div className="space-y-4">
         {extraWarning ? (
-          <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-relaxed text-amber-800">
+          <div className="rounded-lg border border-[var(--tone-warning-border)] bg-[var(--tone-warning-bg)] px-4 py-3 text-sm leading-relaxed text-[var(--tone-warning-fg)]">
             {extraWarning}
           </div>
         ) : null}
 
         {message ? (
-          <p className="text-sm leading-relaxed text-gray-700">{message}</p>
+          <p className="text-sm leading-relaxed text-[var(--color-text)]">{message}</p>
         ) : null}
 
         {danger ? (
-          <p className="text-xs font-medium text-red-700">
+          <p className="text-xs font-medium text-[var(--tone-danger-fg)]">
             {t('confirm.dangerWarning')}
           </p>
         ) : null}

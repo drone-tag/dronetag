@@ -11,7 +11,7 @@ export function AuthOrDivider() {
         <div className="w-full border-t border-[var(--color-border)]" />
       </div>
       <div className="relative flex justify-center">
-        <span className="bg-white px-3 text-xs font-medium uppercase tracking-wide text-[var(--color-text-secondary)]">
+        <span className="bg-[var(--color-card)] px-3 text-xs font-medium uppercase tracking-wide text-[var(--color-text-secondary)]">
           {t('auth.or')}
         </span>
       </div>

@@ -97,23 +97,23 @@ export default function AdminUsersListPage() {
       </div>
 
       {loading ? (
-        <div className="mt-6 flex items-center gap-3 text-sm text-gray-500">
-          <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-gray-600" />
+        <div className="mt-6 flex items-center gap-3 text-sm text-[var(--color-text-secondary)]">
+          <div className="h-4 w-4 animate-spin rounded-full border-2 border-[var(--color-border)] border-t-gray-600" />
           {t('common.loading')}
         </div>
       ) : loadError ? (
         <Card className="mt-6 text-center" padding="lg">
-          <p className="text-sm text-amber-800">{t('admin.users.loadError')}</p>
+          <p className="text-sm text-[var(--tone-warning-fg)]">{t('admin.users.loadError')}</p>
         </Card>
       ) : filtered.length === 0 ? (
         <Card className="mt-6 text-center" padding="lg">
-          <p className="text-sm text-gray-500">{t('admin.users.empty')}</p>
+          <p className="text-sm text-[var(--color-text-secondary)]">{t('admin.users.empty')}</p>
         </Card>
       ) : (
         <Card className="mt-6 overflow-x-auto" padding="none">
           <table className="w-full min-w-[960px] border-collapse text-left text-sm">
             <thead>
-              <tr className="border-b border-gray-200 bg-slate-50/80">
+              <tr className="border-b border-[var(--color-border)] bg-slate-50/80">
                 <th className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
                   {t('admin.users.col.name')}
                 </th>
@@ -131,26 +131,26 @@ export default function AdminUsersListPage() {
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-[var(--color-border)]">
               {filtered.map((u) => (
                 <tr key={u.uid} className="transition hover:bg-slate-50/60">
-                  <td className="px-4 py-3.5 font-medium text-gray-900">
+                  <td className="px-4 py-3.5 font-medium text-[var(--color-text)]">
                     {accountDisplayName(u)}
                   </td>
                   <td className="px-4 py-3.5">
-                    <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wider text-gray-700">
+                    <span className="rounded-full bg-[var(--color-hover)] px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wider text-[var(--color-text)]">
                       {t(`account.accountType.${u.accountType}`)}
                     </span>
                   </td>
-                  <td className="px-4 py-3.5 text-gray-600">{u.email || '—'}</td>
-                  <td className="px-4 py-3.5 text-xs text-gray-500">
+                  <td className="px-4 py-3.5 text-[var(--color-text-secondary)]">{u.email || '—'}</td>
+                  <td className="px-4 py-3.5 text-xs text-[var(--color-text-secondary)]">
                     {u.createdAt ? formatDate(u.createdAt) : '—'}
                   </td>
                   <td className="px-4 py-3.5">
                     <div className="flex flex-wrap items-center gap-1.5">
                       <Link
                         href={`/admin/users/${u.uid}`}
-                        className="rounded-md bg-gray-100 px-2.5 py-1.5 text-xs font-medium text-gray-700 transition hover:bg-gray-200"
+                        className="rounded-md bg-[var(--color-hover)] px-2.5 py-1.5 text-xs font-medium text-[var(--color-text)] transition hover:bg-[var(--color-hover)]"
                       >
                         {t('admin.users.editData')}
                       </Link>
@@ -167,7 +167,7 @@ export default function AdminUsersListPage() {
                         <Link
                           href={`/admin/users/${u.uid}#pagina-pubblica`}
                           title={t('admin.users.publicProfileUnavailable')}
-                          className="rounded-md border border-gray-200 bg-gray-50 px-2.5 py-1.5 text-xs font-medium text-gray-400 transition hover:border-gray-300 hover:bg-gray-100 hover:text-gray-600"
+                          className="rounded-md border border-[var(--color-border)] bg-[var(--color-hover)] px-2.5 py-1.5 text-xs font-medium text-[var(--color-text-secondary)] transition hover:border-[var(--color-border)] hover:bg-[var(--color-hover)] hover:text-[var(--color-text-secondary)]"
                         >
                           {t('dashboard.viewPublicProfile')}
                         </Link>

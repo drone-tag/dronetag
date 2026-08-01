@@ -45,8 +45,8 @@ export default function OrderDetailPage() {
 
   if (loading) {
     return (
-      <div className="mt-8 flex items-center gap-3 text-sm text-gray-500">
-        <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-gray-600" />
+      <div className="mt-8 flex items-center gap-3 text-sm text-[var(--color-text-secondary)]">
+        <div className="h-4 w-4 animate-spin rounded-full border-2 border-[var(--color-border)] border-t-gray-600" />
         {t('common.loading')}
       </div>
     );
@@ -56,7 +56,7 @@ export default function OrderDetailPage() {
     return (
       <Card className="mt-6" padding="lg">
         <div className="text-center">
-          <p className="text-sm text-gray-700">{t('orders.notFound')}</p>
+          <p className="text-sm text-[var(--color-text)]">{t('orders.notFound')}</p>
           <button
             type="button"
             onClick={() => router.push('/account/orders')}
@@ -73,7 +73,7 @@ export default function OrderDetailPage() {
     <div className="mt-6 space-y-6">
       <Link
         href="/account/orders"
-        className="inline-flex items-center gap-1.5 text-xs font-medium text-gray-500 transition hover:text-gray-800"
+        className="inline-flex items-center gap-1.5 text-xs font-medium text-[var(--color-text-secondary)] transition hover:text-[var(--color-text)]"
       >
         <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} aria-hidden>
           <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
@@ -85,11 +85,11 @@ export default function OrderDetailPage() {
       <Card padding="md">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">
+            <p className="text-xs font-semibold uppercase tracking-wider text-[var(--color-text-secondary)]">
               {t('orders.orderNumber')}
             </p>
-            <h2 className="mt-0.5 text-xl font-bold text-gray-900">{order.number}</h2>
-            <p className="mt-1 text-xs text-gray-500">
+            <h2 className="mt-0.5 text-xl font-bold text-[var(--color-text)]">{order.number}</h2>
+            <p className="mt-1 text-xs text-[var(--color-text-secondary)]">
               {t('orders.placedOn', { date: formatDateTime(order.createdAt) })}
             </p>
           </div>
@@ -99,25 +99,25 @@ export default function OrderDetailPage() {
 
       {/* ── Status progress bar ────────────────────────────────────────────── */}
       <Card padding="md">
-        <h3 className="text-sm font-semibold text-gray-900">{t('orders.progress')}</h3>
+        <h3 className="text-sm font-semibold text-[var(--color-text)]">{t('orders.progress')}</h3>
         <StatusProgress status={order.status} />
       </Card>
 
       {/* ── Shipping ───────────────────────────────────────────────────────── */}
       <Card padding="md">
-        <h3 className="mb-3 text-sm font-semibold text-gray-900">
+        <h3 className="mb-3 text-sm font-semibold text-[var(--color-text)]">
           {t('orders.shippingTitle')}
         </h3>
         <div className="grid gap-5 sm:grid-cols-2">
           <div>
-            <p className="text-xs font-medium uppercase tracking-wider text-gray-400">
+            <p className="text-xs font-medium uppercase tracking-wider text-[var(--color-text-secondary)]">
               {t('orders.carrier')}
             </p>
-            <p className="mt-1 text-sm text-gray-900">
+            <p className="mt-1 text-sm text-[var(--color-text)]">
               {order.shipping.carrier || '—'}
             </p>
             {order.shipping.trackingNumber ? (
-              <p className="mt-2 text-xs font-mono text-gray-500 break-all">
+              <p className="mt-2 text-xs font-mono text-[var(--color-text-secondary)] break-all">
                 {order.shipping.trackingNumber}
               </p>
             ) : null}
@@ -136,21 +136,21 @@ export default function OrderDetailPage() {
             ) : null}
           </div>
           <div>
-            <p className="text-xs font-medium uppercase tracking-wider text-gray-400">
+            <p className="text-xs font-medium uppercase tracking-wider text-[var(--color-text-secondary)]">
               {t('orders.shipTo')}
             </p>
-            <address className="mt-1 not-italic text-sm leading-relaxed text-gray-900">
+            <address className="mt-1 not-italic text-sm leading-relaxed text-[var(--color-text)]">
               {formatAddress(order.shipping.address).map((l, i) => (
                 <div key={i}>{l}</div>
               ))}
             </address>
             {order.shipping.estimatedDelivery ? (
-              <p className="mt-3 rounded-md bg-emerald-50 px-2 py-1 text-xs font-medium text-emerald-700 inline-block">
+              <p className="mt-3 rounded-md bg-[var(--tone-success-bg)] px-2 py-1 text-xs font-medium text-[var(--tone-success-fg)] inline-block">
                 {t('orders.eta', { date: formatDate(order.shipping.estimatedDelivery) })}
               </p>
             ) : null}
             {order.deliveredAt ? (
-              <p className="mt-3 rounded-md bg-emerald-50 px-2 py-1 text-xs font-medium text-emerald-700 inline-block">
+              <p className="mt-3 rounded-md bg-[var(--tone-success-bg)] px-2 py-1 text-xs font-medium text-[var(--tone-success-fg)] inline-block">
                 {t('orders.deliveredOn', { date: formatDate(order.deliveredAt) })}
               </p>
             ) : null}
@@ -161,7 +161,7 @@ export default function OrderDetailPage() {
       {/* ── Items + traceability ───────────────────────────────────────────── */}
       <Card padding="md">
         <div className="mb-4 flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-gray-900">{t('orders.items')}</h3>
+          <h3 className="text-sm font-semibold text-[var(--color-text)]">{t('orders.items')}</h3>
           <span className="rounded-md bg-indigo-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-indigo-700">
             {t('orders.professionalTrace')}
           </span>
@@ -172,14 +172,14 @@ export default function OrderDetailPage() {
           ))}
         </div>
 
-        <div className="mt-6 border-t border-gray-100 pt-4 space-y-2 text-sm">
+        <div className="mt-6 border-t border-[var(--color-border)] pt-4 space-y-2 text-sm">
           <TotalLine label={t('orders.subtotal')} amount={order.totals.subtotal} currency={order.totals.currency} />
           <TotalLine label={t('orders.shippingFee')} amount={order.totals.shipping} currency={order.totals.currency} />
-          <div className="mt-2 flex items-center justify-between border-t border-gray-100 pt-3">
-            <span className="text-xs font-semibold uppercase tracking-wider text-gray-500">
+          <div className="mt-2 flex items-center justify-between border-t border-[var(--color-border)] pt-3">
+            <span className="text-xs font-semibold uppercase tracking-wider text-[var(--color-text-secondary)]">
               {t('orders.total')}
             </span>
-            <span className="text-lg font-bold text-gray-900">
+            <span className="text-lg font-bold text-[var(--color-text)]">
               {formatMoney(order.totals.total, order.totals.currency)}
             </span>
           </div>
@@ -188,7 +188,7 @@ export default function OrderDetailPage() {
 
       {/* ── Full chain-of-custody timeline ─────────────────────────────────── */}
       <Card padding="md">
-        <h3 className="mb-4 text-sm font-semibold text-gray-900">
+        <h3 className="mb-4 text-sm font-semibold text-[var(--color-text)]">
           {t('orders.timeline')}
         </h3>
         <Timeline events={order.timeline} />
@@ -210,20 +210,20 @@ function ItemTraceCard({
   const [open, setOpen] = useState(false);
 
   return (
-    <div className="rounded-xl border border-gray-200 bg-gray-50/50 p-4">
+    <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-hover)]/50 p-4">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-sm font-semibold text-gray-900">{item.name}</p>
-          <p className="mt-0.5 text-xs text-gray-500">
+          <p className="text-sm font-semibold text-[var(--color-text)]">{item.name}</p>
+          <p className="mt-0.5 text-xs text-[var(--color-text-secondary)]">
             {item.quantity} × {formatMoney(item.unitPrice, currency)}
           </p>
           {item.trace?.serialNumber ? (
-            <p className="mt-2 font-mono text-[11px] uppercase tracking-wider text-gray-500">
+            <p className="mt-2 font-mono text-[11px] uppercase tracking-wider text-[var(--color-text-secondary)]">
               S/N · {item.trace.serialNumber}
             </p>
           ) : null}
         </div>
-        <p className="text-sm font-semibold text-gray-900">
+        <p className="text-sm font-semibold text-[var(--color-text)]">
           {formatMoney(item.unitPrice * item.quantity, currency)}
         </p>
       </div>
@@ -234,7 +234,7 @@ function ItemTraceCard({
             type="button"
             onClick={() => setOpen((o) => !o)}
             aria-expanded={open}
-            className="mt-3 inline-flex items-center gap-1.5 rounded-md border border-gray-200 bg-white px-2.5 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-gray-700 transition hover:bg-gray-50"
+            className="mt-3 inline-flex items-center gap-1.5 rounded-md border border-[var(--color-border)] bg-[var(--color-card)] px-2.5 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-[var(--color-text)] transition hover:bg-[var(--color-hover)]"
           >
             <svg
               viewBox="0 0 24 24"
@@ -250,7 +250,7 @@ function ItemTraceCard({
           </button>
 
           {open ? (
-            <dl className="mt-4 grid grid-cols-1 gap-x-6 gap-y-3 border-t border-gray-200 pt-4 sm:grid-cols-2">
+            <dl className="mt-4 grid grid-cols-1 gap-x-6 gap-y-3 border-t border-[var(--color-border)] pt-4 sm:grid-cols-2">
               <TraceField label={t('trace.batch')} value={item.trace.batchNumber} />
               <TraceField label={t('trace.material')} value={item.trace.material} />
               <TraceField label={t('trace.printedAt')} value={formatDateTime(item.trace.printedAt)} />
@@ -261,10 +261,10 @@ function ItemTraceCard({
               <TraceField label={t('trace.qcBy')} value={item.trace.qcBy} />
               {item.trace.notes ? (
                 <div className="sm:col-span-2">
-                  <dt className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">
+                  <dt className="text-[11px] font-semibold uppercase tracking-wider text-[var(--color-text-secondary)]">
                     {t('trace.notes')}
                   </dt>
-                  <dd className="mt-1 text-sm text-gray-700">{item.trace.notes}</dd>
+                  <dd className="mt-1 text-sm text-[var(--color-text)]">{item.trace.notes}</dd>
                 </div>
               ) : null}
             </dl>
@@ -278,10 +278,10 @@ function ItemTraceCard({
 function TraceField({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <dt className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">
+      <dt className="text-[11px] font-semibold uppercase tracking-wider text-[var(--color-text-secondary)]">
         {label}
       </dt>
-      <dd className="mt-0.5 text-sm text-gray-900">{value || '—'}</dd>
+      <dd className="mt-0.5 text-sm text-[var(--color-text)]">{value || '—'}</dd>
     </div>
   );
 }
@@ -297,8 +297,8 @@ function TotalLine({
 }) {
   return (
     <div className="flex items-center justify-between text-sm">
-      <span className="text-gray-500">{label}</span>
-      <span className="text-gray-900">{formatMoney(amount, currency)}</span>
+      <span className="text-[var(--color-text-secondary)]">{label}</span>
+      <span className="text-[var(--color-text)]">{formatMoney(amount, currency)}</span>
     </div>
   );
 }
@@ -321,8 +321,8 @@ function StatusProgress({ status }: { status: OrderStatus }) {
                 isActive
                   ? 'border-blue-600 bg-blue-600 text-white'
                   : isDone
-                    ? 'border-blue-600 bg-white text-blue-700'
-                    : 'border-gray-200 bg-white text-gray-300',
+                    ? 'border-blue-600 bg-[var(--color-card)] text-blue-700'
+                    : 'border-[var(--color-border)] bg-[var(--color-card)] text-[var(--color-border)]',
               ].join(' ')}
             >
               {isDone ? (
@@ -336,7 +336,7 @@ function StatusProgress({ status }: { status: OrderStatus }) {
             <span
               className={[
                 'text-center text-[10px] font-medium leading-tight',
-                isActive ? 'text-blue-700' : isDone ? 'text-gray-700' : 'text-gray-400',
+                isActive ? 'text-blue-700' : isDone ? 'text-[var(--color-text)]' : 'text-[var(--color-text-secondary)]',
               ].join(' ')}
             >
               {t(`orderStatus.${step}`)}
@@ -351,7 +351,7 @@ function StatusProgress({ status }: { status: OrderStatus }) {
 function Timeline({ events }: { events: OrderEvent[] }) {
   if (events.length === 0) return null;
   return (
-    <ol className="relative space-y-5 border-l-2 border-gray-100 pl-6">
+    <ol className="relative space-y-5 border-l-2 border-[var(--color-border)] pl-6">
       {events
         .slice()
         .sort((a, b) => b.at.localeCompare(a.at))
@@ -361,16 +361,16 @@ function Timeline({ events }: { events: OrderEvent[] }) {
               aria-hidden
               className={`absolute -left-[34px] top-1 flex h-6 w-6 items-center justify-center rounded-full ring-4 ring-white ${eventColor(event.type)}`}
             >
-              <span className="h-2 w-2 rounded-full bg-white" />
+              <span className="h-2 w-2 rounded-full bg-[var(--color-card)]" />
             </span>
-            <p className="text-sm font-semibold text-gray-900">{event.label}</p>
-            <p className="mt-0.5 text-xs text-gray-500">
+            <p className="text-sm font-semibold text-[var(--color-text)]">{event.label}</p>
+            <p className="mt-0.5 text-xs text-[var(--color-text-secondary)]">
               {formatDateTime(event.at)}
               {event.by ? ` · ${event.by}` : ''}
               {event.location ? ` · ${event.location}` : ''}
             </p>
             {event.note ? (
-              <p className="mt-1 text-xs text-gray-600">{event.note}</p>
+              <p className="mt-1 text-xs text-[var(--color-text-secondary)]">{event.note}</p>
             ) : null}
           </li>
         ))}
@@ -381,16 +381,16 @@ function Timeline({ events }: { events: OrderEvent[] }) {
 function StatusPill({ status }: { status: OrderStatus }) {
   const { t } = useLanguage();
   const styles: Record<OrderStatus, string> = {
-    pending: 'bg-gray-100 text-gray-700',
-    paid: 'bg-blue-50 text-blue-700',
-    in_production: 'bg-indigo-50 text-indigo-700',
-    assembled: 'bg-indigo-50 text-indigo-700',
-    quality_check: 'bg-amber-50 text-amber-700',
-    packed: 'bg-sky-50 text-sky-700',
-    shipped: 'bg-sky-50 text-sky-700',
-    in_transit: 'bg-sky-50 text-sky-700',
-    delivered: 'bg-emerald-50 text-emerald-700',
-    cancelled: 'bg-red-50 text-red-700',
+    pending: 'bg-[var(--color-hover)] text-[var(--color-text)]',
+    paid: 'bg-[var(--tone-info-bg)] text-[var(--tone-info-fg)]',
+    in_production: 'bg-[var(--tone-info-bg)] text-[var(--tone-info-fg)]',
+    assembled: 'bg-[var(--tone-info-bg)] text-[var(--tone-info-fg)]',
+    quality_check: 'bg-[var(--tone-warning-bg)] text-[var(--tone-warning-fg)]',
+    packed: 'bg-[var(--tone-info-bg)] text-[var(--tone-info-fg)]',
+    shipped: 'bg-[var(--tone-info-bg)] text-[var(--tone-info-fg)]',
+    in_transit: 'bg-[var(--tone-info-bg)] text-[var(--tone-info-fg)]',
+    delivered: 'bg-[var(--tone-success-bg)] text-[var(--tone-success-fg)]',
+    cancelled: 'bg-[var(--tone-danger-bg)] text-[var(--tone-danger-fg)]',
   };
   return (
     <span

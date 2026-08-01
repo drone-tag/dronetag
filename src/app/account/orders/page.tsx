@@ -36,7 +36,7 @@ export default function AccountOrdersPage() {
   if (loading) {
     return (
       <div className="flex items-center gap-3 text-sm text-[var(--color-text-secondary)]">
-        <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-200 border-t-[var(--color-action)]" />
+        <div className="h-4 w-4 animate-spin rounded-full border-2 border-[var(--color-border)] border-t-[var(--color-action)]" />
         {t('common.loading')}
       </div>
     );
@@ -72,17 +72,17 @@ function OrderRow({ order }: { order: Order }) {
           <EntityListRow
             actions={<StatusPill status={order.status} />}
           >
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 sm:text-xs">
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--color-text-secondary)] sm:text-xs">
               {t('orders.orderNumber')}
             </p>
-            <p className="mt-0.5 truncate text-sm font-semibold text-gray-900 sm:text-base">{order.number}</p>
-            <p className="mt-0.5 text-[11px] text-gray-500 sm:text-xs">
+            <p className="mt-0.5 truncate text-sm font-semibold text-[var(--color-text)] sm:text-base">{order.number}</p>
+            <p className="mt-0.5 text-[11px] text-[var(--color-text-secondary)] sm:text-xs">
               {t('orders.placedOn', { date: formatDate(order.createdAt) })}
             </p>
-            <p className="mt-2 line-clamp-2 text-[11px] text-gray-600 sm:text-sm">
+            <p className="mt-2 line-clamp-2 text-[11px] text-[var(--color-text-secondary)] sm:text-sm">
               {order.items.map((i) => `${i.quantity}x ${i.name}`).join(' · ')}
             </p>
-            <p className="mt-2 text-sm font-bold text-gray-900">
+            <p className="mt-2 text-sm font-bold text-[var(--color-text)]">
               {formatMoney(order.totals.total, order.totals.currency)}
             </p>
           </EntityListRow>
@@ -95,16 +95,16 @@ function OrderRow({ order }: { order: Order }) {
 function StatusPill({ status }: { status: OrderStatus }) {
   const { t } = useLanguage();
   const styles: Record<OrderStatus, string> = {
-    pending: 'bg-gray-100 text-gray-700',
-    paid: 'bg-blue-50 text-blue-700',
-    in_production: 'bg-indigo-50 text-indigo-700',
-    assembled: 'bg-indigo-50 text-indigo-700',
-    quality_check: 'bg-amber-50 text-amber-700',
-    packed: 'bg-sky-50 text-sky-700',
-    shipped: 'bg-sky-50 text-sky-700',
-    in_transit: 'bg-sky-50 text-sky-700',
-    delivered: 'bg-emerald-50 text-emerald-700',
-    cancelled: 'bg-red-50 text-red-700',
+    pending: 'bg-[var(--color-hover)] text-[var(--color-text)]',
+    paid: 'bg-[var(--tone-info-bg)] text-[var(--tone-info-fg)]',
+    in_production: 'bg-[var(--tone-info-bg)] text-[var(--tone-info-fg)]',
+    assembled: 'bg-[var(--tone-info-bg)] text-[var(--tone-info-fg)]',
+    quality_check: 'bg-[var(--tone-warning-bg)] text-[var(--tone-warning-fg)]',
+    packed: 'bg-[var(--tone-info-bg)] text-[var(--tone-info-fg)]',
+    shipped: 'bg-[var(--tone-info-bg)] text-[var(--tone-info-fg)]',
+    in_transit: 'bg-[var(--tone-info-bg)] text-[var(--tone-info-fg)]',
+    delivered: 'bg-[var(--tone-success-bg)] text-[var(--tone-success-fg)]',
+    cancelled: 'bg-[var(--tone-danger-bg)] text-[var(--tone-danger-fg)]',
   };
   return (
     <span

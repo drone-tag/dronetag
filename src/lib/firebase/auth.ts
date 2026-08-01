@@ -13,24 +13,23 @@ import {
 } from 'firebase/auth';
 
 import { DEMO_MODE, getFirebaseAuth } from '@/lib/firebase/config';
-
-// ─── Demo mode mock user ─────────────────────────────────────────────────────
-
-const DEMO_USER = {
-  uid: 'demo-admin',
-  email: 'admin@dronetag.io',
-  displayName: 'Demo Admin',
-} as User;
-
-// ─── Auth API ────────────────────────────────────────────────────────────────
+import {
+  buildDemoAuthUser,
+  getDemoPersona,
+  type DemoPersonaId,
+} from '@/lib/demo/personas';
 
 export type GoogleSignInResult = UserCredential & {
   isNewUser: boolean;
 };
 
+function currentDemoUser(): User {
+  return buildDemoAuthUser(getDemoPersona());
+}
+
 export function loginWithGoogle(): Promise<GoogleSignInResult> {
   if (DEMO_MODE) {
-    return Promise.resolve({ user: DEMO_USER, isNewUser: false } as GoogleSignInResult);
+    return Promise.resolve({ user: currentDemoUser(), isNewUser: false } as GoogleSignInResult);
   }
   const provider = new GoogleAuthProvider();
   provider.setCustomParameters({ prompt: 'select_account' });
@@ -45,7 +44,7 @@ export function loginWithEmail(
   password: string,
 ): Promise<UserCredential> {
   if (DEMO_MODE) {
-    return Promise.resolve({ user: DEMO_USER } as UserCredential);
+    return Promise.resolve({ user: currentDemoUser() } as UserCredential);
   }
   return signInWithEmailAndPassword(getFirebaseAuth(), email, password);
 }
@@ -56,8 +55,7 @@ export async function signupWithEmail(
   displayName?: string,
 ): Promise<UserCredential> {
   if (DEMO_MODE) {
-    // Demo mode: pretend the signup succeeded and return the demo user.
-    return { user: DEMO_USER } as UserCredential;
+    return { user: currentDemoUser() } as UserCredential;
   }
   const credential = await createUserWithEmailAndPassword(
     getFirebaseAuth(),
@@ -68,7 +66,7 @@ export async function signupWithEmail(
     try {
       await updateProfile(credential.user, { displayName });
     } catch {
-      // Non-fatal: displayName is cosmetic.
+      /* non-fatal */
     }
   }
   return credential;
@@ -80,14 +78,9 @@ export function logout(): Promise<void> {
 }
 
 export type AwaitFirebaseAuthOptions = {
-  /** Force-refresh the ID token so custom claims (e.g. `admin`) are current. */
   refresh?: boolean;
 };
 
-/**
- * Wait until Auth has restored the session, then ensure an ID token exists when signed in.
- * Firestore calls before this often hit permission-denied (rules see no request.auth).
- */
 export async function awaitFirebaseAuthReady(
   options: AwaitFirebaseAuthOptions = {},
 ): Promise<void> {
@@ -107,19 +100,21 @@ export function onAuthChange(
   callback: (user: User | null) => void,
 ): Unsubscribe {
   if (DEMO_MODE) {
-    // Auto-login in demo mode
-    setTimeout(() => callback(DEMO_USER), 50);
-    return () => {};
+    const timer = setTimeout(() => callback(currentDemoUser()), 50);
+    return () => clearTimeout(timer);
   }
   return onAuthStateChanged(getFirebaseAuth(), callback);
 }
 
-/** Synchronous accessor for the currently signed-in user (or null). */
 export function getCurrentUser(): User | null {
-  if (DEMO_MODE) return DEMO_USER;
+  if (DEMO_MODE) return currentDemoUser();
   try {
     return getFirebaseAuth().currentUser;
   } catch {
     return null;
   }
+}
+
+export function getDemoAuthPersonaId(): DemoPersonaId {
+  return getDemoPersona().id;
 }

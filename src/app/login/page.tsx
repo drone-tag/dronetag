@@ -37,7 +37,17 @@ function LoginInner() {
   const redirectParam = params.get('redirect');
 
   function resolveDestination(isAdminUser: boolean): string {
-    if (redirectParam && redirectParam.startsWith('/')) return redirectParam;
+    if (
+      redirectParam &&
+      redirectParam.startsWith('/') &&
+      !redirectParam.startsWith('//')
+    ) {
+      // Admin staff never lands in the user workspace.
+      if (isAdminUser && (redirectParam === '/account' || redirectParam.startsWith('/account/'))) {
+        return '/admin';
+      }
+      return redirectParam;
+    }
     return isAdminUser ? '/admin' : '/account';
   }
 
@@ -67,7 +77,7 @@ function LoginInner() {
 
   if (user) {
     return (
-      <div className="flex min-h-[calc(100dvh-var(--header-height)-var(--safe-top))] items-center justify-center bg-[var(--color-app-bg)] px-4">
+      <div className="flex min-h-[calc(100dvh-var(--app-header-offset))] items-center justify-center bg-[var(--color-app-bg)] px-4">
         <div className="flex items-center gap-3">
           <div className="h-5 w-5 animate-spin rounded-full border-2 border-[var(--color-border)] border-t-[var(--color-action)]" />
           <p className="text-sm text-[var(--color-text-secondary)]">{t('common.loading')}</p>
@@ -118,8 +128,8 @@ function LoginInner() {
           disabled={submitting}
         />
         {error ? (
-          <div className="flex items-start gap-2 rounded-lg bg-red-50 px-3 py-2.5" role="alert">
-            <p className="text-sm text-red-700">{error}</p>
+          <div className="flex items-start gap-2 rounded-lg bg-[var(--tone-danger-bg)] px-3 py-2.5" role="alert">
+            <p className="text-sm text-[var(--tone-danger-fg)]">{error}</p>
           </div>
         ) : null}
         <Button type="submit" fullWidth size="lg" loading={submitting} disabled={submitting} className="min-h-[2.75rem]">

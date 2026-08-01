@@ -99,13 +99,13 @@ export default function AdminReportsPage() {
       </div>
 
       {loading ? (
-        <div className="mt-6 flex items-center gap-3 text-sm text-gray-500">
-          <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-gray-600" />
+        <div className="mt-6 flex items-center gap-3 text-sm text-[var(--color-text-secondary)]">
+          <div className="h-4 w-4 animate-spin rounded-full border-2 border-[var(--color-border)] border-t-gray-600" />
           {t('common.loading')}
         </div>
       ) : filtered.length === 0 ? (
         <Card className="mt-6 text-center" padding="lg">
-          <p className="text-sm text-gray-500">{t('inbox.empty')}</p>
+          <p className="text-sm text-[var(--color-text-secondary)]">{t('inbox.empty')}</p>
         </Card>
       ) : (
         <div className="mt-6 space-y-3">
@@ -119,25 +119,25 @@ export default function AdminReportsPage() {
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="min-w-0 flex-1 space-y-2">
                     <div className="flex flex-wrap items-center gap-2">
-                      <h3 className="text-base font-semibold text-gray-900">
+                      <h3 className="text-base font-semibold text-[var(--color-text)]">
                         {r.finderName.trim() || t('inbox.fromAnonymous')}
                       </h3>
                       <span
                         className={
                           r.read
-                            ? 'rounded-full bg-gray-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-gray-600 ring-1 ring-inset ring-gray-500/20'
-                            : 'rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-blue-700 ring-1 ring-inset ring-blue-600/20'
+                            ? 'rounded-full bg-[var(--color-hover)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-[var(--color-text-secondary)] ring-1 ring-inset ring-[var(--color-border)]'
+                            : 'rounded-full bg-[var(--tone-info-bg)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-[var(--tone-info-fg)] ring-1 ring-inset ring-[var(--tone-info-ring)]'
                         }
                       >
                         {r.read ? t('inbox.read') : t('inbox.unread')}
                       </span>
                     </div>
-                    <p className="text-xs text-gray-500">
+                    <p className="text-xs text-[var(--color-text-secondary)]">
                       <Link
                         href={`/u/${r.droneSlug}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-blue-600 underline-offset-2 hover:underline"
+                        className="text-[var(--color-action)] underline-offset-2 hover:underline"
                       >
                         {r.droneSlug}
                       </Link>
@@ -146,13 +146,13 @@ export default function AdminReportsPage() {
                           {' '}· {t('admin.drones.col.owner')}:{' '}
                           <Link
                             href={`/admin/users/${owner.uid}`}
-                            className="text-blue-600 underline-offset-2 hover:underline"
+                            className="text-[var(--color-action)] underline-offset-2 hover:underline"
                           >
                             {accountDisplayName(owner)}
                           </Link>
                         </>
                       ) : null}
-                      <span className="mx-1.5 text-gray-300">·</span>
+                      <span className="mx-1.5 text-[var(--color-border)]">·</span>
                       {t('inbox.receivedAt', { date: formatDateTime(r.createdAt) })}
                     </p>
 
@@ -160,13 +160,13 @@ export default function AdminReportsPage() {
                       const mailto = safeMailto(r.contactEmail);
                       if (!mailto) return null;
                       return (
-                        <p className="text-sm text-gray-700">
-                          <span className="text-xs uppercase tracking-wider text-gray-400">
+                        <p className="text-sm text-[var(--color-text)]">
+                          <span className="text-xs uppercase tracking-wider text-[var(--color-text-secondary)]">
                             {t('inbox.contact')}:
                           </span>{' '}
                           <a
                             href={mailto}
-                            className="text-blue-600 underline-offset-2 hover:underline"
+                            className="text-[var(--color-action)] underline-offset-2 hover:underline"
                           >
                             {r.contactEmail.trim()}
                           </a>
@@ -175,8 +175,8 @@ export default function AdminReportsPage() {
                     })()}
 
                     {r.message.trim() ? (
-                      <div className="rounded-lg border border-gray-200 bg-gray-50/60 px-3 py-2.5 text-sm text-gray-800">
-                        <p className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-gray-400">
+                      <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-hover)] px-3 py-2.5 text-sm text-[var(--color-text)]">
+                        <p className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-[var(--color-text-secondary)]">
                           {t('inbox.message')}
                         </p>
                         <p className="whitespace-pre-wrap leading-relaxed">{r.message}</p>
@@ -184,15 +184,15 @@ export default function AdminReportsPage() {
                     ) : null}
 
                     {r.location || r.locationText.trim() ? (
-                      <p className="text-xs text-gray-600">
-                        <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">
+                      <p className="text-xs text-[var(--color-text-secondary)]">
+                        <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--color-text-secondary)]">
                           {t('inbox.location')}:
                         </span>{' '}
                         {r.locationText.trim() || ''}
                         {r.location ? (
                           <>
                             {' '}
-                            <span className="font-mono text-[11px] text-gray-500">
+                            <span className="font-mono text-[11px] text-[var(--color-text-secondary)]">
                               {t('inbox.locationCoords', {
                                 lat: r.location.lat.toFixed(5),
                                 lng: r.location.lng.toFixed(5),
@@ -206,7 +206,7 @@ export default function AdminReportsPage() {
                                   href={mapHref}
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  className="text-blue-600 underline-offset-2 hover:underline"
+                                  className="text-[var(--color-action)] underline-offset-2 hover:underline"
                                 >
                                   {t('inbox.viewLocation')}
                                 </a>

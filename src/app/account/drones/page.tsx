@@ -1,18 +1,5 @@
 'use client';
 
-/**
- * Drones list page.
- *
- * - Lists the user's drones with status / visibility / public URL preview.
- * - "New drone" launches a quick-create modal that captures the minimum
- *   required fields (manufacturer, model, classMarking, default operator)
- *   then routes the user to the drone detail page for the rest.
- * - Slot enforcement reads `slots.drone`.
- *
- * Detail editing (insurance link, controller serial, status / visibility,
- * active operator UI in M4) lives in `[id]/page.tsx`.
- */
-
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
@@ -27,6 +14,11 @@ import {
 import { listOperators } from '@/lib/firebase/operators';
 import { ensureSlots } from '@/lib/firebase/slots';
 import { trackEvent } from '@/lib/analytics';
+import {
+  CUSTOM_DRONE_CATALOG_ID,
+  findDroneCatalogEntry,
+  type DroneCatalogEntry,
+} from '@/lib/droneCatalog';
 import {
   DRONE_CLASSES,
   type Drone,
@@ -47,8 +39,11 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { ConfirmDialog } from '@/components/account/ConfirmDialog';
 import { EntityListShell } from '@/components/account/EntityListShell';
 import { FormErrorBanner } from '@/components/account/FormErrorBanner';
+import { DroneCatalogPicker } from '@/components/account/DroneCatalogPicker';
+import { VerificationBadge } from '@/components/ui/StatusBadge';
 
 interface CreateFormState {
+  catalogId: string | null;
   manufacturer: string;
   model: string;
   classMarking: DroneClass;
@@ -57,6 +52,7 @@ interface CreateFormState {
 }
 
 const EMPTY_FORM: CreateFormState = {
+  catalogId: null,
   manufacturer: '',
   model: '',
   classMarking: 'unknown',
@@ -107,8 +103,8 @@ export default function AccountDronesPage() {
 
   if (loading) {
     return (
-      <div className="mt-8 flex items-center gap-3 text-sm text-gray-500">
-        <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-gray-600" />
+      <div className="mt-8 flex items-center gap-3 text-sm text-[var(--color-text-secondary)]">
+        <div className="h-4 w-4 animate-spin rounded-full border-2 border-[var(--color-border)] border-t-gray-600" />
         {t('common.loading')}
       </div>
     );
@@ -304,29 +300,30 @@ function DroneRow({
         >
           <Link
             href={`/account/drones/${drone.id}`}
-            className="block min-w-0 text-sm font-semibold text-gray-900 hover:underline sm:text-base"
+            className="block min-w-0 text-sm font-semibold text-[var(--color-text)] hover:underline sm:text-base"
           >
             {[drone.manufacturer, drone.model].filter(Boolean).join(' ').trim() || drone.slug}
           </Link>
           <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-[11px] sm:text-xs">
-            <span className="rounded-full bg-gray-100 px-2 py-0.5 font-mono uppercase text-gray-700">
+            <span className="rounded-full bg-[var(--color-hover)] px-2 py-0.5 font-mono uppercase text-[var(--color-text)]">
               {drone.classMarking}
             </span>
+            <VerificationBadge status={drone.verificationStatus} />
             <span
               className={
                 isPublic
-                  ? 'rounded-full bg-emerald-50 px-2 py-0.5 font-medium text-emerald-700 ring-1 ring-inset ring-emerald-600/20'
-                  : 'rounded-full bg-gray-50 px-2 py-0.5 font-medium text-gray-600 ring-1 ring-inset ring-gray-500/20'
+                  ? 'rounded-full bg-[var(--tone-success-bg)] px-2 py-0.5 font-medium text-[var(--tone-success-fg)] ring-1 ring-inset ring-[var(--tone-success-ring)]'
+                  : 'rounded-full bg-[var(--color-hover)] px-2 py-0.5 font-medium text-[var(--color-text-secondary)] ring-1 ring-inset ring-[var(--color-border)]'
               }
             >
               {isPublic ? t('visibility.public') : t('visibility.private')} · {t(`status.${drone.status}`)}
             </span>
           </div>
-          <p className="mt-1 truncate text-[11px] text-gray-500 sm:text-xs">
+          <p className="mt-1 truncate text-[11px] text-[var(--color-text-secondary)] sm:text-xs">
             {t('drone.field.defaultOperator')}: {operatorName}
           </p>
           {isPublic ? (
-            <p className="mt-1 truncate font-mono text-[10px] text-gray-400 sm:text-[11px]">
+            <p className="mt-1 truncate font-mono text-[10px] text-[var(--color-text-secondary)] sm:text-[11px]">
               {getPublicProfileUrl(drone.slug)}
             </p>
           ) : null}
@@ -357,14 +354,40 @@ function CreateDroneModal({
     defaultOperatorId: operators.find((o) => o.isDefault)?.id ?? operators[0]?.id ?? '',
   }));
   const [errors, setErrors] = useState<Record<string, string | undefined>>({});
+  const isCustom = form.catalogId === CUSTOM_DRONE_CATALOG_ID;
+  const fromCatalog = Boolean(form.catalogId && !isCustom);
+  const hasChoice = Boolean(form.catalogId);
 
   function setField<K extends keyof CreateFormState>(k: K, v: CreateFormState[K]) {
     setForm((p) => ({ ...p, [k]: v }));
     if (errors[k as string]) setErrors((e) => ({ ...e, [k]: undefined }));
   }
 
+  function applyCatalogEntry(entry: DroneCatalogEntry | null) {
+    if (!entry) {
+      setForm((p) => ({
+        ...p,
+        catalogId: CUSTOM_DRONE_CATALOG_ID,
+        manufacturer: '',
+        model: '',
+        classMarking: 'unknown',
+      }));
+      setErrors((e) => ({ ...e, manufacturer: undefined, model: undefined }));
+      return;
+    }
+    setForm((p) => ({
+      ...p,
+      catalogId: entry.id,
+      manufacturer: entry.manufacturer,
+      model: entry.model,
+      classMarking: entry.classMarking,
+    }));
+    setErrors((e) => ({ ...e, manufacturer: undefined, model: undefined }));
+  }
+
   function validate(): Record<string, string> {
     const e: Record<string, string> = {};
+    if (!hasChoice) e.catalogId = t('drone.catalog.required');
     if (!form.manufacturer.trim()) e.manufacturer = t('form.validation.required');
     if (!form.model.trim()) e.model = t('form.validation.required');
     if (!form.defaultOperatorId) e.defaultOperatorId = t('form.validation.required');
@@ -373,58 +396,107 @@ function CreateDroneModal({
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault();
+    if (!hasChoice) {
+      setErrors({ catalogId: t('drone.catalog.required') });
+      return;
+    }
     const v = validate();
     setErrors(v);
     if (Object.keys(v).length > 0) return;
     onSubmit(form);
   }
 
+  const selectedCatalog = form.catalogId && !isCustom
+    ? findDroneCatalogEntry(form.catalogId)
+    : null;
+
+  const bannerMessage = errors.catalogId && !hasChoice
+    ? errors.catalogId
+    : undefined;
+
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={t('drone.create.title')}>
       <form onSubmit={handleSubmit} noValidate className="space-y-4">
-        <FormErrorBanner show={Object.keys(errors).length > 0} />
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <Input
-            label={t('drone.field.manufacturer')} name="manufacturer" required
-            value={form.manufacturer}
-            onChange={(e) => setField('manufacturer', e.target.value)}
-            error={errors.manufacturer}
-          />
-          <Input
-            label={t('drone.field.model')} name="model" required
-            value={form.model}
-            onChange={(e) => setField('model', e.target.value)}
-            error={errors.model}
-          />
-          <Select
-            label={t('drone.field.classMarking')} name="classMarking"
-            value={form.classMarking}
-            onChange={(e: ChangeEvent<HTMLSelectElement>) =>
-              setField('classMarking', e.target.value as DroneClass)
-            }
-            options={DRONE_CLASSES.map((c) => ({ value: c.value, label: t(c.labelKey) }))}
-          />
-          <Input
-            label={t('drone.field.serialNumber')} name="droneSerialNumber"
-            value={form.droneSerialNumber}
-            onChange={(e) => setField('droneSerialNumber', e.target.value)}
-          />
-          <Select
-            label={t('drone.field.defaultOperator')} name="defaultOperatorId" required
-            value={form.defaultOperatorId}
-            onChange={(e: ChangeEvent<HTMLSelectElement>) =>
-              setField('defaultOperatorId', e.target.value)
-            }
-            options={operators.map((op) => ({ value: op.id, label: operatorDisplayName(op) }))}
-            error={errors.defaultOperatorId}
-            className="sm:col-span-2"
-          />
-        </div>
+        <FormErrorBanner
+          show={Object.keys(errors).length > 0}
+          message={bannerMessage}
+        />
+
+        <DroneCatalogPicker
+          selectedId={form.catalogId}
+          onSelect={(entry) => {
+            applyCatalogEntry(entry);
+            setErrors({});
+          }}
+        />
+        {errors.catalogId && !hasChoice ? (
+          <p className="text-sm text-[var(--color-expired)]" role="alert">{errors.catalogId}</p>
+        ) : null}
+
+        {selectedCatalog ? (
+          <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-hover)] px-3 py-2.5 text-sm">
+            <p className="font-medium text-[var(--color-text)]">
+              {selectedCatalog.manufacturer} {selectedCatalog.model}
+            </p>
+            <p className="mt-0.5 text-xs text-[var(--color-text-secondary)]">
+              {t('drone.catalog.selectedClass')}: {selectedCatalog.classMarking}
+              {selectedCatalog.note ? ` · ${selectedCatalog.note}` : ''}
+            </p>
+          </div>
+        ) : null}
+
+        {isCustom ? (
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <Input
+              label={t('drone.field.manufacturer')} name="manufacturer" required
+              value={form.manufacturer}
+              onChange={(e) => setField('manufacturer', e.target.value)}
+              error={errors.manufacturer}
+            />
+            <Input
+              label={t('drone.field.model')} name="model" required
+              value={form.model}
+              onChange={(e) => setField('model', e.target.value)}
+              error={errors.model}
+            />
+          </div>
+        ) : null}
+
+        {hasChoice ? (
+          <>
+            <Select
+              label={t('drone.field.classMarking')} name="classMarking"
+              value={form.classMarking}
+              onChange={(e: ChangeEvent<HTMLSelectElement>) =>
+                setField('classMarking', e.target.value as DroneClass)
+              }
+              options={DRONE_CLASSES.map((c) => ({ value: c.value, label: t(c.labelKey) }))}
+            />
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <Input
+                label={t('drone.field.serialNumber')} name="droneSerialNumber"
+                value={form.droneSerialNumber}
+                onChange={(e) => setField('droneSerialNumber', e.target.value)}
+                placeholder={t('drone.catalog.serialHint')}
+              />
+              <Select
+                label={t('drone.field.defaultOperator')} name="defaultOperatorId" required
+                value={form.defaultOperatorId}
+                onChange={(e: ChangeEvent<HTMLSelectElement>) =>
+                  setField('defaultOperatorId', e.target.value)
+                }
+                options={operators.map((op) => ({ value: op.id, label: operatorDisplayName(op) }))}
+                error={errors.defaultOperatorId}
+              />
+            </div>
+          </>
+        ) : null}
+
         <div className="flex flex-wrap items-center justify-end gap-2 pt-1">
           <Button variant="ghost" onClick={onClose} disabled={saving}>
             {t('common.cancel')}
           </Button>
-          <Button type="submit" loading={saving}>
+          <Button type="submit" loading={saving} disabled={!hasChoice}>
             {t('common.create')}
           </Button>
         </div>
@@ -432,3 +504,4 @@ function CreateDroneModal({
     </Modal>
   );
 }
+

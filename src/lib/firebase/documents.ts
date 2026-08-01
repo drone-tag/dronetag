@@ -18,6 +18,7 @@ import {
 import { awaitFirebaseAuthReady } from '@/lib/firebase/auth';
 import { DEMO_MODE, getFirebaseDb } from '@/lib/firebase/config';
 import * as demo from '@/lib/demo/entitiesStore';
+import { fileToDataUrl } from '@/lib/demo/fileToDataUrl';
 import { adminFetch } from '@/lib/client/adminApi';
 import type { DocumentRef, DocumentKind } from '@/lib/types/entities';
 import type { VerificationStatus } from '@/lib/types';
@@ -97,7 +98,15 @@ export async function createDocument(
 export async function uploadDocumentFile(documentId: string, file: File): Promise<string> {
   if (DEMO_MODE) {
     await new Promise((r) => setTimeout(r, 300));
-    return URL.createObjectURL(file);
+    const fileUrl = await fileToDataUrl(file);
+    await demo.updateDocument(documentId, {
+      fileUrl,
+      fileName: file.name,
+      fileSize: file.size,
+      mimeType: file.type || 'application/octet-stream',
+      verificationStatus: 'pending',
+    });
+    return fileUrl;
   }
   const form = new FormData();
   form.append('file', file);

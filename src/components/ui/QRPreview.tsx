@@ -16,8 +16,8 @@ export function QRPreview({ url, size = 200 }: QRPreviewProps) {
     return (
       <div
         className={classNames(
-          'flex items-center justify-center rounded-lg border border-dashed border-gray-300 bg-gray-50 shadow-sm',
-          'text-sm text-gray-400'
+          'flex items-center justify-center rounded-lg border border-dashed border-[var(--color-border)] bg-[var(--color-hover)] shadow-sm',
+          'text-sm text-[var(--color-text-secondary)]'
         )}
         style={{ width: size, height: size }}
         role="img"
@@ -30,7 +30,7 @@ export function QRPreview({ url, size = 200 }: QRPreviewProps) {
 
   return (
     <div
-      className="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm"
+      className="overflow-hidden rounded-lg border border-[var(--color-border)] bg-[var(--color-card)] shadow-sm"
       style={{ width: size, height: size }}
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}

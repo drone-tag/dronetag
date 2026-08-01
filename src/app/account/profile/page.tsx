@@ -1,17 +1,8 @@
 'use client';
 
-/**
- * Account profile editor.
- *
- * Renders public branding media only. Personal/account identity data is locked
- * after signup and must be changed through admin support.
- *
- * Privacy: contact/address fields stay private. Photo, logo and banner are
- * copied into public drone snapshots when a drone is published.
- */
-
 import { useEffect, useRef, useState } from 'react';
 import type { ChangeEvent, FormEvent } from 'react';
+import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { resyncUserPublicDrones } from '@/lib/firebase/dronesPublic';
@@ -22,6 +13,7 @@ import {
   uploadAccountLogo,
   uploadAccountProfilePhoto,
 } from '@/lib/firebase/account';
+import { DEMO_MODE } from '@/lib/firebase/config';
 import { ensurePilot } from '@/lib/firebase/pilots';
 import type { Address, UserAccount } from '@/lib/types/account';
 import { Button } from '@/components/ui/Button';
@@ -81,8 +73,8 @@ export default function AccountProfilePage() {
 
   if (loading) {
     return (
-      <div className="mt-8 flex items-center gap-3 text-sm text-gray-500">
-        <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-gray-600" />
+      <div className="mt-8 flex items-center gap-3 text-sm text-[var(--color-text-secondary)]">
+        <div className="h-4 w-4 animate-spin rounded-full border-2 border-[var(--color-border)] border-t-gray-600" />
         {t('common.loading')}
       </div>
     );
@@ -98,7 +90,7 @@ export default function AccountProfilePage() {
         initial={account}
         onSaved={(next) => setAccount(next)}
       />
-      <p className="rounded-lg border border-gray-200 bg-white px-4 py-3 text-xs leading-relaxed text-gray-500">
+      <p className="rounded-lg border border-[var(--color-border)] bg-[var(--color-card)] px-4 py-3 text-xs leading-relaxed text-[var(--color-text-secondary)]">
         {t('legal.platformDisclaimer')}
       </p>
     </div>
@@ -138,8 +130,16 @@ function AccountCard({
     setBannerObjUrl(undefined);
     setErrors({});
     setDirty(false);
-    setSavedAt(null);
-  }, [initial]);
+    setSavedAt(initial.profilePhotoUrl || initial.logoUrl || initial.bannerUrl ? Date.now() : null);
+    // Sync when account identity / branding changes — not on every new object reference.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentionally narrow deps
+  }, [
+    initial.uid,
+    initial.updatedAt,
+    initial.profilePhotoUrl,
+    initial.logoUrl,
+    initial.bannerUrl,
+  ]);
 
   useEffect(() => {
     const tracked = blobUrlsRef.current;
@@ -188,9 +188,17 @@ function AccountCard({
       if (logoFile) logoUrl = await uploadAccountLogo(uid, logoFile);
       if (bannerFile) bannerUrl = await uploadAccountBanner(uid, bannerFile);
 
-      if (photoFile || logoFile || bannerFile) {
-        await resyncUserPublicDrones(uid);
+      // Live: POST /api/account/branding already writes Firestore.
+      // Demo: upload only returns a data URL — persist it on the account.
+      if (DEMO_MODE || (!photoFile && !logoFile && !bannerFile)) {
+        await updateAccount(uid, {
+          profilePhotoUrl,
+          logoUrl,
+          bannerUrl,
+        });
       }
+
+      await resyncUserPublicDrones(uid);
 
       const patch = {
         ...form,
@@ -199,22 +207,12 @@ function AccountCard({
         bannerUrl,
       };
 
-      // Branding uploads are persisted by POST /api/account/branding (Admin SDK).
-      // Identity, contact and address fields stay locked; admins handle changes.
-      if (!photoFile && !logoFile && !bannerFile) {
-        await updateAccount(uid, {
-          profilePhotoUrl,
-          logoUrl,
-          bannerUrl,
-        });
-      }
-      await resyncUserPublicDrones(uid);
-
       const next: UserAccount = {
         ...initial,
         ...patch,
         updatedAt: new Date().toISOString(),
       };
+      setForm(patch);
       onSaved(next);
       setPhotoFile(null);
       setLogoFile(null);
@@ -244,15 +242,21 @@ function AccountCard({
       <form onSubmit={handleSubmit} noValidate className="space-y-6">
         <header className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h2 className="text-base font-semibold text-gray-900">
+            <h2 className="text-base font-semibold text-[var(--color-text)]">
               {t('account.section.media')}
             </h2>
-            <p className="mt-1 text-xs leading-relaxed text-gray-500">
-              {t('account.lockedIdentityHint')}
+            <p className="mt-1 text-xs leading-relaxed text-[var(--color-text-secondary)]">
+              {t('account.lockedIdentityHint')}{' '}
+              <Link
+                href="/account/support?subject=Richiesta%20cambio%20dati"
+                className="font-medium text-[var(--color-action)] underline-offset-2 hover:underline"
+              >
+                {t('support.nav')}
+              </Link>
             </p>
           </div>
           {savedAt && !dirty ? (
-            <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700 ring-1 ring-inset ring-emerald-600/20">
+            <span className="rounded-full bg-[var(--tone-success-bg)] px-2.5 py-1 text-xs font-medium text-[var(--tone-success-fg)] ring-1 ring-inset ring-[var(--tone-success-ring)]">
               {t('account.saved')}
             </span>
           ) : null}

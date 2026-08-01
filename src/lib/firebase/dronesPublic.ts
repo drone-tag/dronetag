@@ -102,7 +102,18 @@ function snapshotFromRaw(slug: string, raw: Record<string, unknown>): DronePubli
  * a public visitor doesn't pay for an auth round-trip on a QR scan.
  */
 export async function getDronePublicBySlug(slug: string): Promise<DronePublicSnapshot | null> {
-  if (DEMO_MODE) return demo.getDronePublicBySlug(slug);
+  if (DEMO_MODE) {
+    // Always re-project from live entities so admin verify/renew shows up
+    // even if the denormalised snapshot was stale (or from another tab's seed).
+    const drone = await demo.getDroneBySlug(slug);
+    if (drone && drone.status === 'active' && drone.visibility === 'public') {
+      await syncDronePublicSnapshot(drone);
+    } else if (drone) {
+      await deleteSnapshot(slug);
+      return null;
+    }
+    return demo.getDronePublicBySlug(slug);
+  }
   if (!slug) return null;
   const db = getFirebaseDb();
   const snap = await getDoc(doc(db, DRONES_PUBLIC, slug));

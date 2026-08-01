@@ -58,7 +58,7 @@ export function ErrorPanel({ error, reset, context }: ErrorPanelProps) {
 
   return (
     <div className="mx-auto flex max-w-md flex-col items-center px-4 py-12 text-center">
-      <div className="mb-5 flex h-14 w-14 items-center justify-center rounded-full bg-red-50 text-red-600">
+      <div className="mb-5 flex h-14 w-14 items-center justify-center rounded-full bg-[var(--tone-danger-bg)] text-[var(--tone-danger-fg)]">
         <svg
           className="h-7 w-7"
           viewBox="0 0 24 24"
@@ -70,8 +70,8 @@ export function ErrorPanel({ error, reset, context }: ErrorPanelProps) {
           <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
         </svg>
       </div>
-      <h1 className="text-lg font-semibold text-gray-900">{t('error.boundary.title')}</h1>
-      <p className="mt-2 text-sm leading-relaxed text-gray-600">{body}</p>
+      <h1 className="text-lg font-semibold text-[var(--color-text)]">{t('error.boundary.title')}</h1>
+      <p className="mt-2 text-sm leading-relaxed text-[var(--color-text-secondary)]">{body}</p>
 
       <div className="mt-6 flex w-full flex-col items-stretch gap-2 sm:flex-row sm:justify-center">
         <Button onClick={reset} className="tap-44">{t('error.boundary.retry')}</Button>
@@ -81,17 +81,17 @@ export function ErrorPanel({ error, reset, context }: ErrorPanelProps) {
       </div>
 
       {(context === 'admin' || isDev) && (error.digest || isDev) ? (
-        <details className="mt-6 w-full rounded-lg border border-gray-200 bg-gray-50/80 px-4 py-3 text-left text-xs">
-          <summary className="cursor-pointer font-medium text-gray-700">
+        <details className="mt-6 w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-hover)]/80 px-4 py-3 text-left text-xs">
+          <summary className="cursor-pointer font-medium text-[var(--color-text)]">
             {t('error.boundary.diagnostics')}
           </summary>
           {error.digest ? (
-            <p className="mt-2 font-mono text-[11px] text-gray-600">
+            <p className="mt-2 font-mono text-[11px] text-[var(--color-text-secondary)]">
               <span className="font-semibold">{t('error.boundary.digest')}:</span> {error.digest}
             </p>
           ) : null}
           {isDev && error.stack ? (
-            <pre className="mt-2 max-h-64 overflow-auto whitespace-pre-wrap text-[10px] leading-relaxed text-gray-500">
+            <pre className="mt-2 max-h-64 overflow-auto whitespace-pre-wrap text-[10px] leading-relaxed text-[var(--color-text-secondary)]">
               {error.stack}
             </pre>
           ) : null}

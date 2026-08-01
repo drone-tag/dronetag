@@ -9,19 +9,24 @@ import { AccountAppShell } from '@/components/layout/AccountAppShell';
 
 export default function AccountLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const { user, loading } = useAuth();
+  const { user, loading, isAdmin } = useAuth();
   const { t } = useLanguage();
 
   useEffect(() => {
     if (loading) return;
-    if (!user) router.replace('/login?redirect=/account');
-  }, [user, loading, router]);
+    if (!user) {
+      router.replace('/login?redirect=/account');
+      return;
+    }
+    // Admin staff account has no user workspace — only /admin.
+    if (isAdmin) router.replace('/admin');
+  }, [user, loading, isAdmin, router]);
 
   if (loading) {
     return (
-      <div className="flex min-h-dvh flex-col items-center justify-center gap-3 bg-[var(--color-app-bg)] pt-header">
+      <div className="flex min-h-[calc(100dvh-var(--app-header-offset))] flex-col items-center justify-center gap-3 bg-[var(--color-app-bg)]">
         <div
-          className="h-9 w-9 animate-spin rounded-full border-2 border-gray-200 border-t-[var(--color-action)]"
+          className="h-9 w-9 animate-spin rounded-full border-2 border-[var(--color-border)] border-t-[var(--color-action)]"
           role="status"
           aria-label={t('common.loading')}
         />
@@ -30,7 +35,7 @@ export default function AccountLayout({ children }: { children: React.ReactNode 
     );
   }
 
-  if (!user) return null;
+  if (!user || isAdmin) return null;
 
   return (
     <AccountProvisionGate>

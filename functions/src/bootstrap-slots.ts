@@ -25,6 +25,8 @@ const BASE_SLOTS = {
   drone: 1,
   operator: 1,
   pdf: 1,
+  permit: 3,
+  archive: 0,
   nfc_badge: 0,
   personalization: 0,
 } as const;

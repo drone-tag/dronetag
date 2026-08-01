@@ -15,10 +15,12 @@ import {
 import { awaitFirebaseAuthReady } from '@/lib/firebase/auth';
 import { DEMO_MODE, getFirebaseDb } from '@/lib/firebase/config';
 import * as demo from '@/lib/demo/entitiesStore';
+import { fileToDataUrl } from '@/lib/demo/fileToDataUrl';
 import { resyncUserPublicDrones } from '@/lib/firebase/dronesPublic';
 import { adminFetch } from '@/lib/client/adminApi';
 import type { Insurance, InsuranceLink } from '@/lib/types/entities';
 import type { VerificationStatus } from '@/lib/types';
+import { normalizeInsuranceDroneIds } from '@/lib/utils/insurance';
 
 const INSURANCES = 'insurances';
 
@@ -26,12 +28,15 @@ function insuranceFromRaw(id: string, raw: Record<string, unknown>): Insurance {
   const str = (k: string) => (typeof raw[k] === 'string' ? (raw[k] as string) : '');
   const optStr = (k: string) =>
     typeof raw[k] === 'string' ? (raw[k] as string) : null;
+  const droneId = optStr('droneId');
+  const droneIds = normalizeInsuranceDroneIds(raw.droneIds, droneId);
   return {
     id,
     userId: str('userId'),
     link: (str('link') || 'drone') as InsuranceLink,
-    droneId: optStr('droneId'),
+    droneId: droneIds[0] ?? droneId,
     operatorId: optStr('operatorId'),
+    droneIds,
     provider: str('provider'),
     policyNumber: str('policyNumber'),
     holderName: str('holderName'),
@@ -80,7 +85,8 @@ export async function createInsurance(
     method: 'POST',
     body: JSON.stringify({
       link: data.link,
-      droneId: data.droneId,
+      droneId: data.droneIds[0] ?? data.droneId,
+      droneIds: data.droneIds,
       operatorId: data.operatorId,
       provider: data.provider,
       policyNumber: data.policyNumber,
@@ -107,7 +113,14 @@ export async function uploadInsurancePolicyPdf(
 ): Promise<string> {
   if (DEMO_MODE) {
     await new Promise((r) => setTimeout(r, 300));
-    return URL.createObjectURL(file);
+    const pdfUrl = await fileToDataUrl(file);
+    await demo.updateInsurance(insuranceId, {
+      pdfUrl,
+      verificationStatus: parserTrusted ? 'verified' : 'pending',
+    });
+    const insurance = await demo.getInsurance(insuranceId);
+    if (insurance?.userId) await resyncUserPublicDrones(insurance.userId);
+    return pdfUrl;
   }
   const before = await getInsurance(insuranceId);
   const form = new FormData();

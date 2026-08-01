@@ -1,5 +1,7 @@
 /**
  * POST /api/entities/insurances - create insurance via Admin SDK.
+ * One policy may cover many drones (`droneIds`); each listed drone gets
+ * `insuranceId` set to the new policy.
  */
 
 import { NextResponse } from 'next/server';
@@ -7,6 +9,7 @@ import { adminFirestore } from '@/lib/server/firebaseAdmin';
 import { requireUserFromRequest } from '@/lib/server/requestAuth';
 import { cleanString } from '@/lib/server/strings';
 import { sanitizeAllowedUrl, UrlValidationError } from '@/lib/server/urls';
+import { normalizeInsuranceDroneIds } from '@/lib/utils/insurance';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -14,6 +17,7 @@ export const dynamic = 'force-dynamic';
 type Body = {
   link?: unknown;
   droneId?: unknown;
+  droneIds?: unknown;
   operatorId?: unknown;
   provider?: unknown;
   policyNumber?: unknown;
@@ -56,18 +60,19 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'expiryDate must be on or after issueDate' }, { status: 400 });
   }
 
-  const droneId =
-    link === 'drone' && typeof body.droneId === 'string' && body.droneId.trim()
-      ? body.droneId.trim()
-      : null;
+  const legacyDroneId =
+    typeof body.droneId === 'string' && body.droneId.trim() ? body.droneId.trim() : null;
+  const droneIds = normalizeInsuranceDroneIds(body.droneIds, legacyDroneId);
+  const droneId = droneIds[0] ?? null;
+
   const operatorId =
     link === 'operator' && typeof body.operatorId === 'string' && body.operatorId.trim()
       ? body.operatorId.trim()
       : null;
 
   const db = adminFirestore();
-  if (droneId) {
-    const ds = await db.collection('drones').doc(droneId).get();
+  for (const id of droneIds) {
+    const ds = await db.collection('drones').doc(id).get();
     if (!ds.exists || (ds.data() as { userId?: string }).userId !== auth.uid) {
       return NextResponse.json({ error: 'linked drone does not belong to user' }, { status: 400 });
     }
@@ -89,10 +94,13 @@ export async function POST(request: Request) {
     throw err;
   }
 
-  const ref = await db.collection('insurances').add({
+  const batch = db.batch();
+  const ref = db.collection('insurances').doc();
+  batch.set(ref, {
     userId: auth.uid,
     link,
     droneId,
+    droneIds,
     operatorId,
     provider,
     policyNumber,
@@ -106,6 +114,15 @@ export async function POST(request: Request) {
     updatedAt: nowIso(),
     dataLockedAt: nowIso(),
   });
+
+  for (const id of droneIds) {
+    batch.update(db.collection('drones').doc(id), {
+      insuranceId: ref.id,
+      updatedAt: nowIso(),
+    });
+  }
+
+  await batch.commit();
 
   return NextResponse.json({ id: ref.id });
 }

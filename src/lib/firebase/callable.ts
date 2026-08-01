@@ -80,9 +80,11 @@ export const callCreateDocument = call<CreateDocumentInput, { id: string }>('cre
 export interface CreateInsuranceInput {
   link: 'drone' | 'operator';
   droneId: string | null;
+  droneIds?: string[];
   operatorId: string | null;
   provider: string;
   policyNumber: string;
+  holderName?: string;
   issueDate: string;
   expiryDate: string;
   notes: string;

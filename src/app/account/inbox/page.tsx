@@ -65,8 +65,8 @@ export default function AccountInboxPage() {
 
   if (loading) {
     return (
-      <div className="mt-8 flex items-center gap-3 text-sm text-gray-500">
-        <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-gray-600" />
+      <div className="mt-8 flex items-center gap-3 text-sm text-[var(--color-text-secondary)]">
+        <div className="h-4 w-4 animate-spin rounded-full border-2 border-[var(--color-border)] border-t-gray-600" />
         {t('common.loading')}
       </div>
     );
@@ -99,7 +99,7 @@ export default function AccountInboxPage() {
       subtitle={t('inbox.subtitle')}
       rightActions={
         unreadCount > 0 ? (
-          <span className="inline-flex items-center gap-2 rounded-full bg-blue-50 px-3 py-1 text-xs font-medium text-blue-700 ring-1 ring-inset ring-blue-600/20">
+          <span className="inline-flex items-center gap-2 rounded-full bg-[var(--tone-info-bg)] px-3 py-1 text-xs font-medium text-[var(--tone-info-fg)] ring-1 ring-inset ring-[var(--tone-info-ring)]">
             <span className="h-1.5 w-1.5 rounded-full bg-blue-600" aria-hidden />
             {unreadCount} {t('inbox.unread').toLowerCase()}
           </span>
@@ -163,29 +163,29 @@ function ReportRow({
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0 flex-1 space-y-2">
             <div className="flex flex-wrap items-center gap-2">
-              <h3 className="text-base font-semibold text-gray-900">{finderName}</h3>
+              <h3 className="text-base font-semibold text-[var(--color-text)]">{finderName}</h3>
               <ReadBadge read={report.read} />
             </div>
 
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-[var(--color-text-secondary)]">
               <Link
                 href={`/u/${report.droneSlug}`}
-                className="text-blue-600 underline-offset-2 hover:underline"
+                className="text-[var(--color-action)] underline-offset-2 hover:underline"
               >
                 {droneLabel}
               </Link>
-              <span className="mx-1.5 text-gray-300">·</span>
+              <span className="mx-1.5 text-[var(--color-border)]">·</span>
               {t('inbox.receivedAt', { date: formatDateTime(report.createdAt) })}
             </p>
 
             {hasContact && mailtoHref ? (
-              <p className="text-sm text-gray-700">
-                <span className="text-xs uppercase tracking-wider text-gray-400">
+              <p className="text-sm text-[var(--color-text)]">
+                <span className="text-xs uppercase tracking-wider text-[var(--color-text-secondary)]">
                   {t('inbox.contact')}:
                 </span>{' '}
                 <a
                   href={mailtoHref}
-                  className="text-blue-600 underline-offset-2 hover:underline"
+                  className="text-[var(--color-action)] underline-offset-2 hover:underline"
                 >
                   {report.contactEmail.trim()}
                 </a>
@@ -193,8 +193,8 @@ function ReportRow({
             ) : null}
 
             {hasMessage ? (
-              <div className="rounded-lg border border-gray-200 bg-gray-50/60 px-3 py-2.5 text-sm text-gray-800">
-                <p className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-gray-400">
+              <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-hover)] px-3 py-2.5 text-sm text-[var(--color-text)]">
+                <p className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-[var(--color-text-secondary)]">
                   {t('inbox.message')}
                 </p>
                 <p className="whitespace-pre-wrap leading-relaxed">{report.message}</p>
@@ -202,8 +202,8 @@ function ReportRow({
             ) : null}
 
             {hasLocation ? (
-              <div className="flex flex-wrap items-center gap-2 text-xs text-gray-600">
-                <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">
+              <div className="flex flex-wrap items-center gap-2 text-xs text-[var(--color-text-secondary)]">
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--color-text-secondary)]">
                   {t('inbox.location')}:
                 </span>
                 {report.locationText.trim() ? (
@@ -211,7 +211,7 @@ function ReportRow({
                 ) : null}
                 {report.location ? (
                   <>
-                    <span className="font-mono text-[11px] text-gray-500">
+                    <span className="font-mono text-[11px] text-[var(--color-text-secondary)]">
                       {t('inbox.locationCoords', {
                         lat: report.location.lat.toFixed(5),
                         lng: report.location.lng.toFixed(5),
@@ -223,7 +223,7 @@ function ReportRow({
                         href={mapHref}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-blue-600 underline-offset-2 hover:underline"
+                        className="text-[var(--color-action)] underline-offset-2 hover:underline"
                       >
                         {t('inbox.viewLocation')}
                       </a>
@@ -266,8 +266,8 @@ function ReadBadge({ read }: { read: boolean }) {
       className={classNames(
         'inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider ring-1 ring-inset',
         read
-          ? 'bg-gray-50 text-gray-600 ring-gray-500/20'
-          : 'bg-blue-50 text-blue-700 ring-blue-600/20',
+          ? 'bg-[var(--color-hover)] text-[var(--color-text-secondary)] ring-[var(--color-border)]'
+          : 'bg-[var(--tone-info-bg)] text-[var(--tone-info-fg)] ring-[var(--tone-info-ring)]',
       )}
     >
       <span

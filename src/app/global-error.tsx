@@ -21,9 +21,9 @@ export default function GlobalError({
 }) {
   return (
     <html lang="en">
-      <body className="bg-gray-50 antialiased">
+      <body className="bg-[var(--color-app-bg)] antialiased">
         <div className="mx-auto flex min-h-[100dvh] max-w-md flex-col items-center justify-center px-6 text-center">
-          <div className="mb-5 flex h-14 w-14 items-center justify-center rounded-full bg-red-50 text-red-600">
+          <div className="mb-5 flex h-14 w-14 items-center justify-center rounded-full bg-[var(--tone-danger-bg)] text-[var(--tone-danger-fg)]">
             <svg
               className="h-7 w-7"
               viewBox="0 0 24 24"

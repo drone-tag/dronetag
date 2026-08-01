@@ -108,7 +108,7 @@ export default function AdminNfcPage() {
         <Card padding="none" className="mt-6 overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full divide-y divide-gray-200 text-sm">
-              <thead className="bg-gray-50 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
+              <thead className="bg-[var(--color-hover)] text-left text-xs font-semibold uppercase tracking-wide text-[var(--color-text-secondary)]">
                 <tr>
                   <th className="px-4 py-3">{t('admin.nfc.col.slug')}</th>
                   <th className="px-4 py-3">{t('admin.nfc.col.url')}</th>
@@ -116,16 +116,16 @@ export default function AdminNfcPage() {
                   <th className="px-4 py-3" aria-hidden />
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100 bg-white">
+              <tbody className="divide-y divide-[var(--color-border)] bg-[var(--color-card)]">
                 {loading ? (
                   <tr>
-                    <td colSpan={4} className="px-4 py-6 text-center text-xs text-gray-400">
+                    <td colSpan={4} className="px-4 py-6 text-center text-xs text-[var(--color-text-secondary)]">
                       {t('common.loading')}
                     </td>
                   </tr>
                 ) : rows.length === 0 ? (
                   <tr>
-                    <td colSpan={4} className="px-4 py-6 text-center text-xs text-gray-400">
+                    <td colSpan={4} className="px-4 py-6 text-center text-xs text-[var(--color-text-secondary)]">
                       {t('admin.nfc.empty')}
                     </td>
                   </tr>
@@ -135,9 +135,9 @@ export default function AdminNfcPage() {
                     const owner = drone ? accounts[drone.userId] : undefined;
                     return (
                       <tr key={row.slug}>
-                        <td className="px-4 py-2 font-mono text-xs text-gray-700">{row.slug}</td>
-                        <td className="px-4 py-2 font-mono text-xs text-gray-600">{row.url}</td>
-                        <td className="px-4 py-2 text-xs text-gray-600">
+                        <td className="px-4 py-2 font-mono text-xs text-[var(--color-text)]">{row.slug}</td>
+                        <td className="px-4 py-2 font-mono text-xs text-[var(--color-text-secondary)]">{row.url}</td>
+                        <td className="px-4 py-2 text-xs text-[var(--color-text-secondary)]">
                           {owner ? accountDisplayName(owner) : '—'}
                         </td>
                         <td className="px-4 py-2 text-right">

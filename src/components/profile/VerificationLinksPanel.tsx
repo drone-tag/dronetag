@@ -42,10 +42,10 @@ function LinkSection({ icon, title, children }: {
   children: React.ReactNode;
 }) {
   return (
-    <div className="rounded-lg border border-gray-200 bg-white p-4">
+    <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-card)] p-4">
       <div className="mb-3 flex items-center gap-2">
         {icon}
-        <h4 className="text-sm font-semibold text-gray-900">{title}</h4>
+        <h4 className="text-sm font-semibold text-[var(--color-text)]">{title}</h4>
       </div>
       {children}
     </div>
@@ -95,26 +95,26 @@ export function VerificationLinksPanel({
         icon={<LinkIcon className="h-4.5 w-4.5 text-blue-600" />}
         title={t('links.publicUrlTitle')}
       >
-        <p className="mb-3 text-xs leading-relaxed text-gray-500">
+        <p className="mb-3 text-xs leading-relaxed text-[var(--color-text-secondary)]">
           {t('links.publicUrlDesc')}
         </p>
 
         {isPublic ? (
           <div className="flex items-stretch gap-2">
-            <div className="flex min-w-0 flex-1 items-center rounded-md border border-gray-200 bg-gray-50 px-3 py-2">
-              <code className="truncate text-xs font-medium text-gray-700">{publicUrl}</code>
+            <div className="flex min-w-0 flex-1 items-center rounded-md border border-[var(--color-border)] bg-[var(--color-hover)] px-3 py-2">
+              <code className="truncate text-xs font-medium text-[var(--color-text)]">{publicUrl}</code>
             </div>
             <button
               type="button"
               onClick={handleCopy}
-              className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-gray-200 bg-white px-3 py-2 text-xs font-medium text-gray-700 transition-colors hover:bg-gray-50 active:bg-gray-100"
+              className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-[var(--color-border)] bg-[var(--color-card)] px-3 py-2 text-xs font-medium text-[var(--color-text)] transition-colors hover:bg-[var(--color-hover)] active:bg-[var(--color-hover)]"
             >
               {copied ? (
                 <svg viewBox="0 0 16 16" fill="currentColor" className="h-3.5 w-3.5 text-emerald-500">
                   <path fillRule="evenodd" d="M12.416 3.376a.75.75 0 01.208 1.04l-5 7.5a.75.75 0 01-1.154.114l-3-3a.75.75 0 011.06-1.06l2.353 2.353 4.493-6.74a.75.75 0 011.04-.207z" clipRule="evenodd" />
                 </svg>
               ) : (
-                <svg viewBox="0 0 16 16" fill="currentColor" className="h-3.5 w-3.5 text-gray-400">
+                <svg viewBox="0 0 16 16" fill="currentColor" className="h-3.5 w-3.5 text-[var(--color-text-secondary)]">
                   <path d="M10.5 3a.75.75 0 01.75.75v1h1a.75.75 0 010 1.5h-1v1a.75.75 0 01-1.5 0v-1h-1a.75.75 0 010-1.5h1v-1A.75.75 0 0110.5 3z" />
                   <path fillRule="evenodd" d="M4.5 2A1.5 1.5 0 003 3.5v9A1.5 1.5 0 004.5 14h7a1.5 1.5 0 001.5-1.5v-7A1.5 1.5 0 0011.5 4H9V3.5A1.5 1.5 0 007.5 2h-3zM9 5.5h2.5a.5.5 0 01.5.5v6.5a.5.5 0 01-.5.5h-7a.5.5 0 01-.5-.5v-9a.5.5 0 01.5-.5h3a.5.5 0 01.5.5V5a.5.5 0 00.5.5z" clipRule="evenodd" />
                 </svg>
@@ -123,8 +123,8 @@ export function VerificationLinksPanel({
             </button>
           </div>
         ) : (
-          <div className="rounded-md border border-dashed border-gray-300 bg-gray-50 px-3 py-3">
-            <p className="text-xs text-gray-400">{t('links.publicUrlNotReady')}</p>
+          <div className="rounded-md border border-dashed border-[var(--color-border)] bg-[var(--color-hover)] px-3 py-3">
+            <p className="text-xs text-[var(--color-text-secondary)]">{t('links.publicUrlNotReady')}</p>
           </div>
         )}
       </LinkSection>
@@ -134,7 +134,7 @@ export function VerificationLinksPanel({
         icon={<QrIcon className="h-4.5 w-4.5 text-indigo-600" />}
         title={t('links.qrTitle')}
       >
-        <p className="mb-3 text-xs leading-relaxed text-gray-500">
+        <p className="mb-3 text-xs leading-relaxed text-[var(--color-text-secondary)]">
           {t('links.qrDesc')}
         </p>
 
@@ -147,7 +147,7 @@ export function VerificationLinksPanel({
               onUpload={onQrUpload}
               preview={false}
             />
-            <p className="mt-1 text-[11px] text-gray-400">{t('form.qrHint')}</p>
+            <p className="mt-1 text-[11px] text-[var(--color-text-secondary)]">{t('form.qrHint')}</p>
           </div>
           <div className="flex shrink-0 justify-center">
             <QRPreview url={qrDisplay} size={140} />
@@ -157,26 +157,26 @@ export function VerificationLinksPanel({
 
       {/* ── NFC Reference ──────────────────────────────────────────── */}
       <LinkSection
-        icon={<NfcIcon className="h-4.5 w-4.5 text-gray-400" />}
+        icon={<NfcIcon className="h-4.5 w-4.5 text-[var(--color-text-secondary)]" />}
         title={t('links.nfcTitle')}
       >
-        <p className="mb-3 text-xs leading-relaxed text-gray-500">
+        <p className="mb-3 text-xs leading-relaxed text-[var(--color-text-secondary)]">
           {t('links.nfcDesc')}
         </p>
 
-        <div className="rounded-md border border-gray-200 bg-gray-50 px-3 py-2.5">
+        <div className="rounded-md border border-[var(--color-border)] bg-[var(--color-hover)] px-3 py-2.5">
           {nfcReference ? (
-            <code className="text-xs font-medium text-gray-700">{nfcReference}</code>
+            <code className="text-xs font-medium text-[var(--color-text)]">{nfcReference}</code>
           ) : (
-            <span className="text-xs text-gray-400">{t('links.nfcNotAssigned')}</span>
+            <span className="text-xs text-[var(--color-text-secondary)]">{t('links.nfcNotAssigned')}</span>
           )}
         </div>
 
-        <div className="mt-3 flex items-start gap-2 rounded-md bg-amber-50 p-2.5">
+        <div className="mt-3 flex items-start gap-2 rounded-md bg-[var(--tone-warning-bg)] p-2.5">
           <svg viewBox="0 0 16 16" fill="currentColor" className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-500">
             <path fillRule="evenodd" d="M8 15A7 7 0 108 1a7 7 0 000 14zm.75-9.25a.75.75 0 00-1.5 0v2.5a.75.75 0 001.5 0v-2.5zM8 11a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
           </svg>
-          <p className="text-[11px] leading-relaxed text-amber-700">{t('links.nfcFuture')}</p>
+          <p className="text-[11px] leading-relaxed text-[var(--tone-warning-fg)]">{t('links.nfcFuture')}</p>
         </div>
       </LinkSection>
 
