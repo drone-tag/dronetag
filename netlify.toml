@@ -5,4 +5,7 @@
   package = "@netlify/plugin-nextjs"
 
 [build.environment]
-  NODE_VERSION = "20"
+  # firebase-admin@14 engines.node is >=22; jwks-rsa@4 needs ^20.19 or ^22.12
+  # so `require('jose')` (ESM-only) works. Netlify's Node 20 build image
+  # cannot load that chain and /api/* returns 500.
+  NODE_VERSION = "22"

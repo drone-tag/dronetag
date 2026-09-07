@@ -3,10 +3,8 @@
  */
 
 import { NextResponse } from 'next/server';
+import { ID_TOKEN_COOKIE, SESSION_COOKIE } from '@/lib/auth/sessionCookieNames';
 import { adminAuth, isFirebaseAdminConfigured } from '@/lib/server/firebaseAdmin';
-
-const ID_TOKEN_COOKIE = '__dronetag_idt';
-const SESSION_COOKIE = '__dronetag_session';
 
 function readCookie(header: string | null, name: string): string | null {
   if (!header) return null;

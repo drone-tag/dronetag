@@ -1,5 +1,5 @@
 /**
- * Session verification for Server Components and Proxy.
+ * Session verification for Server Components (admin layout).
  *
  * `src/lib/server/requestAuth.ts` covers route handlers, which receive a
  * `Request` and can read an Authorization header. Server Components have
@@ -10,10 +10,10 @@
  * only the way the token is obtained differs.
  */
 
+import { ID_TOKEN_COOKIE, SESSION_COOKIE } from '@/lib/auth/sessionCookieNames';
 import { adminAuth, isFirebaseAdminConfigured } from '@/lib/server/firebaseAdmin';
 
-export const ID_TOKEN_COOKIE = '__dronetag_idt';
-export const SESSION_COOKIE = '__dronetag_session';
+export { ID_TOKEN_COOKIE, SESSION_COOKIE };
 
 /** Minimal shape shared by `next/headers` cookies() and NextRequest.cookies. */
 interface CookieReader {

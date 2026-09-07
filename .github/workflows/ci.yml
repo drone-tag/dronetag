@@ -28,16 +28,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v5
 
-      # Node 20 matches the deploy targets: "engines" in package.json requires
-      # >=20.9.0, netlify.toml pins NODE_VERSION=20, and firebase.json runs the
-      # functions on the nodejs20 runtime. Note that .nvmrc in this repo says
-      # 22, so local developer machines and CI are not on the same major
-      # version. That mismatch is pre-existing and should be resolved by
-      # deciding on one version and updating both places.
+      # Node 22 matches .nvmrc, netlify.toml NODE_VERSION, and
+      # firebase-admin@14 engines. Cloud Functions remain on nodejs20
+      # (firebase.json); that runtime is a separate package.
       - name: Set up Node
         uses: actions/setup-node@v5
         with:
-          node-version: '20'
+          node-version: '22'
           cache: npm
 
       # `npm ci` also runs the postinstall hook (scripts/stage-vendor-assets.mjs),

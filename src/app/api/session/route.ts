@@ -18,6 +18,7 @@
  */
 
 import { NextResponse } from 'next/server';
+import { SESSION_COOKIE } from '@/lib/auth/sessionCookieNames';
 import {
   adminAuth,
   isFirebaseAdminConfigured,
@@ -26,7 +27,6 @@ import {
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-const SESSION_COOKIE = '__dronetag_session';
 const SESSION_MAX_AGE = 60 * 60; // 1 hour, matching ID token TTL
 
 export async function POST(request: Request) {

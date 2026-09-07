@@ -53,13 +53,11 @@ if (process.env.NODE_ENV === 'production') {
 // on `script-src` and `style-src` because Next.js and Tailwind inject
 // inline <script> and <style> tags during hydration.
 //
-// A previous version of this comment claimed nonces were blocked because
-// proxy.ts "requires Edge runtime — incompatible with our firebase-admin
-// verification". That is no longer true: as of Next.js 16 Proxy defaults to
-// the Node.js runtime (node_modules/next/dist/docs/01-app/03-api-reference/
-// 03-file-conventions/proxy.md). src/proxy.ts now exists and runs
-// firebase-admin, so a nonce migration is unblocked — it is simply not part
-// of the pre-beta scope.
+// Nonces are unblocked in principle (Next.js 16 Proxy defaults to Node —
+// node_modules/next/dist/docs/01-app/03-api-reference/03-file-conventions/
+// proxy.md) but are not part of the pre-beta scope. On Netlify the adapter
+// still compiles proxy.ts to Edge, so firebase-admin must never enter that
+// import graph.
 //
 // worker-src 'self' is satisfiable now that the pdf.js worker is served
 // from public/vendor/pdfjs instead of a CDN. Before that change, enabling
@@ -192,6 +190,11 @@ const securityHeaders: { key: string; value: string }[] = [
 ];
 
 const nextConfig: NextConfig = {
+  // Keep firebase-admin (and its CJS jwks-rsa → ESM jose chain) outside the
+  // webpack server bundle so Node resolves those packages from node_modules
+  // with native ESM interop. Bundling them is what surfaces
+  // `require() of ES Module .../jose/dist/webapi/index.js` on Netlify.
+  serverExternalPackages: ['firebase-admin', 'jose', 'jwks-rsa'],
   // Monorepo layout: app lives in Sito/ but repo root may contain other lockfiles.
   turbopack: {
     root: projectRoot,

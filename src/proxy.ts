@@ -1,14 +1,17 @@
 import { NextResponse, type NextRequest } from 'next/server';
 
-import { ID_TOKEN_COOKIE, SESSION_COOKIE } from '@/lib/server/adminSession';
+import { ID_TOKEN_COOKIE, SESSION_COOKIE } from '@/lib/auth/sessionCookieNames';
 
 /**
  * Optimistic pre-filter for the admin area.
  *
  * In Next.js 16 this file replaces `middleware.ts`
- * (node_modules/next/dist/docs/01-app/01-getting-started/16-proxy.md). Several
- * project documents referenced a `proxy.ts` that had never been written; this
- * is it.
+ * (node_modules/next/dist/docs/01-app/01-getting-started/16-proxy.md).
+ * Next documents Proxy as Node.js-only and forbids a `runtime` export
+ * (03-api-reference/03-file-conventions/proxy.md). The Netlify Next
+ * adapter still compiles this file to Edge
+ * (`___netlify-edge-handler-node-middleware`), so this module and
+ * everything it imports must stay Edge-safe.
  *
  * WHAT THIS IS NOT
  * ----------------
