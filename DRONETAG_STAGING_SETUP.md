@@ -12,12 +12,11 @@ more. No step here has been executed against a real Firebase project by the
 author of this document — every external action is marked **MANUAL ACTION
 REQUIRED** and must be carried out by a human with console access.
 
-There is an older `docs/DEPLOY_STAGING.md` in this repository. It is partly
-stale: it references an environment variable called
-`NEXT_PUBLIC_APP_CHECK_SITE_KEY` that does not exist anywhere in the code, and a
-session cookie named `__session` that is actually called `__dronetag_session`.
-Prefer the variable table in this document, which was produced by searching the
-source tree.
+Variable names in this document were produced by searching the source tree.
+The shorter overview is `DRONETAG_DEVELOPER_HANDOVER.md` §19–§21. The session
+cookie is `__dronetag_session` (HttpOnly) plus `__dronetag_idt` (JS-readable).
+App Check site keys in code are `NEXT_PUBLIC_RECAPTCHA_ENTERPRISE_SITE_KEY`
+and `NEXT_PUBLIC_RECAPTCHA_SITE_KEY` — not `NEXT_PUBLIC_APP_CHECK_SITE_KEY`.
 
 ---
 
@@ -51,12 +50,12 @@ boots in `DEMO_MODE` against the in-memory store.
 There is an important correction to make here, because other project documents
 imply otherwise: **the application does not connect to the Firebase emulators.**
 There is no `connectFirestoreEmulator`, `connectAuthEmulator`,
-`connectStorageEmulator` or `connectFunctionsEmulator` call anywhere in `src/`,
-and `firebase.json` has no `emulators` block. The emulator is used by exactly
-one thing in this repository — the security-rules test suite described in
-section 5 — and nothing else. Local development against real data therefore
-means pointing `.env.local` at a real Firebase project, which in practice should
-be the staging project, never production.
+`connectStorageEmulator` or `connectFunctionsEmulator` call anywhere in `src/`.
+`firebase.json` does define an `emulators` block (Firestore 8080, Storage 9199);
+it is used by exactly one thing in this repository — `npm run test:rules` —
+and nothing else. Local development against real data therefore means pointing
+`.env.local` at a real Firebase project, which in practice should be the
+staging project, never production.
 
 **Staging.** A separate Firebase project with its own credentials, deployed to
 its own host URL. `DEMO_MODE` is false. This is what the rest of this document

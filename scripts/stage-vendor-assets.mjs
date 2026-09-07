@@ -80,8 +80,8 @@ for (const core of [
 
 // The English trained data is vendored at the repo root rather than pulled
 // from @tesseract.js-data. It is ~5 MB and is the one asset here that is
-// genuinely committed — see DRONETAG_TECH_DEBT.md for the note about moving
-// it out of git.
+// genuinely committed — consider moving it out of git if the repo size
+// becomes a problem (P2).
 stage(join(projectRoot, 'eng.traineddata'), tesseractDir, 'eng.traineddata');
 
 console.log(`[stage-vendor] ${copied} asset(s) staged into public/vendor${skipped ? `, ${skipped} skipped` : ''}`);

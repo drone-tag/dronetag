@@ -45,3 +45,7 @@ coverage/
 # Misc
 .cache/
 .netlify/
+
+# Google / Firebase service-account JSON (never commit)
+*firebase-adminsdk*.json
+*serviceAccount*.json

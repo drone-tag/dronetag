@@ -1,9 +1,9 @@
 # DEPLOY_PRODUCTION.md
 
 Promotion recipe to bring **DroneTag production** to the same revision as
-staging. Assumes `DEPLOY_STAGING.md` has been followed at least once and that
-the change you're shipping has been live on staging for ≥ 48 h with no open
-P0/P1 issues.
+staging. Assumes `DRONETAG_STAGING_SETUP.md` has been followed at least once
+and that the change you're shipping has been live on staging for ≥ 48 h with
+no open P0/P1 issues. See also `DRONETAG_DEVELOPER_HANDOVER.md` §21.
 
 > **Hard rule:** production deploys happen during business hours, never on a
 > Friday afternoon, never within 24 h of a known holiday. The bootstrap flow
@@ -16,7 +16,7 @@ P0/P1 issues.
 
 Before flipping anything in production:
 
-- [ ] All staging checklists from `STAGING-SIGNOFF.md` ticked.
+- [ ] Staging checklists in `DRONETAG_MANUAL_QA.md` and `docs/DEVICE_TESTING.md` ticked.
 - [ ] `/api/health` on staging returned `status: ok` for ≥ 24 h continuously
       (configure your uptime monitor accordingly).
 - [ ] CSP soak on staging is clean for ≥ 48 h with `CSP_ENFORCE=false`.
@@ -31,13 +31,14 @@ Before flipping anything in production:
 
 ## 1. Environment variables (production)
 
-Same matrix as `DEPLOY_STAGING.md §1` with production-specific values:
+Same matrix as `DRONETAG_STAGING_SETUP.md` / `DRONETAG_DEVELOPER_HANDOVER.md` §20
+with production-specific values:
 
 | Variable | Differences from staging |
 |---|---|
 | `NEXT_PUBLIC_FIREBASE_*` | All from `dronetag-prod` project. |
 | `FIREBASE_SERVICE_ACCOUNT_KEY` | Service account from `dronetag-prod`. |
-| `NEXT_PUBLIC_APP_CHECK_SITE_KEY` | reCAPTCHA Enterprise / v3 site key bound to the production origin. |
+| `NEXT_PUBLIC_RECAPTCHA_ENTERPRISE_SITE_KEY` or `NEXT_PUBLIC_RECAPTCHA_SITE_KEY` | reCAPTCHA Enterprise (preferred) or v3 site key bound to the production origin. |
 | `APP_CHECK_ENFORCE` | `true` |
 | `CSP_ENFORCE` | `true` once §6 soak has been completed in staging |
 | `NEXT_PUBLIC_TRUSTED_PDF_HOSTS` | populated only if you actually mirror PDFs off Firebase Storage |
@@ -189,8 +190,8 @@ self-service "promote to admin" is intentionally not implemented.
 
 ## 8. Rollback procedure (production)
 
-Identical decision tree as staging (`DEPLOY_STAGING.md §8`) but with a stricter
-trigger:
+Identical decision tree as staging (see `DRONETAG_STAGING_SETUP.md`) but with a
+stricter trigger:
 
 - **Roll back the frontend immediately** if any of:
   - `/api/health` returns 5xx for > 60 s,

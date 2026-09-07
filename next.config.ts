@@ -32,7 +32,7 @@ if (process.env.NODE_ENV === 'production') {
       `\n\nFix: set every NEXT_PUBLIC_FIREBASE_* variable in your host's\n` +
       `environment configuration (Netlify: Site settings → Environment\n` +
       `variables; Vercel: Project settings → Environment Variables). See\n` +
-      `.env.local.example for the full list and docs/DEPLOY_STAGING.md §1.\n` +
+      `.env.local.example for the full list and DRONETAG_DEVELOPER_HANDOVER.md §20.\n` +
       `${banner}\n\n`,
     );
     throw new Error(

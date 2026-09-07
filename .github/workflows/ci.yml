@@ -64,7 +64,7 @@ jobs:
       #
       # `npm run lint` still reports 11 warnings. Warnings do not affect the
       # exit code; they are mostly `exhaustive-deps` and unused imports and are
-      # tracked in POST_PREBETA_TECH_DEBT.md.
+      # tracked in DRONETAG_DEVELOPER_HANDOVER.md §24.
       - name: Lint
         run: npm run lint
 
