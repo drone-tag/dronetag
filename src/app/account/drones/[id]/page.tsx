@@ -15,7 +15,7 @@
  *                          insurance picker (drone-linked policies only)
  *
  * Identity fields are editable only until the owner confirms and locks them.
- * Publication (status / visibility) is admin-only.
+ * Publication is owner-controlled, gated by PublicationConsent.
  */
 
 import Link from 'next/link';
@@ -46,6 +46,7 @@ import {
   pilotDisplayName,
 } from '@/lib/utils/entities';
 import { getPublicProfileUrl } from '@/lib/utils';
+import { useToast } from '@/contexts/ToastContext';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
@@ -54,6 +55,7 @@ import { ActiveOperatorPanel } from '@/components/account/ActiveOperatorPanel';
 import { ConfirmDialog } from '@/components/account/ConfirmDialog';
 import { FormErrorBanner } from '@/components/account/FormErrorBanner';
 import { ReadOnlyField } from '@/components/account/ReadOnlyField';
+import { PublicationConsent } from '@/components/profile/PublicationConsent';
 
 interface DroneFormState {
   manufacturer: string;
@@ -82,6 +84,7 @@ export default function DroneDetailPage() {
   const router = useRouter();
   const { user } = useAuth();
   const { t } = useLanguage();
+  const toast = useToast();
 
   const droneId = useMemo(() => {
     const raw = params?.id;
@@ -101,6 +104,7 @@ export default function DroneDetailPage() {
   const [dirty, setDirty] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [confirmingLock, setConfirmingLock] = useState(false);
+  const [confirmingPublish, setConfirmingPublish] = useState(false);
 
   const reload = useCallback(async () => {
     if (!user || !droneId) return;
@@ -192,6 +196,7 @@ export default function DroneDetailPage() {
       await reload();
       setSavedAt(Date.now());
       setConfirmingLock(false);
+      toast.success(t('toast.drone.saved'));
     } catch (err) {
       console.error('[drone detail] save failed', err);
       setErrors({ submit: t('account.saveError') });
@@ -201,11 +206,53 @@ export default function DroneDetailPage() {
     }
   }
 
+  async function handlePublish() {
+    setSaving(true);
+    try {
+      await updateDrone(drone!.id, {
+        status: 'active',
+        visibility: 'public',
+        publishedAt: new Date().toISOString(),
+      });
+      await reload();
+      setConfirmingPublish(false);
+      toast.success(t('drone.publish.success'));
+    } catch (err) {
+      console.error('[drone detail] publish failed', err);
+      toast.error(t('account.saveError'));
+      setConfirmingPublish(false);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleUnpublish() {
+    setSaving(true);
+    try {
+      await updateDrone(drone!.id, { visibility: 'private' });
+      await reload();
+      toast.success(t('drone.unpublish.success'));
+    } catch (err) {
+      console.error('[drone detail] unpublish failed', err);
+      toast.error(t('account.saveError'));
+    } finally {
+      setSaving(false);
+    }
+  }
+
   async function handleDelete() {
     setSaving(true);
     try {
       await deleteDrone(drone!.id);
+      // Fired before navigating: the toast provider lives in the root layout,
+      // so the message survives the route change and lands on the list page
+      // where the row is now gone.
+      toast.success(t('toast.drone.deleted'));
       router.push('/account/drones');
+    } catch (err) {
+      console.error('[drone detail] delete failed', err);
+      toast.error(t('toast.drone.deleteFailed'));
+      setConfirmingDelete(false);
     } finally {
       setSaving(false);
     }
@@ -241,12 +288,21 @@ export default function DroneDetailPage() {
             {t('drone.field.slug')}: <code className="font-mono">{drone.slug}</code>
           </p>
         </div>
-        <div className="flex shrink-0 items-center gap-2">
+        <div className="flex shrink-0 flex-wrap items-center gap-2">
           {!isLocked && savedAt && !dirty ? (
             <span className="rounded-full bg-[var(--tone-success-bg)] px-2 py-0.5 text-[10px] font-medium text-[var(--tone-success-fg)] ring-1 ring-inset ring-[var(--tone-success-ring)] sm:px-2.5 sm:py-1 sm:text-xs">
               {t('account.saved')}
             </span>
           ) : null}
+          {isPublic ? (
+            <Button variant="secondary" size="sm" loading={saving} onClick={handleUnpublish}>
+              {t('drone.unpublish')}
+            </Button>
+          ) : (
+            <Button variant="secondary" size="sm" disabled={saving} onClick={() => setConfirmingPublish(true)}>
+              {t('drone.publish')}
+            </Button>
+          )}
           <Button variant="ghost" size="sm" onClick={() => setConfirmingDelete(true)}>
             {t('common.delete')}
           </Button>
@@ -389,6 +445,14 @@ export default function DroneDetailPage() {
           </div>
         </form>
       )}
+
+      <PublicationConsent
+        isOpen={confirmingPublish}
+        busy={saving}
+        publicUrl={getPublicProfileUrl(drone.slug)}
+        onCancel={() => setConfirmingPublish(false)}
+        onConfirm={handlePublish}
+      />
 
       <ConfirmDialog
         isOpen={confirmingLock}

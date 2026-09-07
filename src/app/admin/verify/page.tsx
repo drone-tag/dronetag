@@ -11,6 +11,7 @@ import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useToast } from '@/contexts/ToastContext';
 import {
   listAllAuthorizations,
   updateAuthorization,
@@ -30,6 +31,7 @@ import {
 import { listAllDrones, updateDrone } from '@/lib/firebase/drones';
 import { listAllAccounts } from '@/lib/firebase/account';
 import { ensureSupportThread, sendSupportMessage } from '@/lib/firebase/support';
+import { adminFetch } from '@/lib/client/adminApi';
 import { DEMO_MODE } from '@/lib/firebase/config';
 import type { UserAccount } from '@/lib/types/account';
 import type { Authorization, Certificate, DocumentRef, Drone, Insurance } from '@/lib/types/entities';
@@ -81,6 +83,7 @@ function StatusPill({ status }: { status: VerificationStatus }) {
 export default function AdminVerifyPage() {
   const { t } = useLanguage();
   const { user } = useAuth();
+  const toast = useToast();
   const [view, setView] = useState<ViewMode>('queue');
   const [tab, setTab] = useState<EntityTab>('documents');
   const [accounts, setAccounts] = useState<UserAccount[]>([]);
@@ -91,6 +94,8 @@ export default function AdminVerifyPage() {
   const [drones, setDrones] = useState<Drone[]>([]);
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
+  /** Set when the decision saved but the user could not be emailed. */
+  const [notifyWarning, setNotifyWarning] = useState<string | null>(null);
 
   const reload = async () => {
     const [a, d, c, i, az, dr] = await Promise.all([
@@ -125,29 +130,105 @@ export default function AdminVerifyPage() {
     };
   }, []);
 
+  /**
+   * Tell the user about a verification decision, by email and in the in-app
+   * support thread.
+   *
+   * The decision itself is already saved by the time this runs, so a failure
+   * here must not be surfaced as a failed approval. It is reported as a
+   * separate, non-blocking warning instead.
+   */
   async function notifyUserVerification(
     userId: string,
     kind: 'certificate' | 'insurance' | 'document' | 'drone' | 'authorization',
     label: string,
     status: VerificationStatus,
+    reason?: string,
   ) {
     if (status !== 'verified' && status !== 'rejected') return;
+
+    const kindLabel = t(`account.verification.kind.${kind}`);
+    const body =
+      status === 'verified'
+        ? t('account.verification.notifyVerified', { kind: kindLabel, label })
+        : t('account.verification.notifyRejected', { kind: kindLabel, label });
+    const subject = t('account.verification.threadSubject');
+
+    if (DEMO_MODE) {
+      try {
+        await ensureSupportThread(userId, subject);
+        await sendSupportMessage({
+          threadId: userId,
+          sender: 'admin',
+          senderUid: user?.uid ?? 'demo-admin',
+          body,
+          subject,
+        });
+      } catch (err) {
+        console.warn('[admin verify] notify user failed', err);
+      }
+      return;
+    }
+
+    // `drone` has no email template — a drone is not a document a user submits
+    // for approval — so it stays an in-app message only.
+    const emailEntity =
+      kind === 'drone' ? undefined : (kind as 'certificate' | 'insurance' | 'document' | 'authorization');
+
     try {
-      await ensureSupportThread(userId, t('account.verification.threadSubject'));
-      const kindLabel = t(`account.verification.kind.${kind}`);
-      const body =
-        status === 'verified'
-          ? t('account.verification.notifyVerified', { kind: kindLabel, label })
-          : t('account.verification.notifyRejected', { kind: kindLabel, label });
-      await sendSupportMessage({
-        threadId: userId,
-        sender: 'admin',
-        senderUid: user?.uid ?? 'demo-admin',
-        body,
-        subject: t('account.verification.threadSubject'),
+      const res = await adminFetch('/api/admin/notify-verification', {
+        method: 'POST',
+        body: JSON.stringify({
+          userId,
+          entity: emailEntity ?? 'document',
+          outcome: status === 'verified' ? 'approved' : 'rejected',
+          itemLabel: label,
+          reason,
+          threadMessage: body,
+          threadSubject: subject,
+        }),
       });
+      const payload = (await res.json().catch(() => ({}))) as {
+        email?: { status: string; reason?: string };
+      };
+      if (payload.email && payload.email.status !== 'sent') {
+        setNotifyWarning(
+          t('admin.verify.notifyWarning', { reason: payload.email.reason ?? payload.email.status }),
+        );
+      }
     } catch (err) {
       console.warn('[admin verify] notify user failed', err);
+      setNotifyWarning(t('admin.verify.notifyWarning', { reason: 'network' }));
+    }
+  }
+
+  /**
+   * Shared wrapper for the five decision handlers below.
+   *
+   * They used to run under a `try/finally` with no `catch`: the local row was
+   * only patched after the write resolved, so a rejected write left the row
+   * exactly as it was and the admin saw the spinner stop with nothing else
+   * changing. There was no way to tell a saved decision from a failed one.
+   *
+   * The toast deliberately talks about the decision only. Whether the user was
+   * emailed is reported separately by `notifyWarning`, because notification is
+   * best-effort and claiming it here would sometimes be untrue.
+   */
+  async function runDecision(status: VerificationStatus, apply: () => Promise<void>) {
+    try {
+      await apply();
+      toast.success(
+        t(
+          status === 'verified'
+            ? 'toast.verify.approved'
+            : status === 'rejected'
+              ? 'toast.verify.rejected'
+              : 'toast.verify.reset',
+        ),
+      );
+    } catch (err) {
+      console.error('[admin verify] decision failed', err);
+      toast.error(t('toast.verify.failed'));
     }
   }
 
@@ -205,11 +286,13 @@ export default function AdminVerifyPage() {
   async function setDocStatus(d: DocumentRef, s: VerificationStatus) {
     setBusyId(d.id);
     try {
-      await updateDocument(d.id, { verificationStatus: s });
-      setDocuments((prev) =>
-        prev.map((x) => (x.id === d.id ? { ...x, verificationStatus: s } : x)),
-      );
-      await notifyUserVerification(d.userId, 'document', d.label || d.fileName || d.kind, s);
+      await runDecision(s, async () => {
+        await updateDocument(d.id, { verificationStatus: s });
+        setDocuments((prev) =>
+          prev.map((x) => (x.id === d.id ? { ...x, verificationStatus: s } : x)),
+        );
+        await notifyUserVerification(d.userId, 'document', d.label || d.fileName || d.kind, s);
+      });
     } finally {
       setBusyId(null);
     }
@@ -217,16 +300,18 @@ export default function AdminVerifyPage() {
   async function setCertStatus(c: Certificate, s: VerificationStatus) {
     setBusyId(c.id);
     try {
-      await updateCertificate(c.id, { verificationStatus: s });
-      setCertificates((prev) =>
-        prev.map((x) => (x.id === c.id ? { ...x, verificationStatus: s } : x)),
-      );
-      await notifyUserVerification(
-        c.userId,
-        'certificate',
-        c.registrationNumber || c.label || c.kind,
-        s,
-      );
+      await runDecision(s, async () => {
+        await updateCertificate(c.id, { verificationStatus: s });
+        setCertificates((prev) =>
+          prev.map((x) => (x.id === c.id ? { ...x, verificationStatus: s } : x)),
+        );
+        await notifyUserVerification(
+          c.userId,
+          'certificate',
+          c.registrationNumber || c.label || c.kind,
+          s,
+        );
+      });
     } finally {
       setBusyId(null);
     }
@@ -234,24 +319,26 @@ export default function AdminVerifyPage() {
   async function setInsStatus(i: Insurance, s: VerificationStatus) {
     setBusyId(i.id);
     try {
-      const patch: Partial<Insurance> = { verificationStatus: s };
-      if (DEMO_MODE && s === 'verified') {
-        const now = new Date();
-        const renew = new Date(now);
-        renew.setFullYear(renew.getFullYear() + 1);
-        patch.issueDate = now.toISOString().slice(0, 10);
-        patch.expiryDate = renew.toISOString().slice(0, 10);
-      }
-      await updateInsurance(i.id, patch);
-      setInsurances((prev) =>
-        prev.map((x) => (x.id === i.id ? { ...x, ...patch } : x)),
-      );
-      await notifyUserVerification(
-        i.userId,
-        'insurance',
-        i.provider || i.policyNumber || '—',
-        s,
-      );
+      await runDecision(s, async () => {
+        const patch: Partial<Insurance> = { verificationStatus: s };
+        if (DEMO_MODE && s === 'verified') {
+          const now = new Date();
+          const renew = new Date(now);
+          renew.setFullYear(renew.getFullYear() + 1);
+          patch.issueDate = now.toISOString().slice(0, 10);
+          patch.expiryDate = renew.toISOString().slice(0, 10);
+        }
+        await updateInsurance(i.id, patch);
+        setInsurances((prev) =>
+          prev.map((x) => (x.id === i.id ? { ...x, ...patch } : x)),
+        );
+        await notifyUserVerification(
+          i.userId,
+          'insurance',
+          i.provider || i.policyNumber || '—',
+          s,
+        );
+      });
     } finally {
       setBusyId(null);
     }
@@ -259,16 +346,18 @@ export default function AdminVerifyPage() {
   async function setAuthzStatus(a: Authorization, s: VerificationStatus) {
     setBusyId(a.id);
     try {
-      await updateAuthorization(a.id, { verificationStatus: s });
-      setAuthorizations((prev) =>
-        prev.map((x) => (x.id === a.id ? { ...x, verificationStatus: s } : x)),
-      );
-      await notifyUserVerification(
-        a.userId,
-        'authorization',
-        a.label || a.kind,
-        s,
-      );
+      await runDecision(s, async () => {
+        await updateAuthorization(a.id, { verificationStatus: s });
+        setAuthorizations((prev) =>
+          prev.map((x) => (x.id === a.id ? { ...x, verificationStatus: s } : x)),
+        );
+        await notifyUserVerification(
+          a.userId,
+          'authorization',
+          a.label || a.kind,
+          s,
+        );
+      });
     } finally {
       setBusyId(null);
     }
@@ -276,20 +365,22 @@ export default function AdminVerifyPage() {
   async function setDroneStatus(d: Drone, s: VerificationStatus) {
     setBusyId(d.id);
     try {
-      const patch: Partial<Drone> = {
-        verificationStatus: s,
-        lastVerifiedAt: s === 'verified' ? new Date().toISOString() : d.lastVerifiedAt,
-      };
-      await updateDrone(d.id, patch);
-      setDrones((prev) =>
-        prev.map((x) => (x.id === d.id ? { ...x, ...patch } : x)),
-      );
-      await notifyUserVerification(
-        d.userId,
-        'drone',
-        [d.manufacturer, d.model].filter(Boolean).join(' ') || d.slug,
-        s,
-      );
+      await runDecision(s, async () => {
+        const patch: Partial<Drone> = {
+          verificationStatus: s,
+          lastVerifiedAt: s === 'verified' ? new Date().toISOString() : d.lastVerifiedAt,
+        };
+        await updateDrone(d.id, patch);
+        setDrones((prev) =>
+          prev.map((x) => (x.id === d.id ? { ...x, ...patch } : x)),
+        );
+        await notifyUserVerification(
+          d.userId,
+          'drone',
+          [d.manufacturer, d.model].filter(Boolean).join(' ') || d.slug,
+          s,
+        );
+      });
     } finally {
       setBusyId(null);
     }
@@ -308,6 +399,22 @@ export default function AdminVerifyPage() {
           view === 'queue' ? t('admin.verify.subtitle') : t('admin.verify.archive.subtitle')
         }
       />
+
+      {notifyWarning ? (
+        <div
+          role="status"
+          className="mt-4 flex items-start justify-between gap-3 rounded-lg bg-[var(--tone-warning-bg)] px-4 py-3 text-sm text-[var(--tone-warning-fg)] ring-1 ring-[var(--tone-warning-ring)]"
+        >
+          <span>{notifyWarning}</span>
+          <button
+            type="button"
+            onClick={() => setNotifyWarning(null)}
+            className="shrink-0 underline underline-offset-2"
+          >
+            {t('common.dismiss')}
+          </button>
+        </div>
+      ) : null}
 
       <div className="mt-4 flex flex-wrap gap-2">
         <ViewToggle

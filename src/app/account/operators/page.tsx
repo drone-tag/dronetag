@@ -21,6 +21,7 @@ import { useEffect, useMemo, useState } from 'react';
 import type { ChangeEvent, FormEvent } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useToast } from '@/contexts/ToastContext';
 import {
   createOperator,
   deleteOperator,
@@ -88,6 +89,7 @@ function operatorToForm(op: Operator): OperatorFormState {
 export default function AccountOperatorsPage() {
   const { user } = useAuth();
   const { t } = useLanguage();
+  const toast = useToast();
   const [operators, setOperators] = useState<Operator[]>([]);
   const [drones, setDrones] = useState<Drone[]>([]);
   const [slots, setSlots] = useState<Slots | null>(null);
@@ -155,6 +157,10 @@ export default function AccountOperatorsPage() {
       }
       await updateOperator(op.id, { isDefault: true });
       await reload();
+      // This action has no form and no modal, so without a toast the only
+      // sign it worked is a badge moving in a list the user may not be
+      // looking at.
+      toast.success(t('toast.operator.setCurrent'));
     } catch (err) {
       console.error('[operators] set current failed', err);
       setSaveError(err instanceof Error ? err.message : t('account.saveError'));
@@ -183,6 +189,7 @@ export default function AccountOperatorsPage() {
       await reload();
       setCreating(false);
       setEditing(null);
+      toast.success(t(target ? 'toast.operator.updated' : 'toast.operator.created'));
     } catch (err) {
       console.error('[operators] save failed', err);
       setSaveError(err instanceof Error ? err.message : t('account.saveError'));
@@ -198,6 +205,10 @@ export default function AccountOperatorsPage() {
       await deleteOperator(confirmingDelete.id);
       await reload();
       setConfirmingDelete(null);
+      toast.success(t('toast.operator.deleted'));
+    } catch (err) {
+      console.error('[operators] delete failed', err);
+      toast.error(t('toast.operator.deleteFailed'));
     } finally {
       setSavingId(null);
     }

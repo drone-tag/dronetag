@@ -35,6 +35,7 @@ export default function SignupPage() {
   const [passwordConfirm, setPasswordConfirm] = useState('');
   const [verifyEmail, setVerifyEmail] = useState(true);
   const [verifyPhone, setVerifyPhone] = useState(false);
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -96,10 +97,15 @@ export default function SignupPage() {
       const cred = await signupWithEmail(email.trim(), password, displayName);
       const u = cred.user;
       if (u) {
+        if (!acceptedTerms) {
+          setError(t('signup.terms.required'));
+          return;
+        }
         await ensureAccount(u.uid, u.email ?? email.trim(), {
           firstName: firstName.trim(),
           lastName: lastName.trim(),
           phone: phone.trim(),
+          acceptedTerms: true,
         });
         await initVerification(channels, phone.trim());
       }
@@ -161,15 +167,47 @@ export default function SignupPage() {
         </p>
       }
     >
-      <div className="space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <label className="flex cursor-pointer items-start gap-2.5 text-sm text-[var(--color-text)]">
+          <input
+            type="checkbox"
+            checked={acceptedTerms}
+            onChange={(e) => setAcceptedTerms(e.target.checked)}
+            disabled={submitting}
+            required
+            className="mt-0.5 h-4 w-4 shrink-0 rounded border-[var(--color-border)] text-[var(--color-action)] focus:ring-[var(--color-action)]"
+          />
+          <span>
+            {t('signup.terms.prefix')}{' '}
+            <Link
+              href="/terms"
+              target="_blank"
+              className="font-medium text-[var(--color-action)] underline underline-offset-2"
+            >
+              {t('signup.terms.termsLink')}
+            </Link>{' '}
+            {t('signup.terms.and')}{' '}
+            <Link
+              href="/privacy"
+              target="_blank"
+              className="font-medium text-[var(--color-action)] underline underline-offset-2"
+            >
+              {t('signup.terms.privacyLink')}
+            </Link>
+            .
+          </span>
+        </label>
+
         <GoogleAuthButton
-          disabled={submitting}
+          disabled={submitting || !acceptedTerms}
+          acceptedTerms={acceptedTerms}
           onError={setError}
           onSignedUp={() => setStep('verify')}
         />
+        <p className="text-[11px] leading-relaxed text-[var(--color-text-secondary)]">
+          {t('signup.terms.googleHint')}
+        </p>
         <AuthOrDivider />
-      </div>
-      <form onSubmit={handleSubmit} className="mt-4 space-y-4">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Input
             name="firstName"
@@ -265,7 +303,14 @@ export default function SignupPage() {
           </div>
         ) : null}
 
-        <Button type="submit" fullWidth size="lg" loading={submitting} disabled={submitting} className="min-h-[2.75rem]">
+        <Button
+          type="submit"
+          fullWidth
+          size="lg"
+          loading={submitting}
+          disabled={submitting || !acceptedTerms}
+          className="min-h-[2.75rem]"
+        >
           {t('signup.submit')}
         </Button>
       </form>

@@ -1,26 +1,49 @@
 rules_version = '2';
 
-// DroneTag — Firebase Storage rules (PR-SEC-1).
+// DroneTag — Firebase Storage rules.
 //
-// Closes:
-//   V-011 — no storage.rules file existed.
-//   V-012 — uploads were not user-scoped; any authenticated user could
-//           overwrite any path. Fixed by requiring the URL prefix
-//           `users/{uid}/...` to match the authenticated uid.
-//   V-013 — SVG uploads were allowed and could host JS. Removed from
-//           the content-type allowlist.
-//   V-014 — no max-size enforcement on the wire. Capped at 20 MB.
+// ─── Pre-beta hardening: what changed and why ──────────────────────────────
 //
-// Notes:
-//   * `getDownloadURL()` returns a long-lived token URL; once issued,
-//     anyone with the URL can fetch the object. This is intentional —
-//     we want the public profile QR/NFC viewers to load images and
-//     PDFs without authentication. The rules below restrict who can
-//     WRITE, not who can subsequently read via a token.
-//   * Legacy `profiles/{path=**}` paths are admin-only writeable so
-//     existing legacy admin uploads keep working until migration
-//     finishes; everything else falls through the default deny.
-//   * App Check enforcement is tracked in PR-SEC-2.
+// The previous version of this file granted `allow read: if true` on
+// `users/{uid}/{allPaths=**}`. Every uploaded object — insurance policies,
+// identity documents, pilot certificates — was readable by anyone who could
+// name its path, with no authentication at all (finding SEC-006). The
+// justification recorded at the time was that "download URL tokens are public
+// anyway". That reasoning conflated two different things:
+//
+//   • A `getDownloadURL()` token URL bypasses these rules by design. Anyone
+//     holding that URL can fetch the object. That is expected.
+//   • A *rule* granting public read additionally allows fetching any object
+//     by path WITHOUT a token. Paths here are highly guessable
+//     (`users/{uid}/insurances/{insuranceId}/policy.pdf`), so the rule turned
+//     a leaked-URL risk into a direct-enumeration risk.
+//
+// Removing the public read does not break existing pages: URLs already stored
+// in Firestore keep working, because tokens bypass rules either way. What it
+// stops is unauthenticated traversal of the private namespace.
+//
+// ─── Namespace layout ──────────────────────────────────────────────────────
+//
+//   public/users/{uid}/...   world-readable. Images only. Branding assets
+//                            that genuinely appear on the anonymous profile
+//                            page: avatar, logo, banner, QR code.
+//
+//   users/{uid}/...          private. Owner and admin only. Insurance PDFs,
+//                            certificates, identity documents.
+//
+// The two namespaces do not overlap, so the private rule cannot be widened by
+// accident through an OR with the public one. Storage rules grant access when
+// ANY matching rule allows it, which is exactly why nesting `public/` inside
+// `users/{uid}/` would have been unsafe: the broad private rule would have
+// re-allowed PDF writes into the public subtree.
+//
+// Content types are also asymmetric on purpose: the public namespace accepts
+// images only, so the product cannot end up hosting arbitrary
+// anonymously-readable PDFs.
+//
+// Still open (tracked, not fixed here):
+//   * App Check is not enforced on Storage.
+//   * Objects orphaned by entity deletion are not garbage-collected.
 
 service firebase.storage {
   match /b/{bucket}/o {
@@ -30,48 +53,71 @@ service firebase.storage {
       return request.auth != null;
     }
     function isAdmin() {
-      return isSignedIn() && request.auth.token.admin == true;
+      // See the matching helper in firestore.rules: `.admin` on a token that
+      // carries no such claim is an evaluation error, not `false`. Here the
+      // helper does sit to the left of an `&&` (the admin write rules below),
+      // where an error and a `false` still agree, but only because the rule is
+      // admin-only to begin with.
+      return isSignedIn() && request.auth.token.get('admin', false) == true;
     }
-    function isAllowedContentType() {
+    function isOwner(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+    function isImage() {
+      return request.resource.contentType.matches('image/png|image/jpeg|image/webp');
+    }
+    function isImageOrPdf() {
+      // SVG stays out: it can carry script that executes on the storage
+      // origin when opened directly (V-013).
       return request.resource.contentType.matches(
         'application/pdf|image/png|image/jpeg|image/webp'
       );
     }
-    function isWithinSizeLimit() {
-      // 20 MB hard cap. The client also caps at 5 MB for images and
-      // 20 MB for PDFs — this is the server enforcement.
+    function isWithinImageSize() {
+      return request.resource.size < 5 * 1024 * 1024;
+    }
+    function isWithinFileSize() {
+      // 20 MB hard cap, mirroring the client-side limit in
+      // src/lib/firebase/storage.ts.
       return request.resource.size < 20 * 1024 * 1024;
     }
 
-    // ─── User-scoped namespace (the only writable area) ─────────────────
-    // Path: users/{uid}/...
-    match /users/{uid}/{allPaths=**} {
-      allow read: if true;  // download URL tokens are public anyway
-      allow write: if isSignedIn()
-                       && request.auth.uid == uid
-                       && isAllowedContentType()
-                       && isWithinSizeLimit();
-      allow write: if isAdmin()
-                       && isAllowedContentType()
-                       && isWithinSizeLimit();
-      allow delete: if isSignedIn() && request.auth.uid == uid;
-      allow delete: if isAdmin();
-    }
-
-    // ─── Legacy profiles namespace ──────────────────────────────────────
-    // Pre-PR-SEC-1 uploads still live at `profiles/{slug}/...`. We keep
-    // them publicly readable (they back the legacy `/u/[slug]` page that
-    // is being phased out) and let admins overwrite/delete during the
-    // migration window. New uploads go under `users/{uid}/...`.
-    match /profiles/{path=**} {
+    // ─── Public branding namespace ───────────────────────────────────────
+    // Anonymous read is intentional here: these assets render on /u/{slug}
+    // for a visitor who has just tapped an NFC badge. Images only, 5 MB.
+    match /public/users/{uid}/{allPaths=**} {
       allow read: if true;
-      allow write: if isAdmin()
-                       && isAllowedContentType()
-                       && isWithinSizeLimit();
+
+      allow write: if isOwner(uid) && isImage() && isWithinImageSize();
+      allow write: if isAdmin() && isImage() && isWithinImageSize();
+
+      allow delete: if isOwner(uid) || isAdmin();
+    }
+
+    // ─── Private user namespace ──────────────────────────────────────────
+    // Insurance policies, certificates and identity documents. Never
+    // anonymously readable.
+    match /users/{uid}/{allPaths=**} {
+      allow read: if isOwner(uid) || isAdmin();
+
+      allow write: if isOwner(uid) && isImageOrPdf() && isWithinFileSize();
+      allow write: if isAdmin() && isImageOrPdf() && isWithinFileSize();
+
+      allow delete: if isOwner(uid) || isAdmin();
+    }
+
+    // ─── Legacy profiles namespace ───────────────────────────────────────
+    // Pre-multi-entity uploads at `profiles/{slug}/...`. Read was public;
+    // it is now admin-only. Legacy pages render from download URLs already
+    // persisted in Firestore, which are unaffected. New uploads must use
+    // one of the two namespaces above.
+    match /profiles/{path=**} {
+      allow read: if isAdmin();
+      allow write: if isAdmin() && isImageOrPdf() && isWithinFileSize();
       allow delete: if isAdmin();
     }
 
-    // ─── Default deny for any other path ────────────────────────────────
+    // ─── Default deny ────────────────────────────────────────────────────
     match /{path=**} {
       allow read, write: if false;
     }

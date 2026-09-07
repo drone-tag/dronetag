@@ -1,0 +1,141 @@
+name: CI
+
+# Verification only. This workflow deliberately contains no deployment step of
+# any kind — no Firebase deploy, no Netlify deploy, no Vercel deploy — and it
+# reads no repository or environment secrets. Everything it needs is either in
+# the repo or a clearly fake placeholder defined inline below.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# A newer push to the same branch or pull request makes the in-flight run
+# obsolete, so cancel it instead of paying for both.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  web:
+    name: Web app (lint, typecheck, test, build)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      # Node 20 matches the deploy targets: "engines" in package.json requires
+      # >=20.9.0, netlify.toml pins NODE_VERSION=20, and firebase.json runs the
+      # functions on the nodejs20 runtime. Note that .nvmrc in this repo says
+      # 22, so local developer machines and CI are not on the same major
+      # version. That mismatch is pre-existing and should be resolved by
+      # deciding on one version and updating both places.
+      - name: Set up Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: '20'
+          cache: npm
+
+      # `npm ci` also runs the postinstall hook (scripts/stage-vendor-assets.mjs),
+      # which copies the pdf.js and tesseract.js worker/wasm assets out of
+      # node_modules into public/vendor. That script logs a warning instead of
+      # throwing when a source file is absent, so it cannot fail the install.
+      - name: Install dependencies
+        run: npm ci
+
+      # Blocking as of the final verification round.
+      #
+      # This step used to carry `continue-on-error: true`, because lint exited 1
+      # on 8 pre-existing `react-hooks/set-state-in-effect` errors across
+      # useAccountAvatar, InboxBellButton, Navbar, LanguageContext,
+      # ThemeContext, DemoPersonaSwitcher and the permits page. The comment here
+      # recorded the removal of that line as the required follow-up once those
+      # errors were fixed.
+      #
+      # They are fixed — by deriving state during render, moving the two
+      # localStorage-backed contexts onto useSyncExternalStore, and resetting
+      # the permit form through a `key` — so the line is gone and a newly
+      # introduced lint error now fails the build. The rule was never disabled
+      # or downgraded in eslint.config.mjs.
+      #
+      # `npm run lint` still reports 11 warnings. Warnings do not affect the
+      # exit code; they are mostly `exhaustive-deps` and unused imports and are
+      # tracked in POST_PREBETA_TECH_DEBT.md.
+      - name: Lint
+        run: npm run lint
+
+      # Blocking. The type checker is clean as of this workflow being added.
+      - name: Typecheck
+        run: npx tsc --noEmit
+
+      # Blocking. `npm test` runs `vitest run`, which covers tests/unit and
+      # tests/integration. It does NOT cover the Firestore/Storage security
+      # rules suite in tests/rules — that is `npm run test:rules`, which starts
+      # the Firebase emulator and therefore requires a Java runtime.
+      #
+      # Those 60 assertions now pass locally, and they are the only automated
+      # check on the storage namespace split and the `dronesPublic` write
+      # denial, so a rule edit that breaks them will not be caught here.
+      # Closing that gap means adding `actions/setup-java` before a
+      # `npm run test:rules` step; it is the highest-value remaining change to
+      # this workflow. See DRONETAG_STAGING_SETUP.md for the local invocation.
+      - name: Unit and integration tests
+        run: npm test
+
+      # Blocking.
+      #
+      # next.config.ts refuses to complete a production build when
+      # NEXT_PUBLIC_FIREBASE_API_KEY, NEXT_PUBLIC_FIREBASE_PROJECT_ID or
+      # NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN is missing. That guard exists because a
+      # build without them silently enables DEMO_MODE at runtime, which treats
+      # every signed-in visitor as an administrator.
+      #
+      # The values below are OBVIOUSLY FAKE PLACEHOLDERS. They are not secrets,
+      # they do not correspond to any Firebase project, and they must never be
+      # replaced with real ones. Nothing in `next build` contacts Firebase, so
+      # the variables only have to be syntactically present and well-formed for
+      # the guard to pass and for a representative bundle to be produced.
+      - name: Build
+        env:
+          NEXT_PUBLIC_FIREBASE_API_KEY: AIzaSy-PLACEHOLDER-NOT-A-REAL-KEY-000000
+          NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: placeholder-ci.firebaseapp.com
+          NEXT_PUBLIC_FIREBASE_PROJECT_ID: placeholder-ci
+          NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: placeholder-ci.appspot.com
+          NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: '000000000000'
+          NEXT_PUBLIC_FIREBASE_APP_ID: '1:000000000000:web:0000000000000000000000'
+        run: npm run build
+
+  functions:
+    name: Cloud Functions (build)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: functions/package-lock.json
+
+      # functions/ is a separate npm package with its own lockfile, dependency
+      # tree and tsconfig. The root `npm ci` neither installs nor compiles it,
+      # so a type error in a Cloud Function would otherwise reach a deploy
+      # unnoticed. This job is the only thing that type-checks that code.
+      #
+      # `npm run lint` is deliberately not run here: functions/package.json
+      # declares a lint script, but eslint is not in its devDependencies and the
+      # script still uses the `--ext` flag that ESLint 9 removed. Fixing that
+      # script is separate work; running it today would only produce a
+      # misleading failure.
+      - name: Install and build functions
+        working-directory: functions
+        run: |
+          npm ci
+          npm run build

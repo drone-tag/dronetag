@@ -4,6 +4,7 @@
 
 import {
   getPlanById,
+  KIT_BADGES_PER_PILOT,
   type PlanId,
   type PricingPlan,
 } from '@/config/pricing';
@@ -74,14 +75,26 @@ export function buildPricingQuote(raw: QuoteInput): PricingQuote {
     operatorCount = 1;
   }
 
-  let kitQuantity: number;
-  if (plan.kitIncluded) {
-    kitQuantity = Math.max(1, operatorCount);
-  } else if (plan.requiresOperators) {
-    // Business: one kit per operator by default; allow explicit quantity ≥ operators.
-    kitQuantity = assertPositiveInt(raw.kitQuantity, 'kitQuantity', operatorCount, Math.max(operatorCount, plan.maxOperators ?? 500));
-  } else {
-    kitQuantity = assertPositiveInt(raw.kitQuantity, 'kitQuantity', 1, 20);
+  // Exactly one badge per pilot / profile — the commercial rule, enforced
+  // here rather than trusted from the checkout form.
+  //
+  // The previous logic let an individual order up to 20 kits and a business
+  // order any quantity at or above its operator count, which was a leftover
+  // from the superseded two-badge model. Quantity is now derived, and a
+  // request that disagrees with the derived value is rejected rather than
+  // silently corrected: a mismatch means the client is out of sync with the
+  // catalogue, and quietly charging a different amount than the page showed
+  // would be worse than failing.
+  const kitQuantity = plan.requiresOperators
+    ? operatorCount * KIT_BADGES_PER_PILOT
+    : KIT_BADGES_PER_PILOT;
+
+  const requestedKits = raw.kitQuantity;
+  if (typeof requestedKits === 'number' && requestedKits > 0 && requestedKits !== kitQuantity) {
+    throw new QuoteValidationError(
+      `This plan includes exactly ${kitQuantity} badge(s)`,
+      'invalid_kitQuantity',
+    );
   }
 
   if (isQuoteOnly) {

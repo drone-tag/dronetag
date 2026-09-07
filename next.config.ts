@@ -50,13 +50,20 @@ if (process.env.NODE_ENV === 'production') {
 //
 // The directives below are intentionally tight on `frame-ancestors`,
 // `base-uri`, `form-action` and `worker-src`, but allow `'unsafe-inline'`
-// on `script-src` and `style-src` because:
-//   • Next.js + Tailwind currently inject inline `<script>` and `<style>`
-//     tags during hydration. Switching to nonces requires running every
-//     request through proxy.ts, which in turn requires Edge runtime —
-//     incompatible with our firebase-admin verification today.
-//   • A follow-up PR can introduce nonces once the proxy is split into
-//     an edge-shim + a Node.js verifier. Tracked as a future hardening.
+// on `script-src` and `style-src` because Next.js and Tailwind inject
+// inline <script> and <style> tags during hydration.
+//
+// A previous version of this comment claimed nonces were blocked because
+// proxy.ts "requires Edge runtime — incompatible with our firebase-admin
+// verification". That is no longer true: as of Next.js 16 Proxy defaults to
+// the Node.js runtime (node_modules/next/dist/docs/01-app/03-api-reference/
+// 03-file-conventions/proxy.md). src/proxy.ts now exists and runs
+// firebase-admin, so a nonce migration is unblocked — it is simply not part
+// of the pre-beta scope.
+//
+// worker-src 'self' is satisfiable now that the pdf.js worker is served
+// from public/vendor/pdfjs instead of a CDN. Before that change, enabling
+// CSP_ENFORCE would have silently broken PDF preview and OCR.
 //
 // Trusted external hosts are kept to the strict minimum: Firebase
 // (Auth/Firestore/Storage/AppCheck/Functions), reCAPTCHA, the Google

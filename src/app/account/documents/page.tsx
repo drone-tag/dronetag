@@ -8,6 +8,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useToast } from '@/contexts/ToastContext';
 import {
   createDocument,
   deleteDocument,
@@ -57,6 +58,7 @@ function docToForm(d: DocumentRef): DocFormState {
 export default function AccountDocumentsPage() {
   const { user } = useAuth();
   const { t } = useLanguage();
+  const toast = useToast();
   const [documents, setDocuments] = useState<DocumentRef[]>([]);
   const [slots, setSlots] = useState<Slots | null>(null);
   const [loading, setLoading] = useState(true);
@@ -131,6 +133,7 @@ export default function AccountDocumentsPage() {
       await reload();
       setCreating(false);
       setEditing(null);
+      toast.success(t(target ? 'toast.document.updated' : 'toast.document.created'));
     } catch (err) {
       console.error('[documents] save failed', err);
       const msg = err instanceof Error ? err.message : '';
@@ -149,6 +152,10 @@ export default function AccountDocumentsPage() {
       await deleteDocument(confirmingDelete.id);
       await reload();
       setConfirmingDelete(null);
+      toast.success(t('toast.document.deleted'));
+    } catch (err) {
+      console.error('[documents] delete failed', err);
+      toast.error(t('toast.document.deleteFailed'));
     } finally {
       setSavingId(null);
     }

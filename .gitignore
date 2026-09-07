@@ -8,6 +8,11 @@ dist/
 *.tsbuildinfo
 next-env.d.ts
 
+# Staged out of node_modules by scripts/stage-vendor-assets.mjs on
+# install/build (pdf.js worker, tesseract.js worker + wasm core + lang data).
+# Generated, so not committed — see that script for the reasoning.
+public/vendor/
+
 # Environment / secrets — NEVER commit
 .env
 .env.*

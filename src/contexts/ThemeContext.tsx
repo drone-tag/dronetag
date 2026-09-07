@@ -5,7 +5,8 @@ import {
   useCallback,
   useContext,
   useEffect,
-  useState,
+  useMemo,
+  useSyncExternalStore,
   type ReactNode,
 } from 'react';
 
@@ -26,25 +27,70 @@ const ThemeContext = createContext<ThemeContextType>({
   setPreference: () => {},
 });
 
+const DEFAULT_PREFERENCE: ThemePreference = 'system';
+
+// Two things outside React decide the theme: the stored preference and, when
+// that preference is 'system', the OS setting. Both are exposed as
+// `useSyncExternalStore` sources, which leaves `resolved` a plain derivation
+// and removes the `ready` flag the old code needed to keep the media-query
+// listener from running before the stored value had been read.
+const preferenceListeners = new Set<() => void>();
+let cachedPreference: ThemePreference | null = null;
+
+function subscribePreference(onStoreChange: () => void): () => void {
+  preferenceListeners.add(onStoreChange);
+  return () => {
+    preferenceListeners.delete(onStoreChange);
+  };
+}
+
 function readStoredPreference(): ThemePreference {
-  if (typeof window === 'undefined') return 'system';
+  if (typeof window === 'undefined') return DEFAULT_PREFERENCE;
+  if (cachedPreference !== null) return cachedPreference;
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw === 'light' || raw === 'dark' || raw === 'system') return raw;
+    if (raw === 'light' || raw === 'dark' || raw === 'system') return (cachedPreference = raw);
   } catch {
     /* ignore */
   }
-  return 'system';
+  return (cachedPreference = DEFAULT_PREFERENCE);
 }
 
-function systemPrefersDark(): boolean {
-  if (typeof window === 'undefined') return false;
-  return window.matchMedia('(prefers-color-scheme: dark)').matches;
+function getPreferenceServerSnapshot(): ThemePreference {
+  return DEFAULT_PREFERENCE;
 }
 
-function resolveTheme(preference: ThemePreference): ResolvedTheme {
-  if (preference === 'system') return systemPrefersDark() ? 'dark' : 'light';
-  return preference;
+function writePreference(value: ThemePreference): void {
+  cachedPreference = value;
+  try {
+    localStorage.setItem(STORAGE_KEY, value);
+  } catch {
+    /* ignore */
+  }
+  for (const listener of preferenceListeners) listener();
+}
+
+let darkQuery: MediaQueryList | null = null;
+
+function systemDarkQuery(): MediaQueryList {
+  darkQuery ??= window.matchMedia('(prefers-color-scheme: dark)');
+  return darkQuery;
+}
+
+function subscribeSystemDark(onStoreChange: () => void): () => void {
+  const mq = systemDarkQuery();
+  mq.addEventListener('change', onStoreChange);
+  return () => mq.removeEventListener('change', onStoreChange);
+}
+
+function getSystemDark(): boolean {
+  return systemDarkQuery().matches;
+}
+
+// 'light' is what the server markup assumes, so the hydrating pass has to
+// assume it too; the real OS value is picked up immediately afterwards.
+function getSystemDarkServerSnapshot(): boolean {
+  return false;
 }
 
 function applyTheme(resolved: ResolvedTheme): void {
@@ -53,48 +99,40 @@ function applyTheme(resolved: ResolvedTheme): void {
 }
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [preference, setPreferenceState] = useState<ThemePreference>('system');
-  const [resolved, setResolved] = useState<ResolvedTheme>('light');
-  const [ready, setReady] = useState(false);
+  const preference = useSyncExternalStore(
+    subscribePreference,
+    readStoredPreference,
+    getPreferenceServerSnapshot,
+  );
+  const systemDark = useSyncExternalStore(
+    subscribeSystemDark,
+    getSystemDark,
+    getSystemDarkServerSnapshot,
+  );
 
-  useEffect(() => {
-    const stored = readStoredPreference();
-    const next = resolveTheme(stored);
-    setPreferenceState(stored);
-    setResolved(next);
-    applyTheme(next);
-    setReady(true);
-  }, []);
+  const resolved: ResolvedTheme =
+    preference === 'system' ? (systemDark ? 'dark' : 'light') : preference;
 
+  // `data-theme` and `color-scheme` live on the document, so writing them from
+  // an effect covers the stored value arriving, an explicit choice and an OS
+  // change through one path instead of three.
   useEffect(() => {
-    if (!ready || preference !== 'system') return;
-    const mq = window.matchMedia('(prefers-color-scheme: dark)');
-    const onChange = () => {
-      const next = resolveTheme('system');
-      setResolved(next);
-      applyTheme(next);
-    };
-    mq.addEventListener('change', onChange);
-    return () => mq.removeEventListener('change', onChange);
-  }, [preference, ready]);
+    applyTheme(resolved);
+  }, [resolved]);
 
   const setPreference = useCallback((value: ThemePreference) => {
-    setPreferenceState(value);
-    try {
-      localStorage.setItem(STORAGE_KEY, value);
-    } catch {
-      /* ignore */
-    }
-    const next = resolveTheme(value);
-    setResolved(next);
-    applyTheme(next);
+    writePreference(value);
   }, []);
 
-  return (
-    <ThemeContext.Provider value={{ preference, resolved, setPreference }}>
-      {children}
-    </ThemeContext.Provider>
+  // Memoised because the provider now also re-renders when the OS theme flips
+  // while the preference is an explicit 'light' or 'dark' — a case where
+  // nothing consumers can see has actually changed.
+  const value = useMemo(
+    () => ({ preference, resolved, setPreference }),
+    [preference, resolved, setPreference],
   );
+
+  return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
 }
 
 export function useTheme() {

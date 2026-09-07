@@ -1,26 +1,29 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useSyncExternalStore } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   DEMO_PERSONAS,
   getDemoPersonaId,
+  getDemoPersonaServerSnapshot,
   setDemoPersonaId,
+  subscribeDemoPersona,
   type DemoPersonaId,
 } from '@/lib/demo/personas';
 import { classNames } from '@/lib/utils';
 
 export function DemoPersonaSwitcher({ compact = false }: { compact?: boolean }) {
   const router = useRouter();
-  const [current, setCurrent] = useState<DemoPersonaId>('demo-admin');
-
-  useEffect(() => {
-    setCurrent(getDemoPersonaId());
-  }, []);
+  const current = useSyncExternalStore(
+    subscribeDemoPersona,
+    getDemoPersonaId,
+    getDemoPersonaServerSnapshot,
+  );
 
   function onChange(id: DemoPersonaId) {
     const persona = DEMO_PERSONAS.find((p) => p.id === id);
-    setCurrent(id);
+    // No local mirror of the selection: `setDemoPersonaId` writes the store and
+    // emits the event the subscription above is listening for.
     setDemoPersonaId(id);
     // Admin stays in /admin; users in /account. Do not re-seed on switch —
     // otherwise admin verify results would be wiped when opening Anna/Carlos.

@@ -9,11 +9,16 @@ export function AdminSubNav() {
   const pathname = usePathname();
   const { t } = useLanguage();
 
+  // Every admin route gets a tab. /admin/drones and /admin/reports existed but
+  // were absent here, so they were only reachable by typing the URL — which in
+  // practice meant the found-drone reports queue went unread.
   const tabs = [
     { href: '/admin', label: t('admin.nav.overview'), match: (p: string) => p === '/admin' },
     { href: '/admin/users', label: t('admin.nav.users'), match: (p: string) => p.startsWith('/admin/users') },
-    { href: '/admin/support', label: t('admin.nav.support'), match: (p: string) => p.startsWith('/admin/support') },
     { href: '/admin/verify', label: t('admin.nav.verify'), match: (p: string) => p.startsWith('/admin/verify') },
+    { href: '/admin/drones', label: t('admin.nav.drones'), match: (p: string) => p.startsWith('/admin/drones') },
+    { href: '/admin/reports', label: t('admin.nav.reports'), match: (p: string) => p.startsWith('/admin/reports') },
+    { href: '/admin/support', label: t('admin.nav.support'), match: (p: string) => p.startsWith('/admin/support') },
     { href: '/admin/plans', label: t('admin.nav.plans'), match: (p: string) => p.startsWith('/admin/plans') },
     { href: '/admin/nfc', label: t('admin.nav.nfc'), match: (p: string) => p.startsWith('/admin/nfc') },
   ];

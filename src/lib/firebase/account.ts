@@ -3,19 +3,16 @@ import {
   doc,
   getDoc,
   getDocs,
-  setDoc,
   updateDoc,
 } from 'firebase/firestore';
 
 import { awaitFirebaseAuthReady } from '@/lib/firebase/auth';
 import { adminFetch } from '@/lib/client/adminApi';
+import { provisionAccount } from '@/lib/client/provisionAccount';
 import { DEMO_MODE, getFirebaseDb } from '@/lib/firebase/config';
 import * as demoStore from '@/lib/demo/accountStore';
 import type { AccountType, UserAccount } from '@/lib/types/account';
-import {
-  EMPTY_CONTACT_VERIFICATION,
-  type ContactVerificationState,
-} from '@/lib/types/contactVerification';
+import type { ContactVerificationState } from '@/lib/types/contactVerification';
 
 const USERS = 'users';
 
@@ -75,50 +72,47 @@ export async function getAccount(uid: string): Promise<UserAccount | null> {
 }
 
 /**
- * Idempotently create the `users/{uid}` document after signup or first login.
- * Safe to call every time the app starts — won't overwrite existing data.
+ * Idempotently ensure the `users/{uid}` document exists after signup or first
+ * login. Safe to call on every app start — it never overwrites existing data.
+ *
+ * In live mode the document is created by the server. Firestore rules declare
+ * `allow create: if false` on this collection, so the `setDoc` this function
+ * used to perform was always rejected: signup produced a Firebase Auth user
+ * with no account record behind it. Provisioning now goes through
+ * POST /api/account/provision, which runs the Admin SDK and takes the uid
+ * from the verified token.
  */
 export async function ensureAccount(
   uid: string,
   email: string,
-  seed: Partial<UserAccount> = {},
+  seed: Partial<UserAccount> & { acceptedTerms?: boolean } = {},
 ): Promise<UserAccount> {
   if (DEMO_MODE) return demoStore.ensureAccount(uid, email, seed);
 
   const existing = await getAccount(uid);
   if (existing) return existing;
 
-  const now = new Date().toISOString();
-  const account: UserAccount = {
-    uid,
-    email,
-    accountType: seed.accountType ?? 'private',
-    firstName: seed.firstName ?? '',
-    lastName: seed.lastName ?? '',
-    dateOfBirth: seed.dateOfBirth ?? '',
-    phone: seed.phone ?? '',
-    address: seed.address ?? {
-      line1: '',
-      line2: '',
-      city: '',
-      postalCode: '',
-      country: '',
-    },
-    companyName: seed.companyName ?? '',
-    companyContactPerson: seed.companyContactPerson ?? '',
-    companyVat: seed.companyVat ?? '',
-    companyUniqueNumber: seed.companyUniqueNumber ?? '',
-    profilePhotoUrl: seed.profilePhotoUrl ?? '',
-    logoUrl: seed.logoUrl ?? '',
-    bannerUrl: seed.bannerUrl ?? '',
-    contactVerification: seed.contactVerification ?? { ...EMPTY_CONTACT_VERIFICATION },
-    createdAt: now,
-    updatedAt: now,
-  };
+  await provisionAccount({
+    accountType: seed.accountType,
+    firstName: seed.firstName,
+    lastName: seed.lastName,
+    dateOfBirth: seed.dateOfBirth,
+    phone: seed.phone,
+    address: seed.address,
+    companyName: seed.companyName,
+    companyContactPerson: seed.companyContactPerson,
+    companyVat: seed.companyVat,
+    companyUniqueNumber: seed.companyUniqueNumber,
+    acceptedTerms: seed.acceptedTerms,
+  });
 
-  const db = getFirebaseDb();
-  await setDoc(doc(db, USERS, uid), account);
-  return account;
+  const created = await getAccount(uid);
+  if (created) return created;
+
+  // The route reported success but the document is not readable. Surfacing
+  // this rather than fabricating an in-memory account keeps the caller from
+  // rendering a dashboard backed by nothing.
+  throw new Error('account provisioning did not produce a users/{uid} document');
 }
 
 /** Patch an existing `users/{uid}` document. */

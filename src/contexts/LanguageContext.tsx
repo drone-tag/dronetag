@@ -5,7 +5,7 @@ import {
   useCallback,
   useContext,
   useEffect,
-  useState,
+  useSyncExternalStore,
   type ReactNode,
 } from 'react';
 import { t as translate } from '@/lib/i18n';
@@ -29,34 +29,63 @@ function isLanguage(value: string | null): value is Language {
   return value === 'en' || value === 'it' || value === 'de' || value === 'es' || value === 'fr';
 }
 
+const DEFAULT_LANGUAGE: Language = 'it';
+
+// The selected language lives in localStorage, which React reaches through
+// `useSyncExternalStore` rather than through an effect that copies it into
+// state after mount. `cached` holds the value so the snapshot is a cheap read
+// — it is consulted on every render — and so an explicit choice still applies
+// when localStorage refuses the write, as it does in private browsing.
+const listeners = new Set<() => void>();
+let cached: Language | null = null;
+
+function subscribe(onStoreChange: () => void): () => void {
+  listeners.add(onStoreChange);
+  return () => {
+    listeners.delete(onStoreChange);
+  };
+}
+
 function readStoredLanguage(): Language {
-  if (typeof window === 'undefined') return 'it';
+  if (typeof window === 'undefined') return DEFAULT_LANGUAGE;
+  if (cached !== null) return cached;
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (isLanguage(raw)) return raw;
+    if (isLanguage(raw)) return (cached = raw);
   } catch {
     /* ignore */
   }
-  return 'it';
+  return (cached = DEFAULT_LANGUAGE);
+}
+
+// Rendered on the server and again on the client's hydrating pass, so both
+// agree on the markup; React then re-reads the stored value.
+function getServerSnapshot(): Language {
+  return DEFAULT_LANGUAGE;
+}
+
+function writeLanguage(lang: Language): void {
+  cached = lang;
+  try {
+    localStorage.setItem(STORAGE_KEY, lang);
+  } catch {
+    /* ignore */
+  }
+  for (const listener of listeners) listener();
 }
 
 export function LanguageProvider({ children }: { children: ReactNode }) {
-  const [language, setLanguageState] = useState<Language>('it');
+  const language = useSyncExternalStore(subscribe, readStoredLanguage, getServerSnapshot);
 
+  // The `lang` attribute is state held outside React, so it is synchronised
+  // here rather than written from the setter — this way it also tracks the
+  // post-hydration read, which is when the stored language first arrives.
   useEffect(() => {
-    const stored = readStoredLanguage();
-    setLanguageState(stored);
-    document.documentElement.lang = stored;
-  }, []);
+    document.documentElement.lang = language;
+  }, [language]);
 
   const setLanguage = useCallback((lang: Language) => {
-    setLanguageState(lang);
-    document.documentElement.lang = lang;
-    try {
-      localStorage.setItem(STORAGE_KEY, lang);
-    } catch {
-      /* ignore */
-    }
+    writeLanguage(lang);
   }, []);
 
   const t = useCallback(

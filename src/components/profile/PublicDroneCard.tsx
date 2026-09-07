@@ -14,7 +14,7 @@
 
 import { type ReactNode, useEffect, useState } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { LANGUAGES } from '@/lib/types';
+import { ALL_LANGUAGES } from '@/lib/types';
 import type { PolicyStatus, VerificationStatus } from '@/lib/types';
 import type { DroneClass, DronePublicSnapshot } from '@/lib/types/entities';
 import { classNames, formatDate, formatDateTime } from '@/lib/utils';
@@ -69,14 +69,26 @@ const droneClassLabelKey: Record<DroneClass, string> = {
 
 // ─── Helpers ───────────────────────────────────────────────────────────────
 
+/**
+ * A remote pilot and a UAS operator are legally distinct roles, and the public
+ * page names exactly one of them. The cases are listed exhaustively rather
+ * than falling through to "Pilot": an unrecognised `holderKind` used to be
+ * silently presented to the public as a pilot, which is an assertion about a
+ * person that may not be true. The `never` guard makes a new variant a
+ * compile error instead.
+ */
 function holderRoleKey(kind: DronePublicSnapshot['holderKind']): string {
   switch (kind) {
     case 'operator-company':
       return 'publicDrone.holderOperatorCompany';
     case 'operator-private':
       return 'publicDrone.holderOperatorPrivate';
-    default:
+    case 'pilot':
       return 'publicDrone.holderPilot';
+    default: {
+      const exhaustive: never = kind;
+      return exhaustive;
+    }
   }
 }
 
@@ -155,8 +167,10 @@ export function PublicDroneCard({ snapshot, language }: PublicDroneCardProps) {
 
   const policy = policyConfig[snapshot.insuranceStatus as PolicyStatus];
   const verification = verificationConfig[snapshot.verificationStatus];
+  // ALL_LANGUAGES so a profile stored in a hidden language still gets a proper
+  // label rather than a bare code.
   const langLabel =
-    LANGUAGES.find((l) => l.value === language)?.label ?? language.toUpperCase();
+    ALL_LANGUAGES.find((l) => l.value === language)?.label ?? language.toUpperCase();
 
   return (
     <div className="overflow-hidden rounded-none border-y border-[var(--color-border)] bg-[var(--color-card)] shadow-none sm:rounded-xl sm:border sm:shadow-lg">
@@ -261,8 +275,14 @@ export function PublicDroneCard({ snapshot, language }: PublicDroneCardProps) {
       </div>
 
       {/* ── Sections ──────────────────────────────────────────────────── */}
-      <Section title={t('publicDrone.holderSection')} icon={<IconUser />}>
-        <DataRow label={t(holderRoleKey(snapshot.holderKind))} value={snapshot.holderDisplayName} />
+      {/*
+        The heading names the role and the row names the person. It used to be
+        the other way round, under a heading reading "Operator / pilot", which
+        told a visitor the name below was one of two legally different roles
+        without saying which.
+      */}
+      <Section title={t(holderRoleKey(snapshot.holderKind))} icon={<IconUser />}>
+        <DataRow label={t('publicDrone.holderName')} value={snapshot.holderDisplayName} />
       </Section>
 
       <Section title={t('public.droneInformation')} icon={<IconDrone />}>
@@ -290,19 +310,12 @@ export function PublicDroneCard({ snapshot, language }: PublicDroneCardProps) {
           label={t('publicDrone.validUntil')}
           value={snapshot.insuranceValidUntil ? formatDate(snapshot.insuranceValidUntil) : ''}
         />
-        {snapshot.insurancePdfUrl ? (
-          <div className="mt-3">
-            <a
-              href={snapshot.insurancePdfUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="tap-44 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-card)] px-4 py-3 text-sm font-medium text-[var(--color-text)] shadow-sm transition active:bg-[var(--color-hover)] sm:w-auto sm:justify-start sm:px-3 sm:py-2 sm:text-xs"
-            >
-              <IconExternal />
-              {t('publicDrone.viewPolicyPdf')}
-            </a>
-          </div>
-        ) : null}
+        {/*
+          The policy PDF is not linked here. It names the holder and carries
+          their address and full policy number, which would defeat the
+          masking two rows above (PRV-001 / SEC-007). Coverage is verified
+          from the status, insurer and expiry date instead.
+        */}
       </Section>
 
       <Section title={t('public.verificationRecord')} icon={<IconClipboard />}>

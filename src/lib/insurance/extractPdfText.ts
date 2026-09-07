@@ -4,6 +4,8 @@
  * read in a sensible order.
  */
 
+import { configurePdfWorker } from '@/lib/pdf/pdfWorker';
+
 type PdfTextItem = {
   str: string;
   transform: number[];
@@ -53,7 +55,7 @@ function pageItemsToText(items: unknown[]): string {
 async function loadPdfDocument(data: Uint8Array) {
   if (typeof window !== 'undefined') {
     const pdfjs = await import('pdfjs-dist');
-    pdfjs.GlobalWorkerOptions.workerSrc = `https://cdn.jsdelivr.net/npm/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
+    configurePdfWorker(pdfjs);
     return pdfjs.getDocument({ data }).promise;
   }
 

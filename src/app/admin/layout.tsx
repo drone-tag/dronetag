@@ -1,49 +1,42 @@
-'use client';
+import { redirect } from 'next/navigation';
+import { cookies } from 'next/headers';
 
-import { useEffect } from 'react';
-import { usePathname, useRouter } from 'next/navigation';
-import { useAuth } from '@/contexts/AuthContext';
-import { useLanguage } from '@/contexts/LanguageContext';
-import { AdminSubNav } from '@/components/layout/AdminSubNav';
+import { AdminShell } from '@/components/layout/AdminShell';
+import { verifyAdminSession } from '@/lib/server/adminSession';
 
-export default function AdminLayout({ children }: { children: React.ReactNode }) {
-  const router = useRouter();
-  const pathname = usePathname();
-  const { user, loading, isAdmin } = useAuth();
-  const { t } = useLanguage();
+/**
+ * Server-side gate for the whole /admin subtree.
+ *
+ * Before this existed, /admin was protected only by a `useEffect` redirect in
+ * a Client Component (SEC-003). That guard runs after the server has already
+ * rendered and shipped the admin markup, so it stopped a casual visitor and
+ * nobody else: disabling JavaScript, or simply reading the HTML response, was
+ * enough to see it.
+ *
+ * As a Server Component this runs before any admin markup is produced. The
+ * session cookie is verified with firebase-admin and the `admin` custom claim
+ * is checked; an unauthorised request is redirected and never receives the
+ * page.
+ *
+ * This is a gate, not the authorisation model. Every /api/admin/* route still
+ * calls `requireAdminFromRequest` independently — a layout check protects
+ * pages, not the endpoints those pages call, and the endpoints are where the
+ * data actually lives.
+ */
+export default async function AdminLayout({ children }: { children: React.ReactNode }) {
+  const cookieStore = await cookies();
+  const result = await verifyAdminSession(cookieStore);
 
-  useEffect(() => {
-    if (loading) return;
-    if (!user) {
-      router.replace('/login');
-      return;
-    }
-    if (!isAdmin) router.replace('/account');
-  }, [user, loading, isAdmin, router]);
-
-  if (loading) {
-    return (
-      <div className="flex min-h-[calc(100dvh-4rem)] flex-col items-center justify-center gap-3 bg-[var(--color-app-bg)]">
-        <div
-          className="h-9 w-9 animate-spin rounded-full border-2 border-[var(--color-border)] border-t-[var(--color-action)]"
-          role="status"
-          aria-label={t('common.loading')}
-        />
-        <p className="text-sm text-[var(--color-text-secondary)]">{t('common.loading')}</p>
-      </div>
-    );
+  if (result.status === 'unauthenticated') {
+    redirect('/login?redirect=/admin');
   }
-
-  if (!user || !isAdmin) {
-    return null;
+  if (result.status === 'forbidden') {
+    redirect('/account');
   }
+  // status === 'unavailable' — the Admin SDK is not configured (local dev
+  // without credentials). Fall through to the client shell rather than locking
+  // the operator out of their own dev environment; there is nothing to protect
+  // in that configuration because the API routes return 503 anyway.
 
-  const showSubNav = pathname !== '/admin';
-
-  return (
-    <div className="min-h-[calc(100dvh-4rem)] bg-[var(--color-app-bg)]">
-      {showSubNav ? <AdminSubNav /> : null}
-      {children}
-    </div>
-  );
+  return <AdminShell>{children}</AdminShell>;
 }

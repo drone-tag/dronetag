@@ -61,10 +61,20 @@ export const PRICING_OPERATOR_LIMITS = {
 /** Default operator count when opening business checkout. */
 export const DEFAULT_BUSINESS_OPERATORS = 1;
 
-export const NFC_KIT_CONTENTS_KEYS = [
-  'pricing.kit.item.certBadge',
-  'pricing.kit.item.insuranceBadge',
-] as const;
+/**
+ * What a kit contains: ONE NFC badge per pilot / profile.
+ *
+ * The earlier model shipped two badges — one for the certificate and one for
+ * the insurance — and the config, the pricing page and the i18n strings all
+ * still described it. The product now sells a single badge that links to the
+ * pilot's public profile, where both certificate and insurance status are
+ * shown. `KIT_BADGES_PER_PILOT` is enforced in the quote calculator so the
+ * rule cannot be worked around from the checkout form.
+ */
+export const NFC_KIT_CONTENTS_KEYS = ['pricing.kit.item.badge'] as const;
+
+/** Exactly one badge per pilot / profile. Not configurable by the customer. */
+export const KIT_BADGES_PER_PILOT = 1;
 
 export const PRICING_PLANS: readonly PricingPlan[] = [
   {
@@ -73,7 +83,7 @@ export const PRICING_PLANS: readonly PricingPlan[] = [
     target: 'individual',
     priceCents: 0,
     interval: 'year',
-    kitPriceCents: 3990,
+    kitPriceCents: 2490,
     kitIncluded: false,
     featureKeys: [
       'pricing.plan.free.f1',
@@ -93,7 +103,7 @@ export const PRICING_PLANS: readonly PricingPlan[] = [
     target: 'individual',
     priceCents: 9900,
     interval: 'year',
-    kitPriceCents: 3490,
+    kitPriceCents: 1990,
     kitIncluded: false,
     featureKeys: [
       'pricing.plan.pilot.f1',
@@ -135,7 +145,7 @@ export const PRICING_PLANS: readonly PricingPlan[] = [
     target: 'business',
     priceCents: 4900,
     interval: 'month',
-    kitPriceCents: 2990,
+    kitPriceCents: 1790,
     kitIncluded: false,
     featureKeys: [
       'pricing.plan.team.f1',
@@ -156,7 +166,7 @@ export const PRICING_PLANS: readonly PricingPlan[] = [
     target: 'business',
     priceCents: 14900,
     interval: 'month',
-    kitPriceCents: 2790,
+    kitPriceCents: 1590,
     kitIncluded: false,
     featureKeys: [
       'pricing.plan.business.f1',

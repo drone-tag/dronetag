@@ -54,7 +54,7 @@ export function DesktopSidebar() {
 
   return (
     <aside
-      className="hidden w-[var(--sidebar-width)] shrink-0 lg:flex lg:flex-col"
+      className="hidden w-[var(--sidebar-width)] shrink-0 md:flex md:flex-col"
       aria-label={t('account.nav.sidebar')}
     >
       <div className="sticky top-[calc(var(--app-header-offset)+1rem)] flex max-h-[calc(100dvh-var(--app-header-offset)-2rem)] flex-col rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-card)] shadow-[var(--shadow-card)]">
@@ -119,6 +119,11 @@ export function DesktopSidebar() {
                         >
                           <Icon className="h-5 w-5 shrink-0" />
                           <span className="flex-1 truncate">{t(item.labelKey)}</span>
+                          {item.preview ? (
+                            <span className="shrink-0 rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--color-text-secondary)] ring-1 ring-[var(--color-border)]">
+                              {t('nav.preview')}
+                            </span>
+                          ) : null}
                           {item.href === '/account/support' ? <SupportNavBadge /> : null}
                         </Link>
                       </li>

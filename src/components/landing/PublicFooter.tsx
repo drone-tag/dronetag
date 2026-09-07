@@ -31,13 +31,18 @@ export function PublicFooter() {
                 </Link>
               </li>
               <li>
-                <Link href="mailto:info@drone-tag.com" className="text-xs text-[var(--color-text)] hover:text-[var(--color-action)]">
+                <Link href="/privacy" className="text-xs text-[var(--color-text)] hover:text-[var(--color-action)]">
                   {t('home.footer.privacy')}
                 </Link>
               </li>
               <li>
-                <Link href="mailto:info@drone-tag.com" className="text-xs text-[var(--color-text)] hover:text-[var(--color-action)]">
+                <Link href="/terms" className="text-xs text-[var(--color-text)] hover:text-[var(--color-action)]">
                   {t('home.footer.terms')}
+                </Link>
+              </li>
+              <li>
+                <Link href="/cookies" className="text-xs text-[var(--color-text)] hover:text-[var(--color-action)]">
+                  {t('home.footer.cookies')}
                 </Link>
               </li>
               <li>

@@ -8,6 +8,7 @@ import {
   DEFAULT_BUSINESS_OPERATORS,
   formatEuroFromCents,
   getPlanById,
+  KIT_BADGES_PER_PILOT,
   type PlanId,
 } from '@/config/pricing';
 import { buildPricingQuote } from '@/lib/pricing/quote';
@@ -36,9 +37,11 @@ function CheckoutInner() {
   const [operatorCount, setOperatorCount] = useState(
     plan.requiresOperators ? DEFAULT_BUSINESS_OPERATORS : 1,
   );
-  const [kitQuantity, setKitQuantity] = useState(
-    plan.requiresOperators ? DEFAULT_BUSINESS_OPERATORS : 1,
-  );
+  // Badge count is derived, never chosen: exactly one per pilot / profile.
+  // The old editable field was a remnant of the two-badge kit.
+  const kitQuantity = plan.requiresOperators
+    ? operatorCount * KIT_BADGES_PER_PILOT
+    : KIT_BADGES_PER_PILOT;
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -59,20 +62,8 @@ function CheckoutInner() {
     const p = getPlanById(initialPlanId);
     if (!p) return;
     setCustomerType(p.target === 'business' ? 'company' : 'private');
-    if (p.requiresOperators) {
-      setOperatorCount(DEFAULT_BUSINESS_OPERATORS);
-      setKitQuantity(DEFAULT_BUSINESS_OPERATORS);
-    } else {
-      setOperatorCount(1);
-      setKitQuantity(1);
-    }
+    setOperatorCount(p.requiresOperators ? DEFAULT_BUSINESS_OPERATORS : 1);
   }, [initialPlanId]);
-
-  useEffect(() => {
-    if (plan.requiresOperators) {
-      setKitQuantity((q) => Math.max(q, operatorCount));
-    }
-  }, [operatorCount, plan.requiresOperators]);
 
   const localQuote = useMemo(() => {
     try {
@@ -216,31 +207,22 @@ function CheckoutInner() {
                   value={String(operatorCount)}
                   onChange={(e) => setOperatorCount(Math.max(1, Number(e.target.value) || 1))}
                 />
-                <div>
-                  <Input
-                    name="kitQuantity"
-                    label={t('pricing.checkout.kits')}
-                    type="number"
-                    min={operatorCount}
-                    max={plan.maxOperators ?? 500}
-                    value={String(kitQuantity)}
-                    onChange={(e) => setKitQuantity(Math.max(operatorCount, Number(e.target.value) || operatorCount))}
-                  />
-                  <p className="mt-1 text-[11px] text-[var(--color-text-secondary)]">{t('pricing.checkout.kitsHint')}</p>
+                <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-app-bg)] px-3 py-2.5">
+                  <p className="text-xs font-medium text-[var(--color-text-secondary)]">
+                    {t('pricing.checkout.kits')}
+                  </p>
+                  <p className="mt-0.5 text-sm font-semibold text-[var(--color-text)]">
+                    {kitQuantity}
+                  </p>
+                  <p className="mt-1 text-[11px] text-[var(--color-text-secondary)]">
+                    {t('pricing.checkout.kitsHint')}
+                  </p>
                 </div>
               </div>
             ) : !plan.kitIncluded && plan.interval !== 'quote' ? (
-              <div className="mt-4 max-w-xs">
-                <Input
-                  name="kitQuantity"
-                  label={t('pricing.checkout.kits')}
-                  type="number"
-                  min={1}
-                  max={20}
-                  value={String(kitQuantity)}
-                  onChange={(e) => setKitQuantity(Math.max(1, Number(e.target.value) || 1))}
-                />
-              </div>
+              <p className="mt-4 rounded-lg border border-[var(--color-border)] bg-[var(--color-app-bg)] px-3 py-2.5 text-xs text-[var(--color-text-secondary)]">
+                {t('pricing.checkout.kitsHint')}
+              </p>
             ) : null}
           </section>
 

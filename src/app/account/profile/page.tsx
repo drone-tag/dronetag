@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import type { ChangeEvent, FormEvent } from 'react';
+import type { FormEvent } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -90,6 +90,21 @@ export default function AccountProfilePage() {
         initial={account}
         onSaved={(next) => setAccount(next)}
       />
+      <Card padding="md">
+        <h2 className="text-base font-semibold text-[var(--color-text)]">{t('account.delete.title')}</h2>
+        <p className="mt-2 text-sm leading-relaxed text-[var(--color-text-secondary)]">
+          {t('account.delete.body')}
+        </p>
+        <div className="mt-4">
+          <Button
+            href="/account/support?subject=Account%20deletion%20request"
+            variant="secondary"
+            size="sm"
+          >
+            {t('account.delete.cta')}
+          </Button>
+        </div>
+      </Card>
       <p className="rounded-lg border border-[var(--color-border)] bg-[var(--color-card)] px-4 py-3 text-xs leading-relaxed text-[var(--color-text-secondary)]">
         {t('legal.platformDisclaimer')}
       </p>

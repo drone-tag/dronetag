@@ -3,17 +3,19 @@
 import { type ChangeEvent, useCallback, useEffect, useRef, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useToast } from '@/contexts/ToastContext';
 import { createProfile, updateProfile } from '@/lib/firebase/firestore';
 import {
   uploadProfilePhoto, uploadLogo, uploadBanner, uploadPolicyPdf, uploadQrImage,
 } from '@/lib/firebase/storage';
 import {
-  DEFAULT_PROFILE, LANGUAGES, PROFILE_STATUSES, VISIBILITY_OPTIONS, VERIFICATION_STATUSES,
+  ALL_LANGUAGES, DEFAULT_PROFILE, LANGUAGES, PROFILE_STATUSES, VISIBILITY_OPTIONS, VERIFICATION_STATUSES,
   type Language, type Person, type Organization, type Insurance, type Drone, type Assets,
   type AdminMeta, type Profile, type ProfileFormData, type ProfileStatus, type Visibility,
   type VerificationStatus,
 } from '@/lib/types';
-import { generateSlug } from '@/lib/utils';
+import { generateSlug, getPublicProfileUrl } from '@/lib/utils';
+import { PublicationConsent } from '@/components/profile/PublicationConsent';
 import { Accordion } from '@/components/ui/Accordion';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
@@ -97,6 +99,8 @@ export function ProfileForm({ initialData, onSave }: ProfileFormProps) {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  /** Publication consent (FASE 17) — opened when visibility is set to public. */
+  const [consentOpen, setConsentOpen] = useState(false);
 
   useEffect(() => {
     blobUrlsRef.current.forEach((u) => URL.revokeObjectURL(u));
@@ -148,13 +152,25 @@ export function ProfileForm({ initialData, onSave }: ProfileFormProps) {
   const handleProfileStatusChange = useCallback((e: ChangeEvent<HTMLSelectElement>) => {
     setFormData((prev) => ({ ...prev, status: e.target.value as ProfileStatus }));
   }, []);
-  const handleVisibilityChange = useCallback((e: ChangeEvent<HTMLSelectElement>) => {
-    const vis = e.target.value as Visibility;
+  const applyVisibility = useCallback((vis: Visibility) => {
     setFormData((prev) => ({
       ...prev, visibility: vis,
       publishedAt: vis === 'public' && !prev.publishedAt ? new Date().toISOString() : prev.publishedAt,
     }));
   }, []);
+
+  const handleVisibilityChange = useCallback((e: ChangeEvent<HTMLSelectElement>) => {
+    const vis = e.target.value as Visibility;
+    // Going public asks first, and the select does not move until the user
+    // confirms — so cancelling leaves the form exactly as it was rather than
+    // requiring them to undo a change they did not mean to make. Going private
+    // needs no confirmation; it only ever reduces exposure.
+    if (vis === 'public') {
+      setConsentOpen(true);
+      return;
+    }
+    applyVisibility(vis);
+  }, [applyVisibility]);
   const handleVerificationStatusChange = useCallback((e: ChangeEvent<HTMLSelectElement>) => {
     const vs = e.target.value as VerificationStatus;
     setFormData((prev) => ({
@@ -173,7 +189,10 @@ export function ProfileForm({ initialData, onSave }: ProfileFormProps) {
 
   const validate = useCallback((): boolean => {
     const next: Record<string, string> = {};
-    if (!formData.language || !LANGUAGES.some((l) => l.value === formData.language)) next.language = t('form.validation.required');
+    // Validated against ALL_LANGUAGES, not the selectable subset: a profile
+    // saved in German before those languages were hidden must still pass
+    // validation when the user edits an unrelated field.
+    if (!formData.language || !ALL_LANGUAGES.some((l) => l.value === formData.language)) next.language = t('form.validation.required');
     if (!formData.person.firstName.trim()) next.firstName = t('form.validation.required');
     if (!formData.person.lastName.trim()) next.lastName = t('form.validation.required');
     if (!formData.person.operatorCode.trim()) next.operatorCode = t('form.validation.required');
@@ -208,6 +227,7 @@ export function ProfileForm({ initialData, onSave }: ProfileFormProps) {
   // Storage paths are scoped to the writer's uid (V-012). We capture
   // the admin's uid at submit time so storage.rules will allow the write.
   const { user } = useAuth();
+  const toast = useToast();
   const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault(); setSubmitError(null); setSaved(false);
     if (!validate()) return;
@@ -238,15 +258,28 @@ export function ProfileForm({ initialData, onSave }: ProfileFormProps) {
         await updateProfile(profileId, { assets, insurance });
       }
       setSaved(true);
+      toast.success(t(isEdit ? 'form.saved' : 'form.created'));
       onSave(profileId);
     } catch (err: unknown) {
-      setSubmitError(err instanceof Error ? err.message : t('form.submitError'));
+      const message = err instanceof Error ? err.message : t('form.submitError');
+      setSubmitError(message);
+      // Both: the inline error stays with the form for someone who scrolled
+      // away from the submit button, the toast catches the eye immediately.
+      toast.error(message);
     } finally { setSaving(false); }
   }, [formData, initialData?.id, isEdit, photoFile, logoFile, bannerFile, pdfFile, qrFile, onSave, t, validate, user?.uid]);
 
   // ─── Option lists ───────────────────────────────────────────────────
 
-  const langOpts = LANGUAGES.map((l) => ({ value: l.value, label: l.label }));
+  // Offer the selectable languages, plus whatever this profile is already set
+  // to. Without the second part the select would render with nothing chosen
+  // for a profile stored in a hidden language, and saving would silently
+  // change it.
+  const langOpts = (
+    LANGUAGES.some((l) => l.value === formData.language)
+      ? LANGUAGES
+      : [...LANGUAGES, ...ALL_LANGUAGES.filter((l) => l.value === formData.language)]
+  ).map((l) => ({ value: l.value, label: l.label }));
   const statusOpts = PROFILE_STATUSES.map((s) => ({ value: s.value, label: t(s.labelKey) }));
   const visOpts = VISIBILITY_OPTIONS.map((v) => ({ value: v.value, label: t(v.labelKey) }));
   const verOpts = VERIFICATION_STATUSES.map((s) => ({ value: s.value, label: t(s.labelKey) }));
@@ -467,6 +500,16 @@ export function ProfileForm({ initialData, onSave }: ProfileFormProps) {
           </div>
         </div>
       </div>
+
+      <PublicationConsent
+        isOpen={consentOpen}
+        onCancel={() => setConsentOpen(false)}
+        onConfirm={() => {
+          applyVisibility('public');
+          setConsentOpen(false);
+        }}
+        publicUrl={formData.slug ? getPublicProfileUrl(formData.slug) : undefined}
+      />
     </form>
   );
 }

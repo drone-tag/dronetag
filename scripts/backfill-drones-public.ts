@@ -203,7 +203,6 @@ async function main() {
       insuranceProvider: insurance?.provider ?? '',
       insuranceValidUntil: insurance?.expiryDate ?? '',
       insuranceMaskedPolicyNumber: insurance?.policyNumber ? maskPolicyNumber(insurance.policyNumber) : '',
-      insurancePdfUrl: insurance?.pdfUrl ?? '',
       profilePhotoUrl: userStr('profilePhotoUrl'),
       logoUrl: userStr('logoUrl'),
       bannerUrl: userStr('bannerUrl'),

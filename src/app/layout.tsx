@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { LanguageProvider } from '@/contexts/LanguageContext';
 import { ThemeProvider } from '@/contexts/ThemeContext';
+import { ToastProvider } from '@/contexts/ToastContext';
 import { AppShell } from '@/components/layout/AppShell';
 import { AuthRoutePrefetch } from '@/components/auth/AuthRoutePrefetch';
 import { ServiceWorkerCleanup } from '@/components/system/ServiceWorkerCleanup';
@@ -64,8 +65,13 @@ export default function RootLayout({
         <ThemeProvider>
           <AuthProvider>
             <LanguageProvider>
-              <AuthRoutePrefetch />
-              <AppShell>{children}</AppShell>
+              {/* Inside LanguageProvider so toast callers can pass translated
+                  strings, and outside AppShell so the viewport is a sibling of
+                  the page rather than a descendant of any scroll container. */}
+              <ToastProvider>
+                <AuthRoutePrefetch />
+                <AppShell>{children}</AppShell>
+              </ToastProvider>
             </LanguageProvider>
           </AuthProvider>
         </ThemeProvider>

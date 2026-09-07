@@ -4,13 +4,14 @@
  * Browser-only — dynamically loads tesseract.js on demand.
  */
 
+import { TESSERACT_OPTIONS } from '@/lib/certificate/tesseractAssets';
+import { configurePdfWorker } from '@/lib/pdf/pdfWorker';
+
 export async function ocrCertificatePdf(file: File): Promise<string> {
   if (typeof window === 'undefined') return '';
 
   const pdfjs = await import('pdfjs-dist');
-  if (!pdfjs.GlobalWorkerOptions.workerSrc) {
-    pdfjs.GlobalWorkerOptions.workerSrc = `https://cdn.jsdelivr.net/npm/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
-  }
+  configurePdfWorker(pdfjs);
 
   const buffer = await file.arrayBuffer();
   const doc = await pdfjs.getDocument({ data: buffer }).promise;
@@ -28,6 +29,7 @@ export async function ocrCertificatePdf(file: File): Promise<string> {
   const { createWorker } = await import('tesseract.js');
   const worker = await createWorker('eng', 1, {
     logger: () => {},
+    ...TESSERACT_OPTIONS,
   });
   try {
     const { data } = await worker.recognize(canvas);

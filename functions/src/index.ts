@@ -34,10 +34,17 @@ setGlobalOptions({
 
 export {
   submitReport,
+  bootstrapSlots,
+  /**
+   * @deprecated Pre-beta: the live client creates these entities through
+   * Next.js Route Handlers + Admin SDK (`/api/entities/*`). These callables
+   * stay deployed so existing tokens and any leftover clients do not break.
+   * Do not add new callers. Scheduled for removal after a Functions-only
+   * traffic check shows zero invocations.
+   */
   createDrone,
   createOperator,
   createCertificate,
   createDocument,
   createInsurance,
-  bootstrapSlots,
 };

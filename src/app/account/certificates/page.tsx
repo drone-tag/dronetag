@@ -12,6 +12,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ChangeEvent, FormEvent } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useToast } from '@/contexts/ToastContext';
 import {
   createCertificate,
   deleteCertificate,
@@ -71,6 +72,7 @@ function kindLabelKey(k: CertificateKind): string {
 export default function AccountCertificatesPage() {
   const { user } = useAuth();
   const { t } = useLanguage();
+  const toast = useToast();
   const [certificates, setCertificates] = useState<Certificate[]>([]);
   const [slots, setSlots] = useState<Slots | null>(null);
   const [loading, setLoading] = useState(true);
@@ -149,6 +151,7 @@ export default function AccountCertificatesPage() {
 
       await reload();
       setCreating(false);
+      toast.success(t('toast.certificate.created'));
     } catch (err) {
       console.error('[certificates] create failed', err);
       const msg = err instanceof Error ? err.message : '';
@@ -167,6 +170,13 @@ export default function AccountCertificatesPage() {
       await deleteCertificate(confirmingDelete.id);
       await reload();
       setConfirmingDelete(null);
+      toast.success(t('toast.certificate.deleted'));
+    } catch (err) {
+      // The dialog stays open on failure. Without this branch a rejected
+      // delete left the row in place with no explanation, which reads as the
+      // button being broken.
+      console.error('[certificates] delete failed', err);
+      toast.error(t('toast.certificate.deleteFailed'));
     } finally {
       setSavingId(null);
     }

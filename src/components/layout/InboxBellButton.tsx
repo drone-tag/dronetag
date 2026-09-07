@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -21,20 +21,23 @@ export function InboxBellButton({ className }: { className?: string }) {
   const pathname = usePathname();
   const { user, isAdmin } = useAuth();
   const { t } = useLanguage();
-  const [reportUnread, setReportUnread] = useState(0);
-  const [supportUnread, setSupportUnread] = useState(0);
-  const [menuOpen, setMenuOpen] = useState(false);
+  // Counts carry the scope they were fetched for. Which account and which
+  // bell (personal or admin) the numbers describe is part of the value, so a
+  // switch between accounts shows nothing rather than the previous account's
+  // unread count while the new fetch is in flight. `pathname` still triggers a
+  // refresh but is deliberately not part of the scope: navigating inside the
+  // same account keeps the badge steady instead of blanking it on every page.
+  const [counts, setCounts] = useState<{ scope: string; report: number; support: number } | null>(
+    null,
+  );
   const rootRef = useRef<HTMLDivElement>(null);
 
   const inAdmin = pathname.startsWith('/admin');
   const adminBell = Boolean(isAdmin && inAdmin);
+  const scope = user ? `${user.uid}:${adminBell ? 'admin' : 'self'}` : '';
 
   useEffect(() => {
-    if (!user) {
-      setReportUnread(0);
-      setSupportUnread(0);
-      return;
-    }
+    if (!user) return;
     let cancelled = false;
     (async () => {
       try {
@@ -43,24 +46,34 @@ export function InboxBellButton({ className }: { className?: string }) {
           adminBell ? countSupportUnreadForAdmin() : countSupportUnreadForUser(user.uid),
         ]);
         if (!cancelled) {
-          setReportUnread(reports.filter((r) => !r.read).length);
-          setSupportUnread(support);
+          setCounts({ scope, report: reports.filter((r) => !r.read).length, support });
         }
       } catch {
-        if (!cancelled) {
-          setReportUnread(0);
-          setSupportUnread(0);
-        }
+        if (!cancelled) setCounts({ scope, report: 0, support: 0 });
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, [user, adminBell, pathname]);
+  }, [user, adminBell, pathname, scope]);
 
-  useEffect(() => {
-    setMenuOpen(false);
-  }, [pathname]);
+  const fresh = counts?.scope === scope ? counts : null;
+  const reportUnread = fresh?.report ?? 0;
+  const supportUnread = fresh?.support ?? 0;
+
+  // Same reasoning as the drawer in Navbar: the menu is scoped to the route it
+  // was opened on, so navigating closes it by derivation rather than by a
+  // second render from an effect.
+  const [menuOpenAt, setMenuOpenAt] = useState<string | null>(null);
+  const menuOpen = menuOpenAt === pathname;
+  const setMenuOpen = useCallback(
+    (next: boolean | ((open: boolean) => boolean)) =>
+      setMenuOpenAt((at) => {
+        const open = typeof next === 'function' ? next(at === pathname) : next;
+        return open ? pathname : null;
+      }),
+    [pathname],
+  );
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -76,7 +89,7 @@ export function InboxBellButton({ className }: { className?: string }) {
       document.removeEventListener('mousedown', onDoc);
       document.removeEventListener('keydown', onKey);
     };
-  }, [menuOpen]);
+  }, [menuOpen, setMenuOpen]);
 
   if (!user) return null;
 

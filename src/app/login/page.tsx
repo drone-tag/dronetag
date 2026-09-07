@@ -127,6 +127,14 @@ function LoginInner() {
           autoComplete="current-password"
           disabled={submitting}
         />
+        <div className="flex justify-end">
+          <Link
+            href="/forgot-password"
+            className="text-xs font-medium text-[var(--color-action)] hover:underline"
+          >
+            {t('login.forgotPassword')}
+          </Link>
+        </div>
         {error ? (
           <div className="flex items-start gap-2 rounded-lg bg-[var(--tone-danger-bg)] px-3 py-2.5" role="alert">
             <p className="text-sm text-[var(--tone-danger-fg)]">{error}</p>

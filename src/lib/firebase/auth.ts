@@ -3,6 +3,7 @@ import {
   getAdditionalUserInfo,
   GoogleAuthProvider,
   onAuthStateChanged,
+  sendPasswordResetEmail,
   signInWithEmailAndPassword,
   signInWithPopup,
   signOut,
@@ -75,6 +76,30 @@ export async function signupWithEmail(
 export function logout(): Promise<void> {
   if (DEMO_MODE) return Promise.resolve();
   return signOut(getFirebaseAuth());
+}
+
+/**
+ * Send a Firebase password-reset email.
+ *
+ * `auth/user-not-found` is swallowed on purpose. Firebase distinguishes a
+ * missing account from other failures, and surfacing that distinction would
+ * let anyone use the reset form to test whether an address is registered.
+ * The caller shows the same confirmation either way, so this function
+ * resolves rather than rejects in that case.
+ *
+ * Other errors — network, quota, misconfigured project — still reject, since
+ * those genuinely mean the request did not go through and the user should be
+ * told to retry.
+ */
+export async function sendPasswordReset(email: string): Promise<void> {
+  if (DEMO_MODE) return;
+  try {
+    await sendPasswordResetEmail(getFirebaseAuth(), email);
+  } catch (err) {
+    const code = (err as { code?: string }).code ?? '';
+    if (code === 'auth/user-not-found' || code === 'auth/invalid-email') return;
+    throw err;
+  }
 }
 
 export type AwaitFirebaseAuthOptions = {

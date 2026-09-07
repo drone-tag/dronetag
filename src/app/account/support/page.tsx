@@ -9,10 +9,9 @@ import { Suspense, useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useToast } from '@/contexts/ToastContext';
 import {
-  ensureSupportThread,
-  getSupportThread,
-  listSupportMessages,
+  getOwnSupportThread,
   markSupportThreadRead,
   sendSupportMessage,
 } from '@/lib/firebase/support';
@@ -40,6 +39,7 @@ export default function AccountSupportPage() {
 function AccountSupportInner() {
   const { user } = useAuth();
   const { t } = useLanguage();
+  const toast = useToast();
   const searchParams = useSearchParams();
   const presetSubject = searchParams.get('subject') ?? '';
 
@@ -49,13 +49,14 @@ function AccountSupportInner() {
   const [body, setBody] = useState('');
   const [subject, setSubject] = useState(presetSubject);
   const [sending, setSending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
 
+  // A user reads their own thread through /api/support/thread, which resolves
+  // the thread from their token. The uid-taking helpers go through the admin
+  // endpoint and would be rejected here.
   async function reload(uid: string) {
-    const [th, msgs] = await Promise.all([
-      getSupportThread(uid),
-      listSupportMessages(uid),
-    ]);
+    const { thread: th, messages: msgs } = await getOwnSupportThread();
     setThread(th);
     setMessages(msgs);
     if (th && th.userUnreadCount > 0) {
@@ -70,6 +71,8 @@ function AccountSupportInner() {
     (async () => {
       try {
         await reload(user.uid);
+      } catch {
+        if (!cancelled) setError(t('support.error.load'));
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -77,6 +80,7 @@ function AccountSupportInner() {
     return () => {
       cancelled = true;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
   useEffect(() => {
@@ -87,10 +91,10 @@ function AccountSupportInner() {
     e.preventDefault();
     if (!user || !body.trim() || sending) return;
     setSending(true);
+    setError(null);
     try {
-      if (!thread) {
-        await ensureSupportThread(user.uid, subject.trim());
-      }
+      // The server creates the thread on the first message, so there is no
+      // separate "open a ticket" round trip.
       await sendSupportMessage({
         threadId: user.uid,
         sender: 'user',
@@ -99,7 +103,13 @@ function AccountSupportInner() {
         subject: subject.trim() || undefined,
       });
       setBody('');
+      toast.success(t('support.sent'));
       await reload(user.uid);
+    } catch {
+      // The draft is deliberately left in the textarea so a failed send does
+      // not lose what the user wrote.
+      setError(t('support.error.send'));
+      toast.error(t('support.error.send'));
     } finally {
       setSending(false);
     }
@@ -198,6 +208,11 @@ function AccountSupportInner() {
               {sending ? t('support.sending') : t('support.send')}
             </Button>
           </div>
+          {error ? (
+            <p role="alert" className="text-sm text-[var(--tone-danger-fg)]">
+              {error}
+            </p>
+          ) : null}
         </form>
       </Card>
     </div>

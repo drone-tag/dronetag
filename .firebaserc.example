@@ -1,0 +1,6 @@
+{
+  "projects": {
+    "default": "REPLACE-WITH-PRODUCTION-PROJECT-ID",
+    "staging": "REPLACE-WITH-STAGING-PROJECT-ID"
+  }
+}

@@ -269,7 +269,7 @@ export const translations: TranslationMap = {
   'field.language': 'Preferencia de idioma',
   'field.firstName': 'Nombre',
   'field.lastName': 'Apellidos',
-  'field.operatorCode': 'C\u00f3digo de operador',
+  'field.operatorCode': 'UAS operator registration number',
   'field.email': 'Correo electr\u00f3nico',
   'field.phone': 'Tel\u00e9fono',
   'field.emergencyContact': 'Contacto de emergencia',
@@ -277,7 +277,7 @@ export const translations: TranslationMap = {
   'field.visibility': 'Visibilidad',
   'field.birthDate': 'Fecha de nacimiento',
   'field.nationality': 'Nacionalidad',
-  'field.operatorLicense': 'Licencia de operador',
+  'field.operatorLicense': 'UAS operator licence',
   'field.companyName': 'Raz\u00f3n social',
   'field.companyDetails': 'Datos de la empresa',
   'field.companyAddress': 'Direcci\u00f3n de la empresa',
@@ -303,7 +303,6 @@ export const translations: TranslationMap = {
   'field.adminNotes': 'Notas internas de administraci\u00f3n',
 
   // ── Dashboard table columns ──
-  'dashboard.name': 'Operador',
   'dashboard.organization': 'Organizaci\u00f3n',
   'dashboard.operatorCode': 'C\u00f3digo de operador',
   'dashboard.verification': 'Verificaci\u00f3n',
@@ -471,8 +470,7 @@ export const translations: TranslationMap = {
   'links.publicUrlDesc': 'Esta es la URL p\u00fablica permanente para este perfil de operador. Comp\u00e1rtala directamente o cod\u00edfiquela en el c\u00f3digo QR.',
   'links.publicUrlNotReady': 'Defina un slug y publique el perfil para generar una URL p\u00fablica.',
   'links.qrDesc': 'Cargue o genere una imagen de c\u00f3digo QR que enlace a la p\u00e1gina de verificaci\u00f3n p\u00fablica de este operador.',
-  'links.nfcDesc': 'Se puede vincular una etiqueta NFC f\u00edsica a este perfil para acceso por contacto. La programaci\u00f3n NFC a\u00fan no est\u00e1 disponible.',
-  'links.nfcFuture': 'La integraci\u00f3n NFC estar\u00e1 disponible en una versi\u00f3n futura. Este campo est\u00e1 reservado para el identificador de la etiqueta NFC.',
+  'links.nfcDesc': 'The NFC badge contains the public DroneTag link for this profile. Tapping it with a smartphone opens the page below — no app required.',  // TODO: translate
 
   // ── Empty states ──
   'empty.noProfilesIcon': 'No hay operadores registrados',
@@ -523,7 +521,7 @@ export const translations: TranslationMap = {
   'home.hero.trustExpiry': 'Control de vencimientos',
 
   'home.preview.operatorName': 'Marco Bianchi',
-  'home.preview.operatorRole': 'Operador UAS \u00b7 AeroFly Srl',
+  'home.preview.operatorRole': 'Remote pilot \u00b7 AeroFly Srl',
   'home.preview.insurance': 'Seguro RC',
   'home.preview.insuranceDetail': 'P\u00f3liza v\u00e1lida hasta dic. 2026',
   'home.preview.certificate': 'Certificado A2',
@@ -698,7 +696,6 @@ export const translations: TranslationMap = {
   'account.section.media': 'Public profile images',
   'account.mediaHint': 'Photo, logo and banner appear on your public drone page (/u/…). Contact and address details stay private.',
   'account.lockedIdentityHint': 'Photo, logo and banner are free to update. To change personal data, phone, email or address, contact an admin.',
-  'account.section.pilot': 'Pilot identity',
   'account.saved': 'Changes saved',
   'account.saveError': 'Could not save changes. Please try again.',
   'account.storageBillingRequired':
@@ -949,10 +946,10 @@ export const translations: TranslationMap = {
   // ═══════════════════════════════════════════════════════════════════════════
 
   'publicDrone.eyebrow': 'Drone identification',
-  'publicDrone.holderPilot': 'Pilot',
-  'publicDrone.holderOperatorPrivate': 'Operator',
-  'publicDrone.holderOperatorCompany': 'Operator (company)',
-  'publicDrone.holderSection': 'Operator / pilot',
+  'publicDrone.holderPilot': 'Remote pilot',
+  'publicDrone.holderOperatorPrivate': 'UAS operator',
+  'publicDrone.holderOperatorCompany': 'UAS operator (company)',
+  'publicDrone.holderName': 'Nombre',
   'publicDrone.classification': 'Drone class',
   'publicDrone.identifier': 'Serial number',
   'publicDrone.policyNumberMasked': 'Policy reference',
@@ -1189,7 +1186,7 @@ export const translations: TranslationMap = {
   'admin.users.publicProfileUnavailable':
     'No public page yet: add a public drone with a slug.',
   'admin.users.detail.account': 'Account fields',
-  'admin.users.detail.pilot': 'Pilot identity',
+  'admin.users.detail.pilot': 'Remote pilot identity',
   'admin.users.detail.slots': 'Slots',
   'admin.users.detail.operators': 'Operators',
   'admin.users.detail.drones': 'Drones',
@@ -1360,8 +1357,7 @@ export const translations: TranslationMap = {
   'pricing.kit.sectionSubtitle': 'Physical badges are required so certificates and insurance can be verified on site via NFC or QR.',
   'pricing.kit.mandatoryBanner': 'The NFC kit is mandatory',
   'pricing.kit.mandatoryBody': 'Without the kit you can manage documents digitally, but you cannot attach physical badges to aircraft or equipment. Each kit includes two badges.',
-  'pricing.kit.item.certBadge': '1 NFC badge for certificates',
-  'pricing.kit.item.insuranceBadge': '1 NFC badge for insurance',
+  'pricing.kit.item.badge': '1 NFC badge linked to your public DroneTag profile', // TODO: translate
   'pricing.kit.note': 'On Pilot Pro the kit is included in the annual price. On business plans the kit is charged once per operator.',
   'pricing.kit.visual.cert': 'CERT',
   'pricing.kit.visual.ins': 'INS',
@@ -1441,8 +1437,8 @@ export const translations: TranslationMap = {
   'pricing.checkout.private': 'Individual',
   'pricing.checkout.company': 'Company',
   'pricing.checkout.operators': 'Operators',
-  'pricing.checkout.kits': 'NFC kits',
-  'pricing.checkout.kitsHint': 'At least one kit per operator.',
+  'pricing.checkout.kits': 'NFC badges',  // TODO: translate
+  'pricing.checkout.kitsHint': 'One NFC badge per remote pilot. Applied to a drone, the badge opens that drone’s public DroneTag page.',
   'pricing.checkout.billing': 'Billing details',
   'pricing.checkout.fullName': 'Full name',
   'pricing.checkout.email': 'Email',
@@ -1475,4 +1471,200 @@ export const translations: TranslationMap = {
   'pricing.checkout.error.customer_type_mismatch': 'Customer type does not match this plan.',
   'pricing.checkout.error.invalid_operatorCount': 'Invalid operator count.',
   'pricing.checkout.error.invalid_kitQuantity': 'Invalid kit quantity.',
+  'login.forgotPassword': 'Forgot your password?', // TODO: translate
+  'forgot.title': 'Reset your password', // TODO: translate
+  'forgot.subtitle': 'Enter the email address linked to your DroneTag account and we will send you a reset link.', // TODO: translate
+  'forgot.email': 'Email address', // TODO: translate
+  'forgot.submit': 'Send reset link', // TODO: translate
+  'forgot.sending': 'Sending…', // TODO: translate
+  'forgot.backToLogin': 'Back to sign in', // TODO: translate
+  'forgot.sent.title': 'Check your inbox', // TODO: translate
+  'forgot.sent.body': 'If an account exists for that address, a password reset link is on its way. The link expires after a short time.', // TODO: translate
+  'forgot.sent.resend': 'Send again', // TODO: translate
+  'forgot.error.generic': 'We could not process the request right now. Please try again shortly.', // TODO: translate
+  'forgot.error.invalidEmail': 'Enter a valid email address.', // TODO: translate
+  'links.nfcEncodeLabel': 'Write this URL to the badge', // TODO: translate
+  'links.nfcInstructions': 'Use any NFC writer app (for example NFC Tools on Android or iOS) and write the URL above as an NDEF URI record. Tapping the badge with a smartphone will then open this public profile.', // TODO: translate
+  'links.nfcNotReady': 'Publish this profile and assign it a slug to generate the URL the badge should contain.', // TODO: translate
+  'common.dismiss': 'Dismiss', // TODO: translate
+  'admin.verify.notifyWarning': 'The decision was saved, but the user could not be emailed ({reason}). They can still see the update in their support thread.', // TODO: translate
+  'support.newTicket': 'New request', // TODO: translate
+  'support.subject': 'Subject', // TODO: translate
+  'support.subjectPlaceholder': 'What do you need help with?', // TODO: translate
+  'support.message': 'Message', // TODO: translate
+  'support.messagePlaceholder': 'Describe your request…', // TODO: translate
+  'support.reply': 'Reply', // TODO: translate
+  'support.emptyHint': 'Open a request and the DroneTag team will get back to you here.', // TODO: translate
+  'support.status.pending': 'Reply received', // TODO: translate
+  'support.close': 'Close request', // TODO: translate
+  'support.reopen': 'Reopen', // TODO: translate
+  'support.team': 'DroneTag Support', // TODO: translate
+  'support.error.send': 'Could not send your message. Please try again.', // TODO: translate
+  'support.error.load': 'Could not load your support conversation.', // TODO: translate
+  'onboarding.title': 'Complete your DroneTag profile', // TODO: translate
+  'onboarding.subtitle': 'A few steps to get your drone identifiable and your badge ready.', // TODO: translate
+  'onboarding.progress': '{done} of {total}', // TODO: translate
+  'onboarding.step.profile': 'Your profile', // TODO: translate
+  'onboarding.step.profile.hint': 'Add your name so your public profile can identify you.', // TODO: translate
+  'onboarding.step.operator': 'UAS operator', // TODO: translate
+  'onboarding.step.operator.hint': 'Register the person or organisation responsible for the operation.', // TODO: translate
+  'onboarding.step.drone': 'Your drone', // TODO: translate
+  'onboarding.step.drone.hint': 'Add the aircraft you want to identify.', // TODO: translate
+  'onboarding.step.certificate': 'Pilot certificate', // TODO: translate
+  'onboarding.step.certificate.hint': 'Upload your remote pilot certificate for verification.', // TODO: translate
+  'onboarding.step.insurance': 'Insurance', // TODO: translate
+  'onboarding.step.insurance.hint': 'Upload your policy so its validity can be shown publicly.', // TODO: translate
+  'onboarding.step.public': 'Public profile', // TODO: translate
+  'onboarding.step.public.hint': 'Publish a drone to get its public DroneTag page.', // TODO: translate
+  'onboarding.step.badge': 'NFC badge', // TODO: translate
+  'onboarding.step.badge.hint': 'Get the public link to write onto your badge.', // TODO: translate
+  'legal.draft.badge': 'Draft', // TODO: translate
+  'legal.draft.bannerTitle': 'Draft text — not reviewed by a lawyer', // TODO: translate
+  'legal.draft.bannerBody': 'This page is a working draft written by the DroneTag team so that the structure of the document can be reviewed. It is not in force, it is not legal advice, and it creates no rights or obligations for you or for us. A qualified lawyer must review and replace this text before DroneTag opens to real users.', // TODO: translate
+  'legal.draft.lastUpdated': 'Draft last edited on {date}. No version of this document is in force yet.', // TODO: translate
+  'legal.contact.title': 'Who to contact', // TODO: translate
+  'legal.contact.body': 'Questions about this draft, or about the data DroneTag holds about you, can be sent to info@drone-tag.com. The final document will name the company that operates the service, its registered address, and a specific contact for data requests. None of that is settled yet, so it is left out rather than invented.', // TODO: translate
+  'legal.related.title': 'Other draft documents', // TODO: translate
+  'home.footer.cookies': 'Cookies', // TODO: translate
+  'legal.privacy.title': 'Privacy notice', // TODO: translate
+  'legal.privacy.subtitle': 'What DroneTag stores about you, what a stranger sees when they tap your NFC badge, and what stays private.', // TODO: translate
+  'legal.privacy.who.title': 'Who runs this service', // TODO: translate
+  'legal.privacy.who.body': 'This section will identify the legal entity that operates DroneTag and decides how your data is used, its registered address, and the person to contact about data. That entity has not been fixed yet, so nothing is stated here. Technically, the service runs on Google Firebase for authentication, database and file storage, and is deployed on Netlify.', // TODO: translate
+  'legal.privacy.collect.title': 'What data DroneTag collects', // TODO: translate
+  'legal.privacy.collect.body': 'The account itself holds an email address, a phone number, a name or company name, a postal address, and for private accounts a date of birth. The pilot record adds nationality, an operator code, a licence number and an emergency contact. Operator records repeat name or company name, address, email and, for companies, a VAT or registry number. Drone records hold manufacturer, model, EU class marking, the serial engraved on the aircraft and the controller serial. Uploaded files — insurance policies, certificates, permits and identity documents — are stored as you provide them, so they contain whatever those documents contain.', // TODO: translate
+  'legal.privacy.why.title': 'Why it is collected', // TODO: translate
+  'legal.privacy.why.body': 'Account and contact data is used to sign you in, to notify you, and to answer support requests. Pilot, operator, drone and document data exists so you can keep your own compliance paperwork in one place and, if you choose, show a verifiable summary of it to a third party. Payment and order data exists to ship NFC badges and process plan purchases. The final version of this section will have to state a lawful basis for each purpose; that is a question for a lawyer, and no basis is asserted here.', // TODO: translate
+  'legal.privacy.public.title': 'What is visible on your public page', // TODO: translate
+  'legal.privacy.public.body': 'A published drone gets a page at /u/ followed by its slug, and anyone with the link or the badge can open it without signing in. That page reads a single sanitised record and shows only the holder name (your pilot name, your name as a private operator, or your company name), manufacturer, model, EU class marking, the engraved drone serial, the insurance status and insurer, the policy expiry date, a masked policy number that keeps only the first and last three characters, the verification badge with its date, and any profile photo, logo or banner you uploaded as branding.', // TODO: translate
+  'legal.privacy.notPublic.title': 'What is deliberately not published', // TODO: translate
+  'legal.privacy.notPublic.body': 'The public record does not contain the insurance PDF, your postal address, your email address, your phone number, your date of birth, your VAT or registry number, the controller serial, your emergency contact, internal notes, or the account identifier that would link the page back to you. This is enforced in code rather than by convention: the public page reads only the sanitised snapshot, and the fields above are never written into it. The one internal identifier that is present is the drone record id, used to keep the snapshot aligned with the private record.', // TODO: translate
+  'legal.privacy.sharing.title': 'Who else can see it', // TODO: translate
+  'legal.privacy.sharing.body': 'DroneTag does not sell your data. It is processed by the suppliers the application actually depends on: Google Firebase hosts authentication, the database and uploaded files; Netlify hosts and serves the application and keeps request logs; Resend delivers transactional email such as sign-up codes and notifications. DroneTag staff with an administrator account can read your records in order to review documents and answer support requests. The final version will have to list each supplier, where it processes data, and the contract in place with it.', // TODO: translate
+  'legal.privacy.retention.title': 'How long it is kept', // TODO: translate
+  'legal.privacy.retention.body': 'There is no automatic deletion today. Records and uploaded files stay until you delete them or ask DroneTag to delete them, and reports filed by someone who found your drone stay in your inbox until removed. Setting real retention periods — in particular for insurance and certificate documents, which may need to be kept for a period after they expire — is an open question for a lawyer and is not answered here.', // TODO: translate
+  'legal.privacy.requests.title': 'Asking to see, correct or delete your data', // TODO: translate
+  'legal.privacy.requests.body': 'You can edit most of your own data from the account area, although some identity fields are locked once confirmed so that a published profile cannot be quietly rewritten. For anything you cannot change yourself, including deleting your account, write to info@drone-tag.com and the request is handled manually. There is no self-service export and no automated deletion yet. This notice makes no claim about which statutory rights apply to you; that has to be established by a lawyer.', // TODO: translate
+  'legal.privacy.security.title': 'How the data is protected', // TODO: translate
+  'legal.privacy.security.body': 'Private records are readable only by their owner and by DroneTag administrators, enforced by Firebase security rules rather than by the application alone. Uploaded documents live in a private storage namespace that is not readable without authentication, kept separate from the small public namespace that holds only branding images. Server logs pass through a filter that replaces values such as email addresses, phone numbers and policy numbers before anything is written out. No system is immune to compromise, so this is a description of the current design and not a guarantee.', // TODO: translate
+  'legal.privacy.changes.title': 'Changes to this draft', // TODO: translate
+  'legal.privacy.changes.body': 'This draft will change as the product and its legal review progress. When a reviewed version replaces it, the draft banner at the top of this page will be removed and a real effective date will appear in its place.', // TODO: translate
+  'pricing.kit.visual.badge': 'DRONETAG', // TODO: translate
+  'legal.terms.title': 'Terms of service', // TODO: translate
+  'legal.terms.subtitle': 'The rules that will govern the use of DroneTag, drafted so that they can be reviewed. Nothing below is binding yet.', // TODO: translate
+  'legal.terms.what.title': 'What DroneTag is, and what it is not', // TODO: translate
+  'legal.terms.what.body': 'DroneTag is a private platform for storing your drone paperwork and, if you choose, publishing a short summary of it at a public address reachable from an NFC badge or a QR code. It is not an aviation authority, it is not a public register, and it does not issue, validate or renew any official document. A profile on DroneTag does not replace registration with a competent authority, a pilot certificate, an insurance policy, or any authorisation you need in order to fly.', // TODO: translate
+  'legal.terms.eligibility.title': 'Who can open an account', // TODO: translate
+  'legal.terms.eligibility.body': 'The final version will state a minimum age and whether an account may be opened on behalf of a company by an authorised person. Today the sign-up form asks for a first and last name, an email address, a phone number and a password, or you can sign up with a Google account; the email address or the phone number is then confirmed with a one-time code. There is no age check.', // TODO: translate
+  'legal.terms.account.title': 'Your account and your credentials', // TODO: translate
+  'legal.terms.account.body': 'You are responsible for keeping access to your account secure and for what is done through it. Write to info@drone-tag.com if you believe someone else has access. DroneTag administrators can read the records in your account in order to review the documents you submit for verification and to answer support requests.', // TODO: translate
+  'legal.terms.content.title': 'The documents and data you upload', // TODO: translate
+  'legal.terms.content.body': 'You keep ownership of everything you upload. You grant DroneTag only what is needed to run the service: storing your files, showing them back to you, letting an administrator review them, and publishing the short summary described in the privacy notice when you choose to publish a drone. You are responsible for the accuracy of what you enter and for having the right to upload it, in particular for documents that name someone other than you.', // TODO: translate
+  'legal.terms.publication.title': 'Publishing a drone profile', // TODO: translate
+  'legal.terms.publication.body': 'Publication is your decision and is made one drone at a time. Once published, the page can be read by anyone who has the address; it is not behind a login and there is no visitor log. Unpublishing removes the public record so the address stops resolving, but DroneTag cannot recall pages that have already been saved, cached or shared by someone else. The final version will need to say how quickly unpublishing takes effect.', // TODO: translate
+  'legal.terms.verification.title': 'What the verification badge means', // TODO: translate
+  'legal.terms.verification.body': 'A verified badge means a DroneTag administrator looked at the documents in the account and considered them consistent. It is not an endorsement by an authority, it does not say that the flight you are about to make is lawful, and it does not guarantee that the insurance policy will pay a claim. Anyone relying on a DroneTag page should treat it as a starting point and ask for the original documents when it matters.', // TODO: translate
+  'legal.terms.plans.title': 'Plans, badges and payment', // TODO: translate
+  'legal.terms.plans.body': 'Every account includes a small allowance of drones, operators, certificates and documents, and larger allowances can be bought. NFC badges are physical goods that are manufactured and shipped. Prices, billing periods, renewal, refunds and shipping terms are not settled and are deliberately not stated here: the pricing page shows the prices currently intended, not a contractual offer.', // TODO: translate
+  'legal.terms.availability.title': 'Availability during pre-beta', // TODO: translate
+  'legal.terms.availability.body': 'DroneTag is not finished. Features can change or be removed, data can be migrated, and the service can be unavailable without notice. Do not use DroneTag as the only copy of a document you need — keep your originals. No availability commitment is offered at this stage.', // TODO: translate
+  'legal.terms.suspension.title': 'Suspension and closing an account', // TODO: translate
+  'legal.terms.suspension.body': 'The final version will describe when DroneTag may suspend or close an account, for example for uploading someone else\'s documents or misrepresenting a verification status, and what notice is given. Today you can ask for your account to be closed by writing to info@drone-tag.com; the request is handled by hand and there is no automated deletion.', // TODO: translate
+  'legal.terms.liability.title': 'Liability', // TODO: translate
+  'legal.terms.liability.body': 'This is the section that most needs a lawyer, so no wording is proposed for it. It will have to set out what DroneTag is responsible for, what it is not responsible for, and what happens if a public page shows outdated or incorrect information. Nothing on this page limits any liability today, because nothing on this page is in force.', // TODO: translate
+  'legal.terms.law.title': 'Governing law and disputes', // TODO: translate
+  'legal.terms.law.body': 'The applicable law and the competent court depend on where the operating company is established and where its users are, and neither is fixed. A lawyer will have to complete this section. No jurisdiction is stated here.', // TODO: translate
+  'legal.terms.changes.title': 'Changes to these draft terms', // TODO: translate
+  'legal.terms.changes.body': 'This draft will change without notice while the product is being built. When a reviewed version replaces it, the draft banner will be removed, a real effective date will appear, and the final version will describe how future changes are announced.', // TODO: translate
+  'legal.cookies.title': 'Cookie and browser storage notice', // TODO: translate
+  'legal.cookies.subtitle': 'What DroneTag stores in your browser today, why it is stored, and what is not stored.', // TODO: translate
+  'legal.cookies.scope.title': 'What this page covers', // TODO: translate
+  'legal.cookies.scope.body': 'Cookies are only part of the picture. DroneTag also uses the browser\'s local storage, and the Firebase authentication library keeps its own sign-in state in the browser. This page describes all of them together, because from your point of view they are the same thing: data this site leaves on your device.', // TODO: translate
+  'legal.cookies.essential.title': 'Cookies that are set', // TODO: translate
+  'legal.cookies.essential.body': 'Two cookies are used, both for signing in and both limited to this site. One is set by the server once your sign-in token has been verified, cannot be read by scripts in the page, and expires after one hour. The other is set by the page itself so that the same token is available to the code that guards the administration area, and expires after fifty-five minutes. Both are cleared when you sign out. No advertising or tracking cookie is set.', // TODO: translate
+  'legal.cookies.storage.title': 'What is kept in browser storage', // TODO: translate
+  'legal.cookies.storage.body': 'Your theme choice and your language choice are saved in local storage under the names dronetag-theme and dronetag-language, so that the next visit does not briefly show the wrong colours or the wrong language. The Firebase authentication library also keeps its own sign-in state in the browser, which is what lets you stay signed in between visits. Clearing site data removes all of it and signs you out.', // TODO: translate
+  'legal.cookies.analytics.title': 'Usage analytics', // TODO: translate
+  'legal.cookies.analytics.body': 'No analytics or advertising provider is connected. The application contains an internal event layer with a short, closed list of events, and in its current state that layer only writes to the browser console during development. If a provider is added later, this page and the privacy notice will have to be updated before it is switched on.', // TODO: translate
+  'legal.cookies.thirdParty.title': 'Storage set by other services', // TODO: translate
+  'legal.cookies.thirdParty.body': 'Signing in with Google opens a flow operated by Google, which may set its own cookies on its own domains during that step; those are governed by Google\'s terms rather than by this page. The application is served through Netlify, which records ordinary request logs. The final version of this page will have to list any other third-party component that reaches the browser.', // TODO: translate
+  'legal.cookies.consent.title': 'Consent', // TODO: translate
+  'legal.cookies.consent.body': 'There is no cookie banner and no consent mechanism in the product today. Whether one is required, and for which of the items above, is a question for a lawyer. This page does not claim that the current behaviour is sufficient; it describes it so that the decision can be made on accurate facts.', // TODO: translate
+  'legal.cookies.control.title': 'How to remove them', // TODO: translate
+  'legal.cookies.control.body': 'Signing out clears the two sign-in cookies. Clearing site data for this domain in your browser settings removes everything listed above, including your saved theme and language. Blocking cookies entirely will prevent signing in, because the sign-in token would have nowhere to live.', // TODO: translate
+  'legal.cookies.changes.title': 'Changes to this draft', // TODO: translate
+  'legal.cookies.changes.body': 'This list reflects what the application does at the date shown above, and it will be re-checked against the code whenever that changes. When a reviewed version replaces this draft, the banner at the top will be removed.', // TODO: translate
+  'nav.preview': 'Preview', // TODO: translate
+  'account.nav.section.fleet': 'Fleet', // TODO: translate
+  'account.nav.section.compliance': 'Compliance', // TODO: translate
+  'consent.title': 'Make this profile public?', // TODO: translate
+  'consent.description': 'Anyone with the link will be able to see it, without signing in.', // TODO: translate
+  'consent.warning': 'A public DroneTag profile is readable by anyone who scans the badge or opens the link. It is not indexed as a private page and requires no login.', // TODO: translate
+  'consent.urlLabel': 'Public address', // TODO: translate
+  'consent.sharedTitle': 'What will be visible', // TODO: translate
+  'consent.withheldTitle': 'What stays private', // TODO: translate
+  'consent.shared.name': 'Your name, or your operator or company name', // TODO: translate
+  'consent.shared.drone': 'Drone manufacturer, model and class marking', // TODO: translate
+  'consent.shared.serial': 'The drone serial number engraved on the aircraft', // TODO: translate
+  'consent.shared.certStatus': 'Whether your pilot certificate is valid', // TODO: translate
+  'consent.shared.insuranceStatus': 'Whether your insurance is valid, and its status', // TODO: translate
+  'consent.shared.insuranceProvider': 'The name of your insurance provider', // TODO: translate
+  'consent.shared.insuranceExpiry': 'The insurance expiry date', // TODO: translate
+  'consent.shared.maskedPolicy': 'A masked policy number, showing only the first and last characters', // TODO: translate
+  'consent.shared.verification': 'The DroneTag verification status of the profile', // TODO: translate
+  'consent.withheld.policyPdf': 'The insurance policy document itself', // TODO: translate
+  'consent.withheld.address': 'Your home or registered address', // TODO: translate
+  'consent.withheld.email': 'Your email address', // TODO: translate
+  'consent.withheld.phone': 'Your phone number', // TODO: translate
+  'consent.withheld.fullPolicy': 'The full, unmasked policy number', // TODO: translate
+  'consent.withheld.ids': 'Account identifiers and internal record ids', // TODO: translate
+  'consent.checkbox': 'I understand this profile will be publicly visible, and I want to publish it.', // TODO: translate
+  'consent.confirm': 'Publish profile', // TODO: translate
+  'consent.revocable': 'You can make the profile private again at any time. Once it is unpublished the public page stops working, though anyone who already opened it may still have a copy.', // TODO: translate
+  'form.created': 'Profile created', // TODO: translate
+  'links.copiedToast': 'Public link copied to clipboard', // TODO: translate
+  'links.copyFailed': 'Could not copy the link. Select and copy it manually.', // TODO: translate
+  'support.sent': 'Message sent to DroneTag support', // TODO: translate
+  'signup.terms.prefix': 'I have read and accept the', // TODO: translate
+  'signup.terms.termsLink': 'Terms of service', // TODO: translate
+  'signup.terms.and': 'and the', // TODO: translate
+  'signup.terms.privacyLink': 'Privacy notice', // TODO: translate
+  'signup.terms.required': 'Accept the Terms and Privacy notice to continue.', // TODO: translate
+  'signup.terms.googleHint': 'Accept the Terms and Privacy notice above before signing up with Google.', // TODO: translate
+  'account.delete.title': 'Request account deletion', // TODO: translate
+  'account.delete.body': 'Deletion is not automatic. Opening a support request records your wish to close the account. A DroneTag administrator will process it manually. Your public profiles stay visible until that happens.', // TODO: translate
+  'account.delete.cta': 'Open a deletion request', // TODO: translate
+  'drone.publish': 'Publish profile', // TODO: translate
+  'drone.unpublish': 'Unpublish', // TODO: translate
+  'drone.publish.success': 'Public profile is now live.', // TODO: translate
+  'drone.unpublish.success': 'Public profile has been unpublished.', // TODO: translate
+  'toast.certificate.created': 'Certificate added.', // TODO: translate
+  'toast.certificate.deleted': 'Certificate deleted.', // TODO: translate
+  'toast.certificate.deleteFailed': 'Could not delete the certificate. Please try again.', // TODO: translate
+  'toast.insurance.created': 'Insurance policy added.', // TODO: translate
+  'toast.insurance.deleted': 'Insurance policy deleted.', // TODO: translate
+  'toast.insurance.deleteFailed': 'Could not delete the policy. Please try again.', // TODO: translate
+  'toast.document.created': 'Document uploaded.', // TODO: translate
+  'toast.document.updated': 'Document updated.', // TODO: translate
+  'toast.document.deleted': 'Document deleted.', // TODO: translate
+  'toast.document.deleteFailed': 'Could not delete the document. Please try again.', // TODO: translate
+  'toast.permit.created': 'Authorisation added.', // TODO: translate
+  'toast.permit.updated': 'Authorisation updated.', // TODO: translate
+  'toast.permit.deleted': 'Authorisation deleted.', // TODO: translate
+  'toast.permit.deleteFailed': 'Could not delete the authorisation. Please try again.', // TODO: translate
+  'toast.operator.created': 'UAS operator added.', // TODO: translate
+  'toast.operator.updated': 'UAS operator updated.', // TODO: translate
+  'toast.operator.deleted': 'UAS operator deleted.', // TODO: translate
+  'toast.operator.deleteFailed': 'Could not delete the UAS operator. Please try again.', // TODO: translate
+  'toast.operator.setCurrent': 'Default UAS operator updated.', // TODO: translate
+  'toast.drone.created': 'Drone added.', // TODO: translate
+  'toast.drone.saved': 'Drone details saved.', // TODO: translate
+  'toast.drone.deleted': 'Drone deleted.', // TODO: translate
+  'toast.drone.deleteFailed': 'Could not delete the drone. Please try again.', // TODO: translate
+  'toast.archive.deleted': 'Item permanently deleted.', // TODO: translate
+  'toast.archive.deleteFailed': 'Could not delete the item. Please try again.', // TODO: translate
+  'toast.verify.approved': 'Marked as verified.', // TODO: translate
+  'toast.verify.rejected': 'Marked as rejected.', // TODO: translate
+  'toast.verify.reset': 'Moved back to the review queue.', // TODO: translate
+  'toast.verify.failed': 'Could not save the decision. Please try again.', // TODO: translate
+  'admin.users.detail.pilotOperatorNote': 'The two operator fields below identify the UAS operator, not the remote pilot. They are still stored on the pilot record pending a schema change.', // TODO: translate
 };

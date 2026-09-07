@@ -365,7 +365,12 @@ export interface Report {
 
 // ─── Support chat (user ↔ admin) ───────────────────────────────────────────
 
-export type SupportThreadStatus = 'open' | 'closed';
+/**
+ * `open`    — waiting on DroneTag support.
+ * `pending` — support has replied and is waiting on the user.
+ * `closed`  — resolved. Either side can reopen by posting again.
+ */
+export type SupportThreadStatus = 'open' | 'pending' | 'closed';
 export type SupportMessageSender = 'user' | 'admin';
 
 /** One support conversation per user (`userId` is the thread id). */
@@ -440,7 +445,19 @@ export interface DronePublicSnapshot {
   insuranceProvider: string;
   insuranceValidUntil: string;
   insuranceMaskedPolicyNumber: string;
-  insurancePdfUrl: string;
+  /**
+   * `insurancePdfUrl` was removed during the pre-beta hardening pass.
+   *
+   * The original policy PDF names the holder and carries their home
+   * address and the full policy number in clear text, which defeated the
+   * masking applied two fields above. Publishing it on an anonymous page
+   * was finding PRV-001 / SEC-007.
+   *
+   * The public card shows status, insurer, expiry and a masked number —
+   * enough to verify coverage without handing out the document. Do not
+   * reintroduce this field; expose a server-mediated, access-controlled
+   * download instead if a real need appears.
+   */
 
   /** Account-level branding (optional). */
   profilePhotoUrl: string;

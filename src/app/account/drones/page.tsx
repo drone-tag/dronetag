@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from 'react';
 import type { ChangeEvent, FormEvent } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useToast } from '@/contexts/ToastContext';
 import {
   createDrone,
   deleteDrone,
@@ -63,6 +64,7 @@ const EMPTY_FORM: CreateFormState = {
 export default function AccountDronesPage() {
   const { user } = useAuth();
   const { t } = useLanguage();
+  const toast = useToast();
   const router = useRouter();
   const [drones, setDrones] = useState<Drone[]>([]);
   const [operators, setOperators] = useState<Operator[]>([]);
@@ -143,6 +145,7 @@ export default function AccountDronesPage() {
       });
       trackEvent('drone_created', { classMarking: form.classMarking });
       setCreating(false);
+      toast.success(t('toast.drone.created'));
       router.push(`/account/drones/${id}`);
     } catch (err) {
       console.error('[drones] create failed', err);
@@ -159,6 +162,10 @@ export default function AccountDronesPage() {
       await deleteDrone(confirmingDelete.id);
       await reload();
       setConfirmingDelete(null);
+      toast.success(t('toast.drone.deleted'));
+    } catch (err) {
+      console.error('[drones] delete failed', err);
+      toast.error(t('toast.drone.deleteFailed'));
     } finally {
       setSavingId(null);
     }

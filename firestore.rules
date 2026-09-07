@@ -43,7 +43,16 @@ service cloud.firestore {
       return request.auth != null;
     }
     function isAdmin() {
-      return isSignedIn() && request.auth.token.admin == true;
+      // `.get('admin', false)` rather than `.admin`. Reading a key that is not
+      // present on a token map raises an evaluation error, and every account
+      // without the custom claim — that is, almost every account — hit it. The
+      // outcome was still a deny, because this helper is only ever used
+      // standalone or to the right of an `||`, so an error and a `false` were
+      // indistinguishable here. What it cost was an `EvaluationException` in the
+      // rules log on each such request, and a trap for the next edit: putting
+      // `isAdmin()` to the left of an `||` would have turned the error into a
+      // denial of an otherwise legitimate request.
+      return isSignedIn() && request.auth.token.get('admin', false) == true;
     }
     function ownsDrone(droneId) {
       return isSignedIn()
@@ -176,6 +185,7 @@ service cloud.firestore {
                                 .hasOnly([
                                   'activeOperatorId','activeOperatorUntil',
                                   'activeOperatorSetAt','activeOperatorSetBy','activeOperatorReason',
+                                  'status','visibility','publishedAt',
                                   'updatedAt'
                                 ])
                          )
@@ -190,26 +200,29 @@ service cloud.firestore {
     // public slug. The owner authors the snapshot client-side via
     // `syncDronePublicSnapshot()`; rules verify the writer owns the
     // referenced drone and that the snapshot's slug matches the doc id.
+    // ─── Public drone snapshots ─────────────────────────────────────────
+    // Anonymous read is the whole point of this collection: it backs
+    // /u/{slug} after an NFC tap.
+    //
+    // Writes are deny-from-client (pre-beta hardening, SEC-004).
+    //
+    // The previous rules let an owner create and update the snapshot
+    // directly. They checked that the caller owned the referenced drone and
+    // that the slug matched, but never inspected the payload — so an owner
+    // could write `verificationStatus: 'verified'` for a drone no admin had
+    // ever reviewed, and could set an arbitrary `holderDisplayName`. The
+    // trust signal an anonymous visitor is asked to rely on was writable by
+    // the subject it describes.
+    //
+    // The snapshot is now derived server-side from the private records by
+    // POST /api/entities/drones/[id]/publish, which runs the Admin SDK and
+    // bypasses these rules. Owners request publication; they do not author
+    // its contents.
     match /dronesPublic/{slug} {
       allow read: if true;
+      allow create, update, delete: if false;
 
-      allow create: if isSignedIn()
-                       && request.resource.data.slug == slug
-                       && request.resource.data.droneId is string
-                       && exists(/databases/$(database)/documents/drones/$(request.resource.data.droneId))
-                       && get(/databases/$(database)/documents/drones/$(request.resource.data.droneId)).data.userId == request.auth.uid
-                       && get(/databases/$(database)/documents/drones/$(request.resource.data.droneId)).data.slug == slug;
-
-      allow update: if isSignedIn()
-                       && request.resource.data.droneId == resource.data.droneId
-                       && request.resource.data.slug == resource.data.slug
-                       && exists(/databases/$(database)/documents/drones/$(resource.data.droneId))
-                       && get(/databases/$(database)/documents/drones/$(resource.data.droneId)).data.userId == request.auth.uid;
-
-      allow delete: if isSignedIn()
-                       && exists(/databases/$(database)/documents/drones/$(resource.data.droneId))
-                       && get(/databases/$(database)/documents/drones/$(resource.data.droneId)).data.userId == request.auth.uid;
-
+      // Admin retains direct access for support and backfill.
       allow read, write: if isAdmin();
     }
 
@@ -351,6 +364,30 @@ service cloud.firestore {
     // ─── Signup OTP challenges (server-only via Admin SDK) ───────────────
     match /signupOtp/{uid} {
       allow read, write: if false;
+    }
+
+    // ─── Support ─────────────────────────────────────────────────────────
+    // One thread per user; the document id IS the uid. That makes ownership a
+    // property of the path rather than of a field, so a user cannot read
+    // someone else's thread even if they learn its id — the id is their own
+    // uid or it is not theirs.
+    //
+    // Reads are direct so the UI can show a live conversation cheaply. Writes
+    // go through /api/support/*, because the `sender` field decides whether a
+    // message renders as coming from DroneTag support: if clients could write
+    // it, any user could forge an official reply to themselves. The server
+    // derives `sender` from the verified token instead.
+    match /supportThreads/{userId} {
+      allow read: if isSignedIn() && request.auth.uid == userId;
+      allow create, update, delete: if false;
+
+      match /messages/{messageId} {
+        allow read: if isSignedIn() && request.auth.uid == userId;
+        allow create, update, delete: if false;
+        allow read, write: if isAdmin();
+      }
+
+      allow read, write: if isAdmin();
     }
 
     // ─── Default deny for unmatched paths (V-009) ────────────────────────

@@ -2,8 +2,9 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useEffect } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useFocusTrap, useScrollLock } from '@/lib/hooks/useFocusTrap';
 import { logout } from '@/lib/firebase/auth';
 import { classNames } from '@/lib/utils';
 import {
@@ -23,14 +24,11 @@ export function AccountMoreSheet({ isOpen, onClose }: AccountMoreSheetProps) {
   const { t } = useLanguage();
   const overflow = ACCOUNT_NAV_ITEMS.filter((i) => !i.mobilePrimary);
 
-  useEffect(() => {
-    if (!isOpen) return;
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    return () => {
-      document.body.style.overflow = prev;
-    };
-  }, [isOpen]);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const handleEscape = useCallback(() => onClose(), [onClose]);
+
+  useFocusTrap({ active: isOpen, containerRef: panelRef, onEscape: handleEscape });
+  useScrollLock(isOpen);
 
   useEffect(() => {
     onClose();
@@ -39,14 +37,21 @@ export function AccountMoreSheet({ isOpen, onClose }: AccountMoreSheetProps) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 lg:hidden" role="dialog" aria-modal="true" id="account-more-sheet">
-      <button
-        type="button"
+    <div
+      className="fixed inset-0 z-50 md:hidden"
+      role="dialog"
+      aria-modal="true"
+      aria-label={t('account.nav.more')}
+      id="account-more-sheet"
+    >
+      {/* Not a button — see MobileDrawer for the reasoning. */}
+      <div
+        aria-hidden
         className="absolute inset-0 bg-black/45 backdrop-blur-[2px]"
-        aria-label={t('common.cancel')}
         onClick={onClose}
       />
       <div
+        ref={panelRef}
         className="absolute right-0 bottom-0 left-0 max-h-[min(75dvh,32rem)] overflow-y-auto rounded-t-[1.25rem] border border-[var(--color-border)] bg-[var(--color-card)] shadow-2xl"
         style={{ paddingBottom: 'calc(1rem + var(--safe-bottom))' }}
       >

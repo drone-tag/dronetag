@@ -17,6 +17,13 @@ const eslintConfig = defineConfig([
     // workspace has its own lint script.
     "functions/lib/**",
     "functions/node_modules/**",
+    // Third-party bundles copied out of node_modules at install time by
+    // scripts/stage-vendor-assets.mjs (pdf.js worker, Tesseract core + worker).
+    // They are minified vendor output, not project source.
+    "public/vendor/**",
+    // Netlify build artefacts. Untracked, but present in a local worktree
+    // after a build and otherwise linted as if they were source.
+    ".netlify/**",
   ]),
 ]);
 

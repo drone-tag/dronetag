@@ -9,6 +9,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useToast } from '@/contexts/ToastContext';
 import {
   deleteAuthorization,
   listAuthorizations,
@@ -60,6 +61,7 @@ function estimateInsSize(i: Insurance): number {
 export default function AccountArchivePage() {
   const { user } = useAuth();
   const { t } = useLanguage();
+  const toast = useToast();
   const [loading, setLoading] = useState(true);
   const [slots, setSlots] = useState<Slots | null>(null);
   const [items, setItems] = useState<ArchiveItem[]>([]);
@@ -171,9 +173,13 @@ export default function AccountArchivePage() {
       }
       setConfirmingDelete(null);
       await rebuild();
+      // Deletion here is permanent and frees quota, so the confirmation is
+      // worth more than the usual "the row disappeared" signal.
+      toast.success(t('toast.archive.deleted'));
     } catch (err) {
       console.error('[archive] delete failed', err);
       setError(err instanceof Error ? err.message : t('account.saveError'));
+      toast.error(t('toast.archive.deleteFailed'));
     } finally {
       setDeleting(false);
     }

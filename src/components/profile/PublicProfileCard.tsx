@@ -15,7 +15,7 @@
 import { type ReactNode, useCallback, useEffect, useState } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import type { PolicyStatus, PublicProfile, VerificationStatus } from '@/lib/types';
-import { LANGUAGES } from '@/lib/types';
+import { ALL_LANGUAGES } from '@/lib/types';
 import { classNames, describePolicyStatus, formatDate, formatDateTime } from '@/lib/utils';
 import type { PolicySummary } from '@/lib/utils';
 import { QRPreview } from '@/components/ui/QRPreview';
@@ -81,7 +81,9 @@ function val(s: string | undefined | null): string {
 }
 
 function langLabel(code: string): string {
-  return LANGUAGES.find((l) => l.value === code)?.label || code;
+  // ALL_LANGUAGES, not LANGUAGES: this labels a value already stored on a
+  // profile, which may be one of the languages hidden from the selector.
+  return ALL_LANGUAGES.find((l) => l.value === code)?.label || code;
 }
 
 /**

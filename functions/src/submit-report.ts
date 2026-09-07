@@ -24,6 +24,20 @@ import {
   requireAppCheck,
   nowIso,
 } from './util';
+import { notifyOwnerOfReport } from './notify-owner';
+
+/**
+ * How the drone is described to its owner in the notification.
+ *
+ * Manufacturer and model only — enough to recognise which aircraft, while
+ * keeping the serial number out of an email inbox.
+ */
+function droneLabelFor(drone: Record<string, unknown>): string {
+  const parts = [drone.manufacturer, drone.model]
+    .filter((v): v is string => typeof v === 'string' && v.trim().length > 0)
+    .map((v) => v.trim());
+  return parts.length > 0 ? parts.join(' ') : 'drone';
+}
 
 interface SubmitReportInput {
   droneId?: string;
@@ -119,9 +133,37 @@ export const submitReport = onCall<SubmitReportInput>(
       _origin: { ip },
     });
 
-    // TODO V-006/V-035: enqueue push + email fanout. For now just log.
     logger.info('[submitReport] accepted', { droneSlug, ownerUserId, reportId: ref.id });
 
+    // Notify the owner. The report is already durable, so this is
+    // deliberately after the write and deliberately cannot fail the call:
+    // losing a filed report because an email bounced would be far worse than
+    // an unnotified owner, who still sees the report in their dashboard.
+    const notification = await notifyOwnerOfReport({
+      ownerUserId,
+      droneLabel: droneLabelFor(drone),
+      finderName,
+      finderMessage: message,
+      location: locationText,
+    });
+
+    await ref
+      .update({
+        emailNotified: notification.sent,
+        notificationAttemptedAt: nowIso(),
+        // Already a coarse category, not a provider string — safe for an
+        // admin to read without leaking the recipient.
+        notificationError: notification.error ?? '',
+      })
+      .catch((err) => {
+        logger.warn('[submitReport] could not record notification outcome', {
+          reportId: ref.id,
+          reason: (err as Error).message,
+        });
+      });
+
+    // The finder is told the report was filed, nothing about the owner or
+    // whether they were reachable.
     return { id: ref.id };
   },
 );

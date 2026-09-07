@@ -14,13 +14,23 @@
  *   V-014 — sizes capped both client-side (defence in depth) and
  *           server-side via storage.rules.
  *
- * Path layout:
- *   users/{uid}/profiles/{profileId}/photo.{ext}
- *   users/{uid}/profiles/{profileId}/logo.{ext}
- *   users/{uid}/profiles/{profileId}/banner.{ext}
- *   users/{uid}/profiles/{profileId}/insurance/policy.pdf
- *   users/{uid}/profiles/{profileId}/qr.{ext}
- *   users/{uid}/profiles/{profileId}/documents/{docId}.{ext}
+ * Path layout — two disjoint namespaces, see storage.rules for the rules
+ * that back them:
+ *
+ *   PUBLIC (world-readable, images only)
+ *     public/users/{uid}/profiles/{profileId}/photo.{ext}
+ *     public/users/{uid}/profiles/{profileId}/logo.{ext}
+ *     public/users/{uid}/profiles/{profileId}/banner.{ext}
+ *     public/users/{uid}/profiles/{profileId}/qr.{ext}
+ *
+ *   PRIVATE (owner + admin only)
+ *     users/{uid}/profiles/{profileId}/insurance/policy.pdf
+ *     users/{uid}/profiles/{profileId}/documents/{docId}.{ext}
+ *     users/{uid}/insurances/{insuranceId}/policy.pdf
+ *
+ * The split was introduced during the pre-beta hardening pass: the private
+ * namespace previously carried `allow read: if true`, exposing every
+ * uploaded policy and identity document to unauthenticated path guessing.
  *
  * The `profiles` segment is a sub-namespace under the user's folder for
  * the legacy single-profile model. Future per-drone uploads will live
@@ -66,11 +76,34 @@ function safeExt(file: File, fallback: string): string {
   return fallback;
 }
 
-function userScopedPath(uid: string, suffix: string): string {
+function assertSafeUid(uid: string): void {
   if (!uid || /[/]/.test(uid)) {
     throw new UploadValidationError('Invalid uid for storage path.');
   }
+}
+
+/**
+ * Private namespace: owner + admin only. Insurance policies, certificates,
+ * identity documents. See storage.rules.
+ */
+function userScopedPath(uid: string, suffix: string): string {
+  assertSafeUid(uid);
   return `users/${uid}/${suffix}`;
+}
+
+/**
+ * Public namespace: world-readable, images only.
+ *
+ * Kept as a separate top-level prefix rather than a `public/` folder inside
+ * `users/{uid}/` on purpose. Storage rules grant access if ANY matching rule
+ * allows it, so a nested public folder would still be covered by the broad
+ * private rule — which permits PDFs — and the product could end up serving
+ * anonymously-readable policy documents. Disjoint prefixes make that
+ * impossible.
+ */
+function publicScopedPath(uid: string, suffix: string): string {
+  assertSafeUid(uid);
+  return `public/users/${uid}/${suffix}`;
 }
 
 // ─── Demo mode: return object URLs instead of Firebase Storage URLs ──────────
@@ -106,22 +139,26 @@ export async function deleteFile(path: string): Promise<void> {
 
 // ─── Typed upload helpers (V-012: now require the owner uid) ────────────────
 
+// Branding assets go to the public namespace: they render on /u/{slug} for
+// anonymous visitors, so they are the only uploads that should be world
+// readable.
+
 export function uploadProfilePhoto(uid: string, profileId: string, file: File): Promise<string> {
   validateFile(file, ALLOWED_IMAGE_TYPES, MAX_IMAGE_SIZE);
   const ext = safeExt(file, 'jpg');
-  return uploadFile(file, userScopedPath(uid, `profiles/${profileId}/photo.${ext}`));
+  return uploadFile(file, publicScopedPath(uid, `profiles/${profileId}/photo.${ext}`));
 }
 
 export function uploadLogo(uid: string, profileId: string, file: File): Promise<string> {
   validateFile(file, ALLOWED_IMAGE_TYPES, MAX_IMAGE_SIZE);
   const ext = safeExt(file, 'png');
-  return uploadFile(file, userScopedPath(uid, `profiles/${profileId}/logo.${ext}`));
+  return uploadFile(file, publicScopedPath(uid, `profiles/${profileId}/logo.${ext}`));
 }
 
 export function uploadBanner(uid: string, profileId: string, file: File): Promise<string> {
   validateFile(file, ALLOWED_IMAGE_TYPES, MAX_IMAGE_SIZE);
   const ext = safeExt(file, 'jpg');
-  return uploadFile(file, userScopedPath(uid, `profiles/${profileId}/banner.${ext}`));
+  return uploadFile(file, publicScopedPath(uid, `profiles/${profileId}/banner.${ext}`));
 }
 
 const ACCOUNT_BRANDING_SCOPE = 'account';
@@ -154,7 +191,7 @@ export function uploadInsurancePdf(uid: string, insuranceId: string, file: File)
 export function uploadQrImage(uid: string, profileId: string, file: File): Promise<string> {
   validateFile(file, ALLOWED_IMAGE_TYPES, MAX_IMAGE_SIZE);
   const ext = safeExt(file, 'png');
-  return uploadFile(file, userScopedPath(uid, `profiles/${profileId}/qr.${ext}`));
+  return uploadFile(file, publicScopedPath(uid, `profiles/${profileId}/qr.${ext}`));
 }
 
 export function uploadDocument(uid: string, profileId: string, docId: string, file: File): Promise<string> {
@@ -166,12 +203,12 @@ export function uploadDocument(uid: string, profileId: string, docId: string, fi
 
 // ─── Bulk delete (used when removing a profile) ─────────────────────────────
 
+/** Branding assets, all in the public namespace. */
 const PROFILE_STORAGE_RELATIVE_KEYS = [
   'photo.jpg', 'photo.png', 'photo.webp',
   'logo.png', 'logo.jpg', 'logo.webp',
   'banner.jpg', 'banner.png', 'banner.webp',
   'qr.png', 'qr.jpg', 'qr.webp',
-  'insurance/policy.pdf',
 ] as const;
 
 /**
@@ -181,9 +218,12 @@ const PROFILE_STORAGE_RELATIVE_KEYS = [
  */
 export async function deleteProfileFiles(uid: string, profileId: string): Promise<void> {
   if (DEMO_MODE) return;
-  await Promise.allSettled(
-    PROFILE_STORAGE_RELATIVE_KEYS.map((rel) =>
-      deleteFile(userScopedPath(uid, `profiles/${profileId}/${rel}`)),
+  // Branding lives in the public namespace and the policy PDF in the private
+  // one, so both prefixes have to be swept.
+  await Promise.allSettled([
+    ...PROFILE_STORAGE_RELATIVE_KEYS.map((rel) =>
+      deleteFile(publicScopedPath(uid, `profiles/${profileId}/${rel}`)),
     ),
-  );
+    deleteFile(userScopedPath(uid, `profiles/${profileId}/insurance/policy.pdf`)),
+  ]);
 }

@@ -132,7 +132,9 @@ function AdminSupportInner() {
     if (!selected || busyStatus) return;
     setBusyStatus(true);
     try {
-      const next = selected.status === 'open' ? 'closed' : 'open';
+      // `pending` (support has replied, waiting on the user) is an active
+      // state, so it toggles to closed alongside `open`.
+      const next = selected.status === 'closed' ? 'open' : 'closed';
       await setSupportThreadStatus(selected.userId, next);
       await reloadThreads();
     } finally {

@@ -2,7 +2,7 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
-import { type ReactNode, useEffect, useRef, useState } from 'react';
+import { type ReactNode, useCallback, useRef, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -25,7 +25,12 @@ export function Navbar() {
   const pathname = usePathname();
   const { user, isAdmin } = useAuth();
   const { language, setLanguage, t } = useLanguage();
-  const [drawerOpen, setDrawerOpen] = useState(false);
+  // The drawer belongs to the route it was opened on. Storing that route
+  // rather than a boolean makes "navigating closes the drawer" a property of
+  // the render instead of an effect that fired a second render on every path
+  // change — and it closes on the same render as the navigation, so the drawer
+  // is never briefly painted over the new page.
+  const [drawerOpenAt, setDrawerOpenAt] = useState<string | null>(null);
   const headerRef = useRef<HTMLElement>(null);
   const inAdmin = pathname.startsWith('/admin');
   const inAccount = pathname === '/account' || pathname.startsWith('/account/');
@@ -35,9 +40,15 @@ export function Navbar() {
 
   useSyncHeaderOffset(headerRef);
 
-  useEffect(() => {
-    setDrawerOpen(false);
-  }, [pathname]);
+  const drawerOpen = drawerOpenAt === pathname;
+  const setDrawerOpen = useCallback(
+    (next: boolean | ((open: boolean) => boolean)) =>
+      setDrawerOpenAt((at) => {
+        const open = typeof next === 'function' ? next(at === pathname) : next;
+        return open ? pathname : null;
+      }),
+    [pathname],
+  );
 
   const displayName = accountName || user?.displayName || user?.email || '';
 
@@ -99,7 +110,7 @@ export function Navbar() {
             <>
               <Link
                 href="/account/settings"
-                className="flex min-w-0 shrink items-center gap-2 lg:hidden"
+                className="flex min-w-0 shrink items-center gap-2 md:hidden"
                 onClick={() => setDrawerOpen(false)}
                 aria-label={t('settings.title')}
               >

@@ -16,9 +16,11 @@ export function PricingNfcKitSection() {
         subtitle={t('pricing.kit.sectionSubtitle')}
       />
       <div className="grid items-center gap-8 lg:grid-cols-[1fr_1.1fr]">
-        <div className="flex justify-center gap-4 sm:gap-6">
-          <PricingVisualBadge label={t('pricing.kit.visual.cert')} />
-          <PricingVisualBadge label={t('pricing.kit.visual.ins')} className="mt-8" />
+        {/* One badge, not two. The old model shipped a separate certificate
+            badge and insurance badge; the current model is a single badge per
+            pilot carrying the public profile link, which covers both. */}
+        <div className="flex justify-center">
+          <PricingVisualBadge label={t('pricing.kit.visual.badge')} />
         </div>
         <div className="rounded-2xl border border-[var(--tone-warning-border)] bg-[var(--tone-warning-bg)] p-5 sm:p-6">
           <p className="text-sm font-semibold text-[var(--tone-warning-fg)]">

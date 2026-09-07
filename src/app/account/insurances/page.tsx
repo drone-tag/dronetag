@@ -15,6 +15,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ChangeEvent, FormEvent } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useToast } from '@/contexts/ToastContext';
 import {
   createInsurance,
   deleteInsurance,
@@ -131,6 +132,7 @@ function coveredDroneCount(drones: Drone[], insurance: Insurance): number {
 export default function AccountInsurancesPage() {
   const { user } = useAuth();
   const { t } = useLanguage();
+  const toast = useToast();
   const [insurances, setInsurances] = useState<Insurance[]>([]);
   const [drones, setDrones] = useState<Drone[]>([]);
   const [operators, setOperators] = useState<Operator[]>([]);
@@ -223,6 +225,7 @@ export default function AccountInsurancesPage() {
 
       await reload();
       setCreating(false);
+      toast.success(t('toast.insurance.created'));
     } catch (err) {
       console.error('[insurances] create failed', err);
       setSaveError(
@@ -246,6 +249,12 @@ export default function AccountInsurancesPage() {
       await deleteInsurance(confirmingDelete.id);
       await reload();
       setConfirmingDelete(null);
+      toast.success(t('toast.insurance.deleted'));
+    } catch (err) {
+      // Detaching dependent drones happens first, so a failure here can leave
+      // those drones without a policy. Saying so beats a silent no-op.
+      console.error('[insurances] delete failed', err);
+      toast.error(t('toast.insurance.deleteFailed'));
     } finally {
       setSavingId(null);
     }

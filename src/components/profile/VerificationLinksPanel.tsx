@@ -2,6 +2,7 @@
 
 import { useCallback, useState } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useToast } from '@/contexts/ToastContext';
 import { getPublicProfileUrl } from '@/lib/utils';
 import { QRPreview } from '@/components/ui/QRPreview';
 import { UploadField } from '@/components/ui/UploadField';
@@ -59,7 +60,13 @@ export interface VerificationLinksPanelProps {
   visibility: string;
   qrCodeUrl: string;
   qrPreviewUrl: string;
-  nfcReference: string;
+  /**
+   * Physical NFC chip identifier. Accepted for backwards compatibility with
+   * `Profile.assets.nfcReference`, but no longer rendered: nothing in the
+   * system ever populates it, so displaying an always-empty "tag identifier"
+   * implied a chip registry that does not exist. See the NFC section below.
+   */
+  nfcReference?: string;
   onQrUpload: (file: File) => void;
 }
 
@@ -68,10 +75,10 @@ export function VerificationLinksPanel({
   visibility,
   qrCodeUrl,
   qrPreviewUrl,
-  nfcReference,
   onQrUpload,
 }: VerificationLinksPanelProps) {
   const { t } = useLanguage();
+  const toast = useToast();
   const [copied, setCopied] = useState(false);
 
   const isPublic = visibility === 'public' && slug.trim().length > 0;
@@ -79,11 +86,18 @@ export function VerificationLinksPanel({
 
   const handleCopy = useCallback(() => {
     if (!publicUrl) return;
-    void navigator.clipboard.writeText(publicUrl).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    });
-  }, [publicUrl]);
+    navigator.clipboard.writeText(publicUrl).then(
+      () => {
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+        toast.success(t('links.copiedToast'));
+      },
+      // Clipboard writes are refused outside a secure context and in some
+      // embedded browsers. Silently doing nothing left the button looking
+      // broken; say so instead.
+      () => toast.error(t('links.copyFailed')),
+    );
+  }, [publicUrl, toast, t]);
 
   const qrDisplay = qrPreviewUrl || qrCodeUrl || '';
 
@@ -155,7 +169,18 @@ export function VerificationLinksPanel({
         </div>
       </LinkSection>
 
-      {/* ── NFC Reference ──────────────────────────────────────────── */}
+      {/*
+        ── NFC badge ──────────────────────────────────────────────────
+        This section used to show a "NFC integration will be available in a
+        future release" warning next to an always-empty tag identifier, while
+        the pricing page sold the badge as a shipping product. Both statements
+        could not be true.
+
+        What the product actually does is simple and worth stating plainly: the
+        badge is an NFC tag encoding the public profile URL. There is no chip
+        UID registry — nothing in the codebase reads or writes one — so the
+        panel does not pretend otherwise.
+      */}
       <LinkSection
         icon={<NfcIcon className="h-4.5 w-4.5 text-[var(--color-text-secondary)]" />}
         title={t('links.nfcTitle')}
@@ -164,20 +189,39 @@ export function VerificationLinksPanel({
           {t('links.nfcDesc')}
         </p>
 
-        <div className="rounded-md border border-[var(--color-border)] bg-[var(--color-hover)] px-3 py-2.5">
-          {nfcReference ? (
-            <code className="text-xs font-medium text-[var(--color-text)]">{nfcReference}</code>
-          ) : (
-            <span className="text-xs text-[var(--color-text-secondary)]">{t('links.nfcNotAssigned')}</span>
-          )}
-        </div>
-
-        <div className="mt-3 flex items-start gap-2 rounded-md bg-[var(--tone-warning-bg)] p-2.5">
-          <svg viewBox="0 0 16 16" fill="currentColor" className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-500">
-            <path fillRule="evenodd" d="M8 15A7 7 0 108 1a7 7 0 000 14zm.75-9.25a.75.75 0 00-1.5 0v2.5a.75.75 0 001.5 0v-2.5zM8 11a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
-          </svg>
-          <p className="text-[11px] leading-relaxed text-[var(--tone-warning-fg)]">{t('links.nfcFuture')}</p>
-        </div>
+        {isPublic ? (
+          <>
+            <p className="mb-1.5 text-[11px] font-medium text-[var(--color-text-secondary)]">
+              {t('links.nfcEncodeLabel')}
+            </p>
+            <div className="flex items-stretch gap-2">
+              <div className="flex min-w-0 flex-1 items-center rounded-md border border-[var(--color-border)] bg-[var(--color-hover)] px-3 py-2">
+                <code className="truncate text-xs font-medium text-[var(--color-text)]">
+                  {publicUrl}
+                </code>
+              </div>
+              <button
+                type="button"
+                onClick={handleCopy}
+                className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-[var(--color-border)] bg-[var(--color-card)] px-3 py-2 text-xs font-medium text-[var(--color-text)] transition-colors hover:bg-[var(--color-hover)] active:bg-[var(--color-hover)]"
+              >
+                {copied ? t('links.copied') : t('links.copyUrl')}
+              </button>
+            </div>
+            <p className="mt-2 text-[11px] leading-relaxed text-[var(--color-text-secondary)]">
+              {t('links.nfcInstructions')}
+            </p>
+          </>
+        ) : (
+          <div className="rounded-md border border-dashed border-[var(--color-border)] bg-[var(--color-hover)] px-3 py-3">
+            {/*
+              "Badge not ready" is derived from a real, checkable condition —
+              the profile is public and has a slug — rather than being a
+              hardcoded status.
+            */}
+            <p className="text-xs text-[var(--color-text-secondary)]">{t('links.nfcNotReady')}</p>
+          </div>
+        )}
       </LinkSection>
 
     </div>

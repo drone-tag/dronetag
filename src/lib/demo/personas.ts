@@ -264,6 +264,23 @@ export function getDemoPersona(id = getDemoPersonaId()): DemoPersona {
   return DEMO_PERSONAS.find((p) => p.id === id) ?? DEMO_PERSONAS[0];
 }
 
+/**
+ * `useSyncExternalStore` pair for the persona held in localStorage.
+ *
+ * The server has no localStorage, so the server snapshot is the same default
+ * the markup is rendered with; React swaps in the stored value once hydration
+ * is done. That is the same two-pass behaviour the switcher used to get from an
+ * effect, minus the extra state write that made it a cascading render.
+ */
+export function subscribeDemoPersona(onChange: () => void): () => void {
+  window.addEventListener(DEMO_PERSONA_EVENT, onChange);
+  return () => window.removeEventListener(DEMO_PERSONA_EVENT, onChange);
+}
+
+export function getDemoPersonaServerSnapshot(): DemoPersonaId {
+  return 'demo-admin';
+}
+
 export function setDemoPersonaId(id: DemoPersonaId): void {
   try {
     localStorage.setItem(STORAGE_KEY, id);

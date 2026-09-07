@@ -168,6 +168,95 @@ function certificateFromRaw(id: string, raw: Record<string, unknown>): Certifica
   };
 }
 
+/**
+ * Rebuild — or remove — the public snapshot for a single drone.
+ *
+ * This is the ONLY path that may write `dronesPublic/{slug}`. Firestore rules
+ * deny the collection to clients entirely.
+ *
+ * Before the pre-beta hardening pass the browser assembled the snapshot and
+ * wrote it directly. The rules checked that the caller owned the referenced
+ * drone and that the slug matched, but nothing validated the *contents*, so
+ * an owner could publish `verificationStatus: 'verified'` for a drone no
+ * admin had ever reviewed — the badge an anonymous visitor is asked to trust
+ * was writable by the party it describes (SEC-004).
+ *
+ * Now the server reads the private records itself and derives every public
+ * field. The client can only ask for the drone to be published; it cannot
+ * influence what publishing means.
+ *
+ * @param droneId  Drone to sync.
+ * @param callerUid Uid that must own the drone. Pass null for admin callers.
+ * @returns whether a snapshot now exists for the drone.
+ */
+export async function syncDronePublicSnapshotAdmin(
+  droneId: string,
+  callerUid: string | null,
+): Promise<{ published: boolean; slug: string }> {
+  const db = adminFirestore();
+  const droneDoc = await db.collection('drones').doc(droneId).get();
+  if (!droneDoc.exists) {
+    throw new PublicSyncError('drone not found', 404);
+  }
+
+  const drone = droneFromRaw(droneDoc.id, droneDoc.data() as Record<string, unknown>);
+  if (callerUid !== null && drone.userId !== callerUid) {
+    throw new PublicSyncError('forbidden', 403);
+  }
+  if (!drone.slug) {
+    throw new PublicSyncError('drone has no slug', 409);
+  }
+
+  const shouldPublish = drone.status === 'active' && drone.visibility === 'public';
+  if (!shouldPublish) {
+    await db.doc(`dronesPublic/${drone.slug}`).delete().catch(() => undefined);
+    return { published: false, slug: drone.slug };
+  }
+
+  const [certSnap, userSnap] = await Promise.all([
+    db.collection('certificates').where('userId', '==', drone.userId).get(),
+    db.doc(`users/${drone.userId}`).get(),
+  ]);
+  const certificates = certSnap.docs.map((d) =>
+    certificateFromRaw(d.id, d.data() as Record<string, unknown>),
+  );
+  const userRaw = userSnap.exists ? (userSnap.data() as Record<string, unknown>) : null;
+  const branding = {
+    profilePhotoUrl: userRaw ? str(userRaw, 'profilePhotoUrl') : '',
+    logoUrl: userRaw ? str(userRaw, 'logoUrl') : '',
+    bannerUrl: userRaw ? str(userRaw, 'bannerUrl') : '',
+  };
+
+  const effId = effectiveOperatorId(drone);
+  const [opDoc, pilotDoc, insDoc] = await Promise.all([
+    effId ? db.doc(`operators/${effId}`).get() : Promise.resolve(null),
+    drone.linkedPilotId ? db.doc(`pilots/${drone.linkedPilotId}`).get() : Promise.resolve(null),
+    drone.insuranceId ? db.doc(`insurances/${drone.insuranceId}`).get() : Promise.resolve(null),
+  ]);
+
+  const op = opDoc?.exists
+    ? operatorFromRaw(opDoc.id, opDoc.data() as Record<string, unknown>)
+    : null;
+  const pilot = pilotDoc?.exists
+    ? pilotFromRaw(pilotDoc.id, pilotDoc.data() as Record<string, unknown>)
+    : null;
+  const insurance = insDoc?.exists
+    ? insuranceFromRaw(insDoc.id, insDoc.data() as Record<string, unknown>)
+    : null;
+
+  const snapshot = projectSnapshot(drone, op, pilot, insurance, branding, certificates);
+  await db.doc(`dronesPublic/${snapshot.slug}`).set(snapshot);
+  return { published: true, slug: snapshot.slug };
+}
+
+/** Error carrying the HTTP status a route handler should return. */
+export class PublicSyncError extends Error {
+  constructor(message: string, readonly status: number) {
+    super(message);
+    this.name = 'PublicSyncError';
+  }
+}
+
 /** Re-sync every public-active drone for `uid`. Returns slug count written. */
 export async function resyncUserPublicDronesAdmin(uid: string): Promise<number> {
   if (!uid) return 0;

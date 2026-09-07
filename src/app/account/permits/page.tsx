@@ -10,6 +10,7 @@ import type { FormEvent } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useToast } from '@/contexts/ToastContext';
 import {
   createAuthorization,
   deleteAuthorization,
@@ -71,6 +72,7 @@ function isActive(a: Authorization): boolean {
 export default function AccountPermitsPage() {
   const { user } = useAuth();
   const { t } = useLanguage();
+  const toast = useToast();
   const [items, setItems] = useState<Authorization[]>([]);
   const [slots, setSlots] = useState<Slots | null>(null);
   const [loading, setLoading] = useState(true);
@@ -173,6 +175,7 @@ export default function AccountPermitsPage() {
       await reload();
       setCreating(false);
       setEditing(null);
+      toast.success(t(target ? 'toast.permit.updated' : 'toast.permit.created'));
     } catch (err) {
       console.error('[permits] save failed', err);
       setSaveError(
@@ -194,6 +197,10 @@ export default function AccountPermitsPage() {
       await deleteAuthorization(confirmingDelete.id);
       await reload();
       setConfirmingDelete(null);
+      toast.success(t('toast.permit.deleted'));
+    } catch (err) {
+      console.error('[permits] delete failed', err);
+      toast.error(t('toast.permit.deleteFailed'));
     } finally {
       setSavingId(null);
     }
@@ -294,6 +301,11 @@ export default function AccountPermitsPage() {
 
       {creating || editing ? (
         <PermitFormModal
+          // Remounting on a change of edit target is what resets the form.
+          // The previous version did it from an effect keyed on `initial`,
+          // which `authzToForm` rebuilds on every parent render — so the draft
+          // was discarded far more often than when the target actually changed.
+          key={editing?.id ?? 'new'}
           isOpen
           initial={editing ? authzToForm(editing) : EMPTY_FORM}
           title={editing ? t('permits.edit.title') : t('permits.create.title')}
@@ -360,11 +372,6 @@ function PermitFormModal({
   const { t } = useLanguage();
   const [form, setForm] = useState(initial);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
-
-  useEffect(() => {
-    setForm(initial);
-    setPendingFile(null);
-  }, [initial]);
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault();

@@ -458,6 +458,15 @@ function PilotSection({
             value={form.email} onChange={(e) => set('email', e.target.value)} />
           <Input label={t('field.phone')} name="pPhone"
             value={form.phone} onChange={(e) => set('phone', e.target.value)} />
+          {/*
+            An administrator granting a verification badge is the person least
+            able to afford the pilot/operator ambiguity, so the card says out
+            loud that these two fields describe a different role from the one
+            in its heading.
+          */}
+          <p className="sm:col-span-2 -mb-1 text-xs text-[var(--color-text-secondary)]">
+            {t('admin.users.detail.pilotOperatorNote')}
+          </p>
           <Input label={t('field.operatorCode')} name="pOpCode"
             value={form.operatorCode} onChange={(e) => set('operatorCode', e.target.value)} />
           <Input label={t('field.operatorLicense')} name="pOpLic"

@@ -14,22 +14,31 @@
  *   3. Reads are cheap — no fan-out across pilots/operators/insurances on
  *      every QR scan.
  *
- * `syncDronePublicSnapshot` is the single source of truth for the
- * snapshot's contents. Every mutation that affects the projection
- * (drone update, active-operator switch, pilot/operator/insurance
- * change) must call this helper or `resyncUserPublicDrones` so the
- * snapshot stays current.
+ * WRITES ARE SERVER-SIDE ONLY (pre-beta hardening, SEC-004).
+ *
+ * This module used to assemble the snapshot in the browser and write it
+ * straight to Firestore. The rules checked drone ownership and slug
+ * consistency but never the payload, so an owner could publish
+ * `verificationStatus: 'verified'` for a drone no admin had reviewed.
+ *
+ * In live mode `syncDronePublicSnapshot` now POSTs to
+ * /api/entities/drones/[id]/publish and the server re-derives every public
+ * field from the private records. `projectSnapshot` below is still the single
+ * definition of the projection — it is imported and executed by the server
+ * (src/lib/server/syncPublicDrones.ts) so the two paths cannot drift — but in
+ * live mode the client never calls it.
+ *
+ * Demo mode keeps the in-browser path, since there is no server there.
  */
 
 import {
   collection,
-  deleteDoc,
   doc,
   getDoc,
   getDocs,
-  setDoc,
 } from 'firebase/firestore';
 
+import { adminFetch } from '@/lib/client/adminApi';
 import { awaitFirebaseAuthReady } from '@/lib/firebase/auth';
 import { DEMO_MODE, getFirebaseDb } from '@/lib/firebase/config';
 import * as demo from '@/lib/demo/entitiesStore';
@@ -87,7 +96,8 @@ function snapshotFromRaw(slug: string, raw: Record<string, unknown>): DronePubli
     insuranceProvider: str('insuranceProvider'),
     insuranceValidUntil: str('insuranceValidUntil'),
     insuranceMaskedPolicyNumber: str('insuranceMaskedPolicyNumber'),
-    insurancePdfUrl: str('insurancePdfUrl'),
+    // `insurancePdfUrl` is deliberately not read back even if a legacy
+    // document still carries it — see DronePublicSnapshot for why.
     profilePhotoUrl: str('profilePhotoUrl'),
     logoUrl: str('logoUrl'),
     bannerUrl: str('bannerUrl'),
@@ -134,23 +144,14 @@ export async function listAllDronesPublic(): Promise<DronePublicSnapshot[]> {
 
 async function setSnapshot(snapshot: DronePublicSnapshot): Promise<void> {
   if (DEMO_MODE) return demo.setDronePublic(snapshot);
-  await awaitFirebaseAuthReady();
-  const db = getFirebaseDb();
-  await setDoc(doc(db, DRONES_PUBLIC, snapshot.slug), snapshot);
+  // Live mode never reaches here: syncDronePublicSnapshot delegates to the
+  // server route, which is the only writer. Kept for the demo store only.
+  throw new Error('dronesPublic writes are server-side only');
 }
 
 async function deleteSnapshot(slug: string): Promise<void> {
   if (DEMO_MODE) return demo.deleteDronePublicBySlug(slug);
-  await awaitFirebaseAuthReady();
-  const db = getFirebaseDb();
-  try {
-    await deleteDoc(doc(db, DRONES_PUBLIC, slug));
-  } catch (err: unknown) {
-    const code = typeof err === 'object' && err !== null && 'code' in err
-      ? String((err as { code: unknown }).code) : '';
-    if (code === 'not-found' || code === 'permission-denied') return;
-    throw err;
-  }
+  throw new Error('dronesPublic writes are server-side only');
 }
 
 // ─── Projection helper ─────────────────────────────────────────────────────
@@ -200,7 +201,6 @@ export function projectSnapshot(
     insuranceMaskedPolicyNumber: insurance?.policyNumber
       ? maskPolicyNumber(insurance.policyNumber)
       : '',
-    insurancePdfUrl: insurance?.pdfUrl ?? '',
     profilePhotoUrl: branding.profilePhotoUrl,
     logoUrl: branding.logoUrl,
     bannerUrl: branding.bannerUrl,
@@ -223,31 +223,69 @@ export function projectSnapshot(
  */
 export async function syncDronePublicSnapshot(drone: Drone): Promise<void> {
   try {
-    if (drone.status !== 'active' || drone.visibility !== 'public') {
-      await deleteSnapshot(drone.slug);
+    if (DEMO_MODE) {
+      if (drone.status !== 'active' || drone.visibility !== 'public') {
+        await deleteSnapshot(drone.slug);
+        return;
+      }
+      const effId = effectiveOperatorId(drone);
+      const { listCertificates } = await import('@/lib/firebase/certificates');
+      const [op, pilot, insurance, account, certificates] = await Promise.all([
+        effId ? getOperator(effId) : Promise.resolve<Operator | null>(null),
+        drone.linkedPilotId ? getPilot(drone.linkedPilotId) : Promise.resolve<Pilot | null>(null),
+        drone.insuranceId
+          ? getInsurance(drone.insuranceId)
+          : Promise.resolve<Insurance | null>(null),
+        getAccount(drone.userId),
+        listCertificates(drone.userId),
+      ]);
+      const branding = account
+        ? {
+            profilePhotoUrl: account.profilePhotoUrl,
+            logoUrl: account.logoUrl,
+            bannerUrl: account.bannerUrl,
+          }
+        : { profilePhotoUrl: '', logoUrl: '', bannerUrl: '' };
+      const snapshot = projectSnapshot(drone, op, pilot, insurance, branding, certificates);
+      await setSnapshot(snapshot);
       return;
     }
-    const effId = effectiveOperatorId(drone);
-    const { listCertificates } = await import('@/lib/firebase/certificates');
-    const [op, pilot, insurance, account, certificates] = await Promise.all([
-      effId ? getOperator(effId) : Promise.resolve<Operator | null>(null),
-      drone.linkedPilotId ? getPilot(drone.linkedPilotId) : Promise.resolve<Pilot | null>(null),
-      drone.insuranceId ? getInsurance(drone.insuranceId) : Promise.resolve<Insurance | null>(null),
-      getAccount(drone.userId),
-      listCertificates(drone.userId),
-    ]);
-    const branding = account
-      ? {
-          profilePhotoUrl: account.profilePhotoUrl,
-          logoUrl: account.logoUrl,
-          bannerUrl: account.bannerUrl,
-        }
-      : { profilePhotoUrl: '', logoUrl: '', bannerUrl: '' };
-    const snapshot = projectSnapshot(drone, op, pilot, insurance, branding, certificates);
-    await setSnapshot(snapshot);
+
+    // Live mode: ask the server to reconcile. It re-reads the private records
+    // and derives the public fields itself, so nothing the browser computed
+    // can influence the published snapshot (SEC-004).
+    await requestPublicSync(drone.id);
   } catch (err) {
     console.warn('[dronesPublic] sync failed', { slug: drone.slug, droneId: drone.id, err });
   }
+}
+
+/**
+ * Ask the server to rebuild (or drop) the public snapshot for a drone.
+ *
+ * Unlike `syncDronePublicSnapshot`, this surfaces failures instead of
+ * swallowing them: it backs the explicit "publish profile" action, where the
+ * user needs to know the request did not take effect.
+ */
+export async function requestPublicSync(droneId: string): Promise<{ published: boolean }> {
+  if (DEMO_MODE) {
+    const drone = await demo.getDrone(droneId);
+    if (drone) await syncDronePublicSnapshot(drone);
+    return { published: Boolean(drone && drone.visibility === 'public' && drone.status === 'active') };
+  }
+
+  const res = await adminFetch(`/api/entities/drones/${encodeURIComponent(droneId)}/publish`, {
+    method: 'POST',
+  });
+  if (!res.ok) {
+    const detail = await res.json().catch(() => ({}));
+    throw new Error(
+      typeof detail === 'object' && detail !== null && 'error' in detail
+        ? String((detail as { error: unknown }).error)
+        : `publish failed (${res.status})`,
+    );
+  }
+  return (await res.json()) as { published: boolean };
 }
 
 /**

@@ -17,8 +17,10 @@ import { Card } from '@/components/ui/Card';
 import { PolicyStatusBadge, VerificationBadge } from '@/components/ui/StatusBadge';
 import { ResponsivePageHeader } from '@/components/ui/ResponsivePageHeader';
 import { CoverdroneCta } from '@/components/account/CoverdroneCta';
+import { OnboardingChecklist } from '@/components/account/OnboardingChecklist';
 import { UserAvatar } from '@/components/ui/UserAvatar';
 import type { Certificate, DocumentRef, Drone, Insurance, Operator } from '@/lib/types/entities';
+import type { UserAccount } from '@/lib/types/account';
 import type { PolicyStatus, VerificationStatus } from '@/lib/types';
 
 type ExpiryAlert = {
@@ -63,6 +65,9 @@ export function AccountDashboard() {
   const [insurances, setInsurances] = useState<Insurance[]>([]);
   const [documents, setDocuments] = useState<DocumentRef[]>([]);
   const [displayName, setDisplayName] = useState('');
+  /** Kept whole, not just as a display name, so the onboarding checklist can
+      judge profile completeness from the real record. */
+  const [account, setAccount] = useState<UserAccount | null>(null);
   const [profilePhotoUrl, setProfilePhotoUrl] = useState('');
 
   useEffect(() => {
@@ -88,6 +93,7 @@ export function AccountDashboard() {
           ? [acct.firstName, acct.lastName].filter(Boolean).join(' ').trim()
           : user.displayName ?? user.email ?? '';
         setDisplayName(name);
+        setAccount(acct);
         setProfilePhotoUrl(acct?.profilePhotoUrl ?? '');
       } finally {
         if (!cancelled) setLoading(false);
@@ -424,6 +430,16 @@ export function AccountDashboard() {
           </li>
         </ul>
       </Card>
+
+      {/* Above quick actions: while onboarding is incomplete this is the more
+          useful of the two, and it removes itself once every step is done. */}
+      <OnboardingChecklist
+        account={account}
+        operators={operators}
+        drones={drones}
+        certificates={certificates}
+        insurances={insurances}
+      />
 
       <section>
         <h2 className="mb-2 text-sm font-semibold text-[var(--color-text)] sm:mb-3">{t('account.dashboard.quickActions')}</h2>

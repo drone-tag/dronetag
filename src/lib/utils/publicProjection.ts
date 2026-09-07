@@ -18,7 +18,8 @@
  *   • Organisation address and VAT/registration are omitted.
  *   • The insurance policy number is masked by default; only first / last
  *     few characters are visible.
- *   • The PDF link is opt-in via `exposePdfUrl`.
+ *   • The policy PDF is NOT exposed on the new multi-entity card. See the
+ *     note on PublicDroneCard['insurance'].
  */
 
 import type { Profile, PublicProfile, PublicProjectionOptions } from '@/lib/types';
@@ -44,7 +45,7 @@ import type { PolicyStatus } from '@/lib/types';
  * Masks the interior characters of a policy number, keeping the first and
  * last `visible` characters and replacing the middle with asterisks.
  *
- *   maskPolicyNumber('ABC-12345-XY', 3)  →  'ABC-*****-XY'
+ *   maskPolicyNumber('ABC-12345-XY', 3)  →  'ABC******-XY'
  *     (for very short strings it degrades gracefully)
  */
 export function maskPolicyNumber(raw: string, visible = 3): string {
@@ -187,14 +188,16 @@ export interface PublicDroneCard {
     validUntil: string;
     /** Masked: only first/last few chars visible. */
     maskedPolicyNumber: string;
-    /** Optional PDF link, gated by projection options. */
-    pdfUrl: string;
+    /**
+     * There is intentionally NO `pdfUrl` here. The policy document names
+     * the holder and carries their address and full policy number, so
+     * publishing it undid the masking on the line above (PRV-001 /
+     * SEC-007). Removed during the pre-beta hardening pass.
+     */
   };
 }
 
 export interface PublicDroneCardOptions {
-  /** Include the insurance PDF URL. Default: true. */
-  exposePdfUrl?: boolean;
   /** Mask the middle digits of the policy number. Default: true. */
   maskPolicyNumber?: boolean;
 }
@@ -220,7 +223,7 @@ export function toPublicDroneCard(
   insurance: Insurance | null,
   options: PublicDroneCardOptions = {},
 ): PublicDroneCard {
-  const { exposePdfUrl = true, maskPolicyNumber: doMask = true } = options;
+  const { maskPolicyNumber: doMask = true } = options;
 
   // Holder display name: prefer the effective operator name (per PRD §1
   // "pilot name OR operator/company name"). Fall back to the linked pilot
@@ -269,8 +272,7 @@ export function toPublicDroneCard(
       maskedPolicyNumber: insurance
         ? (doMask ? maskPolicyNumber(insurance.policyNumber) : insurance.policyNumber)
         : '',
-      pdfUrl: exposePdfUrl ? (insurance?.pdfUrl ?? '') : '',
-      // adminOnlyFields: notes, link, droneId, operatorId, userId, issueDate
+      // adminOnlyFields: pdfUrl, notes, link, droneId, operatorId, userId, issueDate
     },
   };
 }

@@ -18,7 +18,12 @@ function isPublicMarketingPage(pathname: string | null): boolean {
 }
 
 function isConsumerAuthPage(pathname: string | null): boolean {
-  return pathname === '/login' || pathname === '/signup';
+  return pathname === '/login' || pathname === '/signup' || pathname === '/forgot-password';
+}
+
+/** Draft privacy / terms / cookies notices — must render while logged out. */
+function isLegalPage(pathname: string | null): boolean {
+  return pathname === '/privacy' || pathname === '/terms' || pathname === '/cookies';
 }
 
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -27,7 +32,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const landing = isLandingPage(pathname);
   const marketing = isPublicMarketingPage(pathname);
   const consumerAuth = isConsumerAuthPage(pathname);
-  const usePublicChrome = landing || consumerAuth || marketing;
+  const legal = isLegalPage(pathname);
+  const usePublicChrome = landing || consumerAuth || marketing || legal;
 
   return (
     <>

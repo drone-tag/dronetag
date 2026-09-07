@@ -22,7 +22,7 @@ export function MobileBottomNavigation() {
   return (
     <>
       <nav
-        className="surface-header fixed right-0 bottom-0 left-0 z-40 border-t backdrop-blur-md lg:hidden"
+        className="surface-header fixed right-0 bottom-0 left-0 z-40 border-t backdrop-blur-md md:hidden"
         style={{ paddingBottom: 'var(--safe-bottom)' }}
         aria-label={t('account.nav.mobile')}
       >

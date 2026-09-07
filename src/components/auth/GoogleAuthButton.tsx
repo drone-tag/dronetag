@@ -44,11 +44,18 @@ function splitDisplayName(displayName: string | null | undefined): { firstName: 
 
 type GoogleAuthButtonProps = {
   disabled?: boolean;
+  /** When true, the server records acceptedTermsAt on first provision. */
+  acceptedTerms?: boolean;
   onError?: (message: string) => void;
   onSignedUp?: () => void;
 };
 
-export function GoogleAuthButton({ disabled = false, onError, onSignedUp }: GoogleAuthButtonProps) {
+export function GoogleAuthButton({
+  disabled = false,
+  acceptedTerms = false,
+  onError,
+  onSignedUp,
+}: GoogleAuthButtonProps) {
   const { t } = useLanguage();
   const [loading, setLoading] = useState(false);
 
@@ -59,7 +66,11 @@ export function GoogleAuthButton({ disabled = false, onError, onSignedUp }: Goog
       const u = result.user;
       if (u) {
         const { firstName, lastName } = splitDisplayName(u.displayName);
-        await ensureAccount(u.uid, u.email ?? '', { firstName, lastName });
+        await ensureAccount(u.uid, u.email ?? '', {
+          firstName,
+          lastName,
+          acceptedTerms,
+        });
         if (result.isNewUser) {
           await adminFetch('/api/auth/contact-verification/init', {
             method: 'POST',

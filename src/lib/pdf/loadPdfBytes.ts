@@ -3,6 +3,7 @@
  */
 
 import { adminFetch } from '@/lib/client/adminApi';
+import { configurePdfWorker } from '@/lib/pdf/pdfWorker';
 import { isAllowedFileUrl } from '@/lib/utils/urlAllowlist';
 
 export async function loadPdfBytes(sourceUrl: string): Promise<ArrayBuffer> {
@@ -29,9 +30,6 @@ export async function loadPdfBytes(sourceUrl: string): Promise<ArrayBuffer> {
 
 export async function getPdfjs() {
   const pdfjs = await import('pdfjs-dist');
-  if (typeof window !== 'undefined' && !pdfjs.GlobalWorkerOptions.workerSrc) {
-    pdfjs.GlobalWorkerOptions.workerSrc =
-      `https://cdn.jsdelivr.net/npm/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
-  }
+  configurePdfWorker(pdfjs);
   return pdfjs;
 }

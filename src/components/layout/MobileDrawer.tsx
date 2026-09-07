@@ -1,7 +1,8 @@
 'use client';
 
-import { type ReactNode, useEffect } from 'react';
+import { type ReactNode, useCallback, useRef } from 'react';
 import { classNames } from '@/lib/utils';
+import { useFocusTrap, useScrollLock } from '@/lib/hooks/useFocusTrap';
 
 type MobileDrawerProps = {
   isOpen: boolean;
@@ -18,35 +19,27 @@ export function MobileDrawer({
   children,
   side = 'left',
 }: MobileDrawerProps) {
-  useEffect(() => {
-    if (!isOpen) return;
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    return () => {
-      document.body.style.overflow = prev;
-    };
-  }, [isOpen]);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const handleEscape = useCallback(() => onClose(), [onClose]);
 
-  useEffect(() => {
-    if (!isOpen) return;
-    function onKey(e: KeyboardEvent) {
-      if (e.key === 'Escape') onClose();
-    }
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [isOpen, onClose]);
+  // The drawer is a modal surface like any other: without a trap, Tab walks
+  // straight through it into the page it is covering.
+  useFocusTrap({ active: isOpen, containerRef: panelRef, onEscape: handleEscape });
+  useScrollLock(isOpen);
 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[60] lg:hidden" role="dialog" aria-modal="true" aria-label={title}>
-      <button
-        type="button"
+    <div className="fixed inset-0 z-[60] md:hidden" role="dialog" aria-modal="true" aria-label={title}>
+      {/* Not a button: it would be a tab stop announced before the drawer's
+          own contents. Escape and the header close button serve keyboard users. */}
+      <div
+        aria-hidden
         className="absolute inset-0 bg-black/50 backdrop-blur-[2px]"
-        aria-label="Close menu"
         onClick={onClose}
       />
       <div
+        ref={panelRef}
         className={classNames(
           'absolute top-0 flex h-full w-[min(20rem,88vw)] flex-col border-[var(--color-border)] bg-[var(--color-card)] shadow-2xl',
           side === 'left' ? 'left-0 border-r safe-pt safe-pb' : 'right-0 border-l safe-pt safe-pb',

@@ -5,9 +5,10 @@
  * Owner-only read/write (see firestore.rules).
  */
 
-import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
+import { doc, getDoc, updateDoc } from 'firebase/firestore';
 
 import { awaitFirebaseAuthReady } from '@/lib/firebase/auth';
+import { provisionAccount } from '@/lib/client/provisionAccount';
 import { DEMO_MODE, getFirebaseDb } from '@/lib/firebase/config';
 import * as demo from '@/lib/demo/entitiesStore';
 import { resyncUserPublicDrones } from '@/lib/firebase/dronesPublic';
@@ -83,10 +84,22 @@ export async function ensurePilot(
     await demo.upsertPilot(pilot);
     return pilot;
   }
-  await awaitFirebaseAuthReady();
-  const db = getFirebaseDb();
-  await setDoc(doc(db, PILOTS, userId), pilot);
-  return pilot;
+
+  // Firestore rules deny client creates on `pilots/{uid}`; the record is
+  // provisioned server-side alongside `users/{uid}`. See
+  // src/app/api/account/provision/route.ts.
+  await provisionAccount({
+    firstName: pilot.firstName,
+    lastName: pilot.lastName,
+    dateOfBirth: pilot.dateOfBirth,
+    nationality: pilot.nationality,
+    phone: pilot.phone,
+    address: pilot.address,
+  });
+
+  const created = await getPilot(userId);
+  if (created) return created;
+  throw new Error('pilot provisioning did not produce a pilots/{uid} document');
 }
 
 export async function updatePilot(userId: string, patch: Partial<Pilot>): Promise<void> {
