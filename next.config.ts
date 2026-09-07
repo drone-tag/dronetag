@@ -190,11 +190,11 @@ const securityHeaders: { key: string; value: string }[] = [
 ];
 
 const nextConfig: NextConfig = {
-  // Keep firebase-admin (and its CJS jwks-rsa → ESM jose chain) outside the
-  // webpack server bundle so Node resolves those packages from node_modules
-  // with native ESM interop. Bundling them is what surfaces
-  // `require() of ES Module .../jose/dist/webapi/index.js` on Netlify.
-  serverExternalPackages: ['firebase-admin', 'jose', 'jwks-rsa'],
+  // firebase-admin is already in Next's default serverExternalPackages list
+  // (native deps / google-cloud). Keep it external; do not bundle it.
+  // The jwks-rsa → jose CJS/ESM boundary is resolved by the jose@4.15.9
+  // npm override, not by externalizing jose or jwks-rsa.
+  serverExternalPackages: ['firebase-admin'],
   // Monorepo layout: app lives in Sito/ but repo root may contain other lockfiles.
   turbopack: {
     root: projectRoot,

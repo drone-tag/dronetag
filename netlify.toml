@@ -5,7 +5,7 @@
   package = "@netlify/plugin-nextjs"
 
 [build.environment]
-  # firebase-admin@14 engines.node is >=22; jwks-rsa@4 needs ^20.19 or ^22.12
-  # so `require('jose')` (ESM-only) works. Netlify's Node 20 build image
-  # cannot load that chain and /api/* returns 500.
+  # firebase-admin@14 requires Node >=22. NODE_VERSION does not fix
+  # jwks-rsa@4 require() of ESM jose on AWS Lambda; that is handled by
+  # the jose@4.15.9 override in package.json.
   NODE_VERSION = "22"
