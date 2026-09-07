@@ -1,1053 +1,732 @@
 # DroneTag Developer Handover
 
-Technical source of truth for a new programmer. Verified against the current
-working tree (not against older audit documents). No secrets are recorded here.
+Technical source of truth for engineers taking over DroneTag. Verified against
+the working tree at `4bb18cb` and a read-only production smoke test on
+2026-09-08. No secrets, tokens, key material, personal data, or environment
+values are recorded here.
 
-Companion operational docs (not duplicated here):
+Companion docs (not duplicated):
 
 - [README.md](./README.md) — short landing page and quick start
-- [DRONETAG_STAGING_SETUP.md](./DRONETAG_STAGING_SETUP.md) — how to stand up staging
+- [DRONETAG_STAGING_SETUP.md](./DRONETAG_STAGING_SETUP.md) — how to create staging
 - [docs/DEPLOY_PRODUCTION.md](./docs/DEPLOY_PRODUCTION.md) — production promotion recipe
 - [DRONETAG_MANUAL_QA.md](./DRONETAG_MANUAL_QA.md) — functional checklist
 - [docs/DEVICE_TESTING.md](./docs/DEVICE_TESTING.md) — real-device checklist
 - [DRONETAG_GLOSSARY.md](./DRONETAG_GLOSSARY.md) — pilot vs operator vocabulary
-- [DRONETAG_ACCOUNT_DELETION_DESIGN.md](./DRONETAG_ACCOUNT_DELETION_DESIGN.md) — deletion cascade design (not implemented)
-- [scripts/README.md](./scripts/README.md) — admin/backfill scripts
+- [DRONETAG_ACCOUNT_DELETION_DESIGN.md](./DRONETAG_ACCOUNT_DELETION_DESIGN.md) — deletion cascade (not implemented)
+- [scripts/README.md](./scripts/README.md) — admin / backfill scripts
 
 ---
 
-## 1. Product overview
+## 1. Executive Technical Summary
 
-DroneTag is a web platform for UAS (drone) identification.
+DroneTag is a Next.js web application for UAS (drone) identification.
 
 An operator stores identity, aircraft, remote-pilot certificates, insurance
-policies and permits. An administrator reviews those documents. If the owner
-publishes a drone, DroneTag shows a short public card at `/u/{slug}`. A
-physical NFC badge is programmed with that URL: anyone who taps the badge sees
-who is responsible for the aircraft, whether the certificate and insurance look
-valid, and can file a “found drone” report. The owner is notified by email when
-Resend is configured.
+and permits. An administrator reviews documents. A published drone gets a
+public card at `/u/{slug}` — the URL written on a physical NFC badge. Anyone
+who taps the badge can see who is responsible for the aircraft and file a
+“found drone” report.
 
-DroneTag is **not** a payment product, a fleet-management product, or a
-hardware encoder. Those surfaces exist as configuration or tooling only.
+The product is **pre-beta**. Core identity, public profile, admin review and
+found-drone notification work. Payments, team tenancy, automated account
+erasure and a verified backup/restore runbook are not implemented.
+
+Three write paths exist:
+
+1. Browser → Next.js Route Handler → Firebase Admin SDK (privileged creates
+   and server-owned writes).
+2. Browser Firebase client SDK → Firestore / Storage, constrained by rules
+   (owner reads, some updates, some deletes, some uploads).
+3. Browser callable → Cloud Function `submitReport` (anonymous found-drone).
+
+Hosting is **Netlify**, not Firebase Hosting. Firebase provides Auth,
+Firestore, Storage and Cloud Functions.
 
 ---
 
-## 2. Current status
+## 2. Current Delivery Status
 
-**State: PRE-BETA**
-
-Last local verification (2026-09-07, no deploy):
-
-| Check | Result |
+| Area | Status |
 |---|---|
-| TypeScript | PASS (`npx tsc --noEmit`) |
-| Functions | PASS (`cd functions && npm run build`) |
-| Unit / integration tests | 106 / 106 |
-| Firestore rules tests | 44 / 44 |
-| Storage rules tests | 16 / 16 |
-| **Total automated tests** | **166 / 166** |
-| Lint | 0 errors (11 warnings, exit 0) |
-| Production build | PASS |
-| Pages emitted by that build | 38 |
+| Production site | Live at `https://drone-tag.com` |
+| GitHub | Private (`https://github.com/wepopagani/dronetag.git`) |
+| Branch | `main` @ `4bb18cbed927e4b55d9e90fe3d7c1a921b1a992a` |
+| Firebase Admin on Netlify | Working (Node 22 Lambda + jose CJS override) |
+| Service-account rotation | Complete (old user-managed keys revoked) |
+| Automated tests | 166 / 166 locally (106 unit + 60 rules) |
+| Lint | 0 errors, 11 warnings |
+| Production smoke | `/` 200, `/login` 200, `/admin` 307 login, `/api/health` 200, session/admin APIs 400/401 |
 
-**Beta readiness: 73 / 100**  
-An invited, named group can sign up, provision an account, manage entities,
-publish a public profile, file a found-drone report, open support, and receive
-transactional email **if** Firebase rules/functions and Resend are configured
-on a non-production project.
+**Invited beta** is plausible after staging, Resend, Auth providers and a
+rules/functions deploy confirmation.
 
-**Production readiness: 36 / 100**  
-Lower on purpose. Production sale is blocked by work this tree does not
-contain: real payments, lawyer-reviewed legal texts, Team/Business tenancy,
-automatic account erasure, a verified backup/restore runbook, App Check on the
-Next.js path, a separate staging Firebase project actually in use, and
-operational tasks only the owner can do (credential rotation, rules deploy,
-GitHub visibility). Local test scores do not close those items.
+**Commercial production** is not ready: no payment provider, no lawyer-reviewed
+legal texts, no automatic erasure, no verified backups, App Check not enforced
+on Next.js APIs, no dedicated staging Firebase project in repo config.
 
 ---
 
-## 3. Technology stack
+## 3. Repository & Deployment
 
-Versions from `package.json` / `package-lock.json` / `functions/package.json`
-at the time of writing. Caret ranges may resolve slightly differently after
-`npm install`; lockfile versions are listed where they differ from the range.
+| Item | Value |
+|---|---|
+| Remote | `https://github.com/wepopagani/dronetag.git` |
+| Default branch | `main` |
+| Web host | Netlify site → `https://drone-tag.com` |
+| Netlify build | `npm run build` via `@netlify/plugin-nextjs` |
+| Netlify Node | `NODE_VERSION=22` (`netlify.toml`) |
+| Production function | `___netlify-server-handler` on AWS Lambda `nodejs22.x` |
+| Firebase project alias | `dronetag-e905d` (`.firebaserc`) |
+| Cloud Functions | Separate package `functions/`, runtime `nodejs20`, region `us-central1` |
+| CI | `.github/workflows/ci.yml` — lint, typecheck, unit tests, Next build (Node 22) + Functions build (Node 20). **No deploy.** Rules tests are **not** in CI (need Java). |
+
+Git hygiene:
+
+- `.env`, `.env.*` ignored except `.env.local.example` / `.env.example`
+- Service-account JSON filenames ignored (`*firebase-adminsdk*.json`)
+- `.next/`, `.netlify/`, `node_modules/`, `public/vendor/`, `coverage/` ignored
+- Current tree does not track env values or service-account JSON
+
+Historical git objects may still contain old env *paths* or a former admin
+password string. Those credentials are **not active** (see §15). Do not rewrite
+history unless the owner explicitly requests it.
+
+---
+
+## 4. Technology Stack
+
+Lockfile versions at handover time. Caret ranges may resolve differently after
+a later `npm install`.
 
 | Layer | Version | Notes |
 |---|---|---|
-| Next.js | **16.2.12** (`^16.2.12`) | App Router. `dev` / `build` use **Webpack** (`--webpack`). |
-| React / react-dom | **19.2.4** | |
-| TypeScript | **5.9.3** (`^5`) | `strict` |
-| Tailwind CSS | **4.2.2** (`^4`) + `@tailwindcss/postcss` | Custom UI in `src/components/ui/`. No MUI/Chakra. |
-| Firebase client | **^12.11.0** | Auth, Firestore, Storage, Functions, App Check |
-| Firebase Admin | **^14.2.0** | Next.js Route Handlers + scripts (root and `functions/`) |
-| Firebase Functions | **^7.3.2** | `functions/`, Node **20**, region `us-central1` |
-| Node | engines **≥ 20.9.0** | `.nvmrc` is **22**. CI, Netlify and Functions pin **20**. Prefer 20 to match deploy. |
-| Hosting | **Netlify** | `netlify.toml` + `@netlify/plugin-nextjs`. `firebase.json` has no Hosting block. |
-| Resend | HTTP API (`fetch`) | **No** `resend` npm package. Used from Next.js and from Functions. |
-| PDF / OCR | `pdfjs-dist` **^6.3.289**, `tesseract.js` **^7.0.0** | Workers staged into `public/vendor/` by `scripts/stage-vendor-assets.mjs` (gitignored). |
-| Validation | `zod` **^4.5.4** | New Route Handlers |
-| Testing | Vitest **^3.2.7**, `@firebase/rules-unit-testing` **^5.0.2** | Unit + integration + emulator rules suites |
-| Lint | ESLint **^9**, `eslint-config-next` **^16.2.12** | |
-| Other | `uuid` ^13, `react-firebase-hooks` ^5.1.1 | |
+| Next.js | 16.2.12 | App Router. `dev` / `build` use Webpack (`--webpack`). |
+| React | 19.2.4 | |
+| TypeScript | 5.x (`strict`) | |
+| Tailwind CSS | 4.x | Custom UI in `src/components/ui/` |
+| Firebase client | ^12.11.0 | Auth, Firestore, Storage, Functions, App Check init |
+| Firebase Admin | 14.2.0 | Next Route Handlers + scripts |
+| firebase-functions | ^7.3.2 | `functions/`, Node 20 |
+| Hosting | Netlify | `netlify.toml` + `@netlify/plugin-nextjs` |
+| Email | Resend HTTP (`fetch`) | No `resend` npm package |
+| PDF / OCR | pdfjs-dist, tesseract.js | Workers staged into `public/vendor/` (gitignored) |
+| Validation | zod ^4 | Newer Route Handlers |
+| Tests | Vitest 3 + Firebase rules emulator | |
+| Payments | None | `NoopBillingProvider` |
 
-There is **no** Stripe (or other payment) SDK. Billing is a `NoopBillingProvider`.
+Root `engines.node` is `>=20.9.0`. Prefer **Node 22** for the Next.js app
+(matches `.nvmrc`, CI web job, Netlify). Use **Node 20** only for `functions/`.
 
 ---
 
-## 4. Architecture
+## 5. System Architecture
 
-Three write paths exist today. Internalise this before changing data access.
-
-1. **Privileged creates and server-owned writes** — browser → `fetch` → Next.js
-   Route Handler → Firebase Admin SDK → Firestore / Storage. Examples: account
-   provision, entity creates, publish snapshot, support messages, admin APIs.
-2. **Owner reads / some updates / some deletes / some uploads** — browser
-   Firebase client SDK → Firestore / Storage, constrained by
-   `firestore.rules` and `storage.rules`.
-3. **Found-drone submit** — browser callable → Cloud Function `submitReport` →
-   Admin SDK. This is the only callable the live client actually invokes.
-
-```mermaid
-flowchart TB
-  Browser[Browser / PWA]
-  Next[Next.js App Router on Netlify]
-  RH[Route Handlers + Admin SDK]
-  Rules[Firestore + Storage rules]
-  Fn[Cloud Functions us-central1]
-  Resend[Resend HTTP API]
-
-  Browser -->|Auth cookie / ID token| Next
-  Browser -->|reads and owner updates| Rules
-  Browser -->|privileged writes| RH
-  Browser -->|submitReport only| Fn
-  RH --> Rules
-  Fn --> Rules
-  RH --> Resend
-  Fn --> Resend
-  Next -->|optimistic /admin cookie check| Proxy[src/proxy.ts]
-  Next -->|real admin gate| AdminLayout[src/app/admin/layout.tsx]
 ```
+Browser / PWA
+  ├─ Firebase client SDK ──► Firestore / Storage (rules)
+  ├─ fetch ────────────────► Next.js Route Handlers (Admin SDK) ──► Firestore / Storage / Resend
+  └─ httpsCallable ────────► Cloud Function submitReport ──────────► Firestore / Resend
 
-Firebase products in use: **Auth**, **Firestore**, **Storage**, **Functions**.
-Hosting is **Netlify**, not Firebase Hosting.
+Next.js on Netlify
+  ├─ src/proxy.ts          optimistic cookie presence check for /admin pages
+  ├─ src/app/admin/layout  real admin gate (verifyIdToken + claim)
+  └─ ___netlify-server-handler (Node 22 Lambda)
+```
 
 `DEMO_MODE` (`src/lib/firebase/config.ts`) activates when
-`NEXT_PUBLIC_FIREBASE_API_KEY` or `NEXT_PUBLIC_FIREBASE_PROJECT_ID` is missing.
-The data layer then uses an in-memory store under `src/lib/demo/`. In that
-mode `AuthContext` can treat the signed-in persona as admin.
-`next.config.ts` **refuses a production build** without those Firebase env
-vars so a misconfigured deploy cannot ship that bundle. A second runtime
-guard throws if `DEMO_MODE` loads over HTTPS on a non-localhost host.
+`NEXT_PUBLIC_FIREBASE_API_KEY` or `NEXT_PUBLIC_FIREBASE_PROJECT_ID` is missing
+and uses an in-memory store. In that mode the UI can treat the signed-in
+persona as admin. `next.config.ts` **refuses a production build** without those
+vars. A runtime guard throws if `DEMO_MODE` loads over HTTPS on a non-localhost
+host.
 
-The app does **not** connect to Firebase emulators for local development.
-The emulator is used only by `npm run test:rules`.
+The app does **not** use Firebase emulators for local development. The emulator
+is used only by `npm run test:rules`.
 
 ---
 
-## 5. Repository structure
+## 6. Authentication & Authorization
 
-```
-dronetag/
-├── src/app/                 # App Router pages + Route Handlers
-├── src/components/          # UI (account, admin, auth, landing, layout, profile, pwa, ui)
-├── src/contexts/            # Auth, language, theme, toast
-├── src/lib/                 # Firebase clients, server helpers, i18n, pricing, types
-├── src/config/              # Commercial pricing catalogue (source of truth for /pricing)
-├── src/proxy.ts             # Optimistic /admin cookie pre-filter (Next.js 16 Proxy)
-├── functions/               # Cloud Functions (TypeScript → compiled lib/)
-├── tests/unit|integration|rules/
-├── scripts/                 # Admin bootstrap, backfill, seed, vendor staging
-├── public/                  # Static assets, PWA. public/vendor/ is generated
-├── firestore.rules
-├── firestore.indexes.json
-├── storage.rules
-├── firebase.json            # Rules, indexes, functions, emulators (tests only)
-├── .firebaserc              # Single alias: dronetag-e905d
-├── netlify.toml
-└── .github/workflows/ci.yml
-```
+### Client auth
 
-| Path | Responsibility |
+- Email/password signup and login (`signupWithEmail`, `loginWithEmail`).
+- Google popup (`loginWithGoogle`). Must be enabled in the Firebase Auth console.
+- Optional Firebase Phone Auth for contact verification (not a login substitute).
+- Forgot password: `/forgot-password` → `sendPasswordResetEmail`.
+  `auth/user-not-found` is swallowed so the form does not reveal whether an
+  address is registered.
+- After signup: email OTP via `POST /api/auth/otp/email/send` + `/verify`.
+  Codes are stored hashed in `signupOtp/{uid}` (Admin SDK only).
+
+Public signup is on unless `NEXT_PUBLIC_ALLOW_SIGNUP=false`.
+
+### Session
+
+1. Client holds a Firebase ID token.
+2. `POST /api/session` with `{ idToken }` verifies it (`checkRevoked: true`)
+   and sets HttpOnly `__dronetag_session` (1 hour).
+3. `AuthContext` also sets JS-readable `__dronetag_idt` (same token).
+4. Route Handlers accept `Authorization: Bearer` **or** either cookie
+   (`src/lib/server/requestAuth.ts`).
+
+The JS-readable cookie is a convenience / fallback, not the security model.
+Hardening = HttpOnly-only.
+
+If Admin SDK is not configured, `/api/session` returns 204 and does not set
+the HttpOnly cookie.
+
+### Account provision
+
+`POST /api/account/provision` creates `users/{uid}`, `pilots/{uid}`,
+`slots/{uid}` from the **verified token** (never from a client-supplied uid).
+Idempotent; repairs half-provisioned accounts. Firestore `allow create: if false`
+on those collections is intentional.
+
+### Admin model
+
+Admin is **only** Firebase custom claim `admin === true`.
+
+- Grant: `npm run grant-admin -- <email>`
+- First admin: `npm run create-admin -- <email>` (random password + reset link;
+  **no password in source**)
+- Unused leftover: `src/lib/auth/adminAllowlist.ts` (not imported).
+  `NEXT_PUBLIC_ADMIN_EMAILS` is not read. Do not wire an email allowlist.
+
+### Authorization layers (what is real vs optimistic)
+
+| Layer | File | What it does | Security boundary? |
+|---|---|---|---|
+| Proxy | `src/proxy.ts` | If neither cookie exists, redirect `/admin` → login | **No.** Cookie presence only. A forged cookie passes. Netlify compiles this to Edge; it must stay free of `firebase-admin`. |
+| Admin layout | `src/app/admin/layout.tsx` | `verifyAdminSession` + `checkRevoked: true` before any admin markup | **Yes** for HTML pages. |
+| Admin APIs | `requireAdminFromRequest` on every `/api/admin/*` | Token + `admin === true` | **Yes** for data. |
+| Account layout | `src/app/account/layout.tsx` | Client `useEffect` redirect | **No.** UX only. Data sits behind rules/APIs. |
+| Firestore / Storage rules | `firestore.rules`, `storage.rules` | Default deny; claim-aware `isAdmin()` | **Yes** for client SDK access. |
+
+If Admin SDK is missing locally, the admin layout falls through
+(`status === 'unavailable'`). APIs still return 503.
+
+---
+
+## 7. Firebase Architecture
+
+| Product | Role |
 |---|---|
-| `src/app/` | Routes. Marketing `/`, auth, `/account/*`, `/admin/*`, `/u/[slug]`, legal pages, `/api/*`. |
-| `src/lib/firebase/` | Client SDK data access + `DEMO_MODE` branches. |
-| `src/lib/server/` | Admin SDK, auth, quota, email, public-snapshot sync, validation. |
-| `src/lib/demo/` | In-memory demo store. Do not treat as production behaviour. |
-| `functions/src/` | Callables + Auth `onCreate` trigger. |
-| `tests/rules/` | Only automated proof of the storage split and `dronesPublic` deny-from-client. |
+| Auth | Email/password, Google, optional phone; custom claims |
+| Firestore | Application data (see §8) |
+| Storage | Uploaded PDFs/images; branding |
+| Cloud Functions | `submitReport` (live), `bootstrapSlots` (Auth onCreate), deprecated `create*` callables |
+| App Check | Client init if reCAPTCHA env is set. Functions can enforce. Next.js Route Handlers **do not** verify App Check. Rules do **not** require `request.app`. |
+| Hosting | Not used. Web is Netlify. |
+
+Rules files in git are tested by `npm run test:rules`. Live project behaviour
+equals those files **only after** `firebase deploy --only firestore:rules,storage`
+(and functions separately). Do not assume production already matches git.
+
+Deprecated callables (`createDrone`, `createOperator`, …) remain exported so
+old clients do not 404. The Next.js app creates entities through
+`/api/entities/*`. Do not add new callers in `src/lib/firebase/callable.ts`.
 
 ---
 
-## 6. Authentication
+## 8. Data Model
 
-| Flow | Status | How |
-|---|---|---|
-| Email/password signup | **Implemented** | `signupWithEmail` → Firebase Auth, then `POST /api/account/provision`. |
-| Email/password login | **Implemented** | `loginWithEmail`. |
-| Google | **Implemented** | `loginWithGoogle()` (`signInWithPopup`). Signup requires the terms checkbox first. Google must be enabled in the Firebase Auth console. |
-| Email OTP | **Implemented** | After signup, `POST /api/auth/otp/email/send` + `/verify`. Codes stored hashed in `signupOtp/{uid}` (Admin SDK only). Delivery via Resend. In development the code may be echoed if Resend is unset. |
-| Phone verification | **Implemented, optional** | Firebase Phone Auth (`src/lib/firebase/phoneAuth.ts`). Requires the Phone provider + reCAPTCHA in Firebase. Not a substitute for email. |
-| Forgot password | **Implemented** | `/forgot-password` → `sendPasswordResetEmail`. `auth/user-not-found` is swallowed so the form does not reveal whether an address is registered. |
-| Server-side provisioning | **Implemented** | `POST /api/account/provision` creates `users/{uid}`, `pilots/{uid}`, `slots/{uid}` from the **verified token** (never from a client-supplied uid). Idempotent; repairs half-provisioned accounts. Firestore `allow create: if false` on those collections is intentional. |
-| Session | **Implemented, needs hardening** | `POST /api/session` sets HttpOnly `__dronetag_session` (1 h, ID-token TTL). `AuthContext` also sets JS-readable `__dronetag_idt`. Route Handlers accept `Authorization: Bearer` **or** either cookie. |
-| Admin claims | **Implemented** | Firebase custom claim `admin == true`. Grant with `npm run grant-admin -- <email>`. First admin: `npm run create-admin -- <email>` (random password, reset link; **no password in source**). |
-| Public signup flag | **Implemented** | `NEXT_PUBLIC_ALLOW_SIGNUP` defaults to enabled. Set to `false` to force admin-provisioned accounts only. |
+Ownership is `userId` or document id = Auth uid unless noted. No personal
+production data is listed here.
 
-**Still to harden**
+| Collection | Purpose | Ownership / relations | Public? | Who may write |
+|---|---|---|---|---|
+| `users/{uid}` | Account profile, branding URLs, terms, contact verification | Doc id = uid | Private | Create: server. Update: owner allow-list or admin. |
+| `pilots/{uid}` | Remote-pilot identity (one per account) | Doc id = uid. `Drone.linkedPilotId` | Private | Create: server. |
+| `operators/{id}` | UAS operator (private or company), quota-limited | `userId`. Drone `defaultOperatorId` / `activeOperatorId` | Private | Create: `/api/entities/operators`. |
+| `drones/{id}` | Aircraft; slug, visibility, 24h active-operator override | `userId`. Links operator, insurance, pilot | Private | Create: `/api/entities/drones`. Owner cannot self-verify or rewrite slug. |
+| `dronesPublic/{slug}` | Sanitised public card | `droneId` → `drones` | **Anonymous read** | Server only (`/publish`). Client create/update/delete denied. |
+| `certificates/{id}` | Remote-pilot attestations | `userId` | Private (badge on public card is derived) | `/api/entities/certificates` |
+| `insurances/{id}` | Policies + private `pdfUrl` | `userId` | Private. PDF is **not** on the public card. | `/api/entities/insurances` |
+| `documents/{id}` | Other files (ID, etc.) | `userId` | Private | `/api/entities/documents` |
+| `authorizations/{id}` | Operational permits | `userId` | Private | `/api/entities/authorizations` |
+| `slots/{uid}` | Quotas (drone, operator, cert, pdf, permit, archive, nfc_badge, …) | Doc id = uid | Private | Provision, `bootstrapSlots`, or admin. Client create denied. |
+| `plans/{planId}` | Legacy admin slot-price docs | Public read, admin write | **Not** the commercial catalogue (`src/config/pricing.ts`) | Admin |
+| `reports/{id}` | Found-drone inbox | `ownerUserId` derived by `submitReport` | Owner + admin | Function write. Owner may only flip `read`. |
+| `rateLimits/{key}` | Function-side buckets (found-drone) | Server | No client access | Functions |
+| `orders/{id}` | Legacy order documents on `/account/orders` | `userId` | Private | **Checkout does not write here.** |
+| `signupOtp/{uid}` | Hashed email OTP | Server | No client access | Admin SDK |
+| `supportThreads/{uid}` + `messages` | One thread per user | Path id = uid | Owner + admin | APIs set `sender`. Client writes denied. |
+| `profiles/{id}` | Legacy single-profile model | Admin only | Unused by `/u/{slug}` | Keep until migration is confirmed |
 
-- Stop relying on `__dronetag_idt` (HttpOnly-only session).
-- App Check on Route Handlers (client init exists; Next.js APIs do not verify App Check).
-- Rate limits on OTP / provision / support (Functions rate-limit found-drone only).
-- OTP / `signupOtp` TTL and IP binding.
-- Admin layout falls through when the Admin SDK is not configured (local-dev convenience).
-- `/account/*` has no server layout gate (client `useEffect` only).
+**Not implemented as live products:** `companies`, `badges`, `subscriptions`,
+`deletionRequests`.
 
-`scripts/create-admin.ts` **used to** contain a hardcoded admin password. That
-credential is gone from the tree but must be treated as compromised in Firebase
-until rotated. Do not rewrite git history unless the owner explicitly asks.
-
----
-
-## 7. Authorization & security
-
-**Firestore rules** (`firestore.rules`)
-
-- Default deny.
-- `isAdmin()` uses `request.auth.token.get('admin', false) == true` (plain
-  `.admin` is an evaluation error when the claim is absent).
-- Privileged creates (`users`, `pilots`, `operators`, `drones`, `certificates`,
-  `insurances`, `documents`, `authorizations`, `reports`, `supportThreads`)
-  are **deny-from-client**.
-- Owners may update allow-listed fields only. They cannot set
-  `verificationStatus`, change `userId` / `slug`, or rewrite public snapshots.
-- `dronesPublic/{slug}`: anonymous **read**; client **create/update/delete
-  denied**. Admin may write (support / backfill).
-- `signupOtp`, `rateLimits`: no client access (admin can read rate-limit docs).
-
-**Storage rules** (`storage.rules`)
-
-- `public/users/{uid}/**` — images only, ≤ 5 MB, **anonymous read**. Reserved
-  branding/QR layout; the live branding API does not write here (see §9).
-- `users/{uid}/**` — images/PDF, ≤ 20 MB, **owner or admin only**. Insurance
-  PDFs, identity documents, and live account branding live here.
-- `profiles/**` — legacy; admin only.
-- SVG is rejected (scriptable).
-
-**Admin authorization**
-
-- Optimistic cookie presence check: `src/proxy.ts` (does **not** verify tokens).
-- Real page gate: `src/app/admin/layout.tsx` → `verifyAdminSession` (token +
-  claim, `checkRevoked: true`).
-- Real API gate: `requireAdminFromRequest` on every `/api/admin/*` handler.
-- `/account/*` is gated only in the client layout. Admins are bounced to
-  `/admin`. Unused leftover: `src/lib/auth/adminAllowlist.ts` (not imported;
-  `NEXT_PUBLIC_ADMIN_EMAILS` is not read). Admin is the custom claim only.
-
-**Public / private separation**
-
-- Anonymous visitors read **only** `dronesPublic/{slug}` and `plans`. Branding
-  images on the public card are token URLs, not anonymous Storage listing.
-- Raw `drones/*` are owner/admin only.
-- Insurance PDFs are not on the public card. Authenticated preview goes through
-  `GET /api/files/proxy` (owner prefix or admin).
-
-**Public snapshots**
-
-- Built only by `POST|DELETE /api/entities/drones/[id]/publish` →
-  `syncDronePublicSnapshotAdmin`. The client cannot choose
-  `verificationStatus` or `holderDisplayName`.
-
-**Server-side validation**
-
-- Zod on newer handlers (provision, support, publish).
-- Quote amounts always recomputed from `src/config/pricing.ts`.
-- Uploaded URLs restricted to Firebase Storage hosts plus
-  `NEXT_PUBLIC_TRUSTED_PDF_HOSTS` / `TRUSTED_PDF_HOSTS`.
-
-**CSP**
-
-- HSTS, `X-Frame-Options: DENY`, nosniff, Referrer-Policy, Permissions-Policy
-  always ship.
-- Content-Security-Policy is emitted **only** when `CSP_ENFORCE=true`.
-  Unset means **no CSP header** (not Report-Only). `.env.local.example`
-  still describes the older Report-Only behaviour.
-
-**Secrets**
-
-- Client Firebase keys are `NEXT_PUBLIC_*` (expected).
-- Service account, Resend key, seed passwords are server-only. Never commit
-  `.env.local` or a service-account JSON.
-
-**Open findings (still open)**
-
-- Rules in git ≠ rules in the live Firebase project until someone deploys them.
-- App Check not verified on Next.js Route Handlers.
-- No rate limit on Route Handlers.
-- JS-readable session cookie.
-- Historical git objects may still contain old env files / the old admin
-  password — rotate, do not assume `git rm` revoked them.
-- App Check not enforced on Firestore/Storage rules (`request.app` left as TODO).
-- Storage objects are not garbage-collected on entity delete.
-
----
-
-## 8. Data model
-
-Collections actually referenced by rules and/or live code. Ownership is
-`userId` / document id = uid unless noted.
-
-| Collection | Purpose | Ownership / relations |
-|---|---|---|
-| `users/{uid}` | Account profile, branding URLs, `acceptedTermsAt`, contact verification | Doc id = Auth uid. Created by provision / admin create-user. |
-| `pilots/{uid}` | Remote-pilot identity (one per account) | Doc id = uid. Linked from `Drone.linkedPilotId`. Fields `operatorCode` / `operatorLicense` are **misplaced** (see glossary). |
-| `operators/{id}` | UAS operator (private or company), up to quota | `userId`. Drone `defaultOperatorId` / `activeOperatorId`. |
-| `drones/{id}` | Aircraft; has `slug`, visibility, 24h active-operator override | `userId`. Links operator, insurance, pilot. |
-| `dronesPublic/{slug}` | Sanitised public card | Doc id = slug. `droneId` back to `drones`. Server-written. |
-| `certificates/{id}` | Remote-pilot attestations | `userId`. Drive public verification badge. |
-| `insurances/{id}` | Policies + private `pdfUrl` | `userId`. Linked to drone and/or operator. |
-| `documents/{id}` | Other files (ID, etc.) | `userId`. |
-| `authorizations/{id}` | Operational permits | `userId`. |
-| `slots/{uid}` | Quotas (drone, operator, cert, pdf, permit, archive, nfc_badge, …) | Doc id = uid. Written by provision, `bootstrapSlots`, or admin. |
-| `plans/{planId}` | **Legacy/admin slot-price docs** (see §13) | Public read, admin write. **Not** the commercial catalogue. |
-| `reports/{id}` | Found-drone inbox | `ownerUserId` derived server-side. Owner may only flip `read`. |
-| `rateLimits/{key}` | Function-side buckets | No client access. |
-| `orders/{id}` | Legacy order documents shown on `/account/orders` | `userId`. **Checkout does not write here.** |
-| `signupOtp/{uid}` | Hashed email OTP | Server only. |
-| `supportThreads/{uid}` + `messages` | One thread per user | Path id = uid. Client writes denied; APIs set `sender`. |
-| `profiles/{id}` | **Legacy** single-profile model | Admin only. `/u/{slug}` no longer reads this. Keep until migration/backfill is confirmed. |
-
-**Not present as live products:** `companies`, `badges`, `subscriptions`,
-`deletionRequests`. Do not document them as implemented.
-
-Additive fields already in use: `users.acceptedTermsAt`; report
-`emailNotified` / `notificationAttemptedAt` / `notificationError`.
-
----
-
-## 9. Storage model
+### Storage prefixes
 
 | Prefix | Audience | Content |
 |---|---|---|
-| `public/users/{uid}/**` | World-readable | Intended branding/QR namespace (images only, 5 MB). Client helper comments still describe this layout. |
-| `users/{uid}/**` | Owner + admin | Live uploads: insurance/certificate/document/permit files **and** account branding at `users/{uid}/profiles/account/{photo\|logo\|banner}.*`. Images/PDF, 20 MB. |
-| `profiles/**` | Admin only | Legacy top-level uploads. New writes must not use this prefix. |
+| `public/users/{uid}/**` | World-readable images ≤ 5 MB | Reserved branding/QR namespace. Live branding API does **not** write here. |
+| `users/{uid}/**` | Owner + admin; images/PDF ≤ 20 MB | Live uploads and account branding. |
+| `profiles/**` | Admin only | Legacy. Do not write new files here. |
 
 Live branding (`POST /api/account/branding`) writes the **private** prefix and
 returns a Firebase download URL with a token. The public card shows those
-images because tokens bypass Storage rules — not because the object sits
-under `public/users/`. The rules still stop **unauthenticated path
-enumeration** of private PDFs.
-
-Download-URL tokens (`?token=`) bypass Storage rules by design. Existing
-public token URLs keep working after the private-namespace lock-down.
+images because **download tokens bypass Storage rules**, not because the object
+is world-listable. Unauthenticated path enumeration of private PDFs is still
+denied.
 
 There is no object lifecycle / cascade delete.
 
 ---
 
-## 10. Backend / API
+## 9. Public NFC Profile
 
-Auth column: **user** = verified Firebase ID token (cookie or Bearer);
-**admin** = token + `admin` claim; **public** = no login; **idToken** = body
-token for cookie minting.
-
-### Route Handlers (active)
-
-| METHOD | PATH | AUTH | PURPOSE |
-|---|---|---|---|
-| POST | `/api/session` | idToken in body | Set HttpOnly `__dronetag_session`. 204 if Admin SDK missing. |
-| DELETE | `/api/session` | — | Clear session cookie. |
-| GET | `/api/health` | public | `{ status, version, commit, now }`. 503 if Admin SDK missing. Does **not** advertise CSP/App Check. |
-| POST | `/api/account/provision` | user | Create/repair `users`, `pilots`, `slots`. |
-| POST | `/api/account/branding` | user | Upload photo/logo/banner via Admin SDK to **`users/{uid}/profiles/account/…`** (private namespace) and return a download-URL token. |
-| POST | `/api/auth/contact-verification/init` | user | Start email/phone verification channels. |
-| POST | `/api/auth/otp/email/send` | user | Send email OTP (Resend). |
-| POST | `/api/auth/otp/email/verify` | user | Verify email OTP. |
-| POST | `/api/auth/contact-verification/phone` | user | Record phone verification. |
-| POST | `/api/entities/operators` | user | Create operator (quota). |
-| POST | `/api/entities/drones` | user | Create drone + slug (quota). |
-| POST, DELETE | `/api/entities/drones/[id]/publish` | user | Rebuild or remove `dronesPublic` snapshot. |
-| POST | `/api/entities/certificates` | user | Create certificate. |
-| POST | `/api/entities/certificates/[id]/pdf` | user | Attach certificate file. |
-| POST | `/api/entities/insurances` | user | Create insurance. |
-| POST | `/api/entities/insurances/[id]/pdf` | user | Attach policy PDF. |
-| POST | `/api/entities/documents` | user | Create document. |
-| POST | `/api/entities/documents/[id]/file` | user | Attach document file. |
-| POST | `/api/entities/authorizations` | user | Create permit. |
-| POST | `/api/entities/authorizations/[id]/file` | user | Attach permit file. |
-| GET | `/api/files/proxy` | user | Stream an allowlisted Storage PDF same-origin (owner prefix or admin). |
-| POST | `/api/pricing/quote` | public | Recalculate amounts from `src/config/pricing.ts`. |
-| POST | `/api/pricing/checkout` | public | Validate billing + quote; persist **in process memory only**. Sets `paymentActive: false`. |
-| POST | `/api/billing/webhook` | public | Placeholder. `NoopBillingProvider`. |
-| GET, POST, PATCH, PUT | `/api/support/thread` | user | Caller's support thread. Server sets `sender`. |
-| GET | `/api/admin/accounts` | admin | List `users/*`. |
-| POST | `/api/admin/users` | admin | Provision an Auth user + account docs. |
-| POST | `/api/admin/notify-verification` | admin | Email approval/rejection. |
-| GET, POST, PATCH | `/api/admin/support` | admin | List threads / reply / status. |
-| POST | `/api/admin/resync-public-drones` | admin | Rebuild snapshots for a user. |
-
-### Cloud Functions
-
-| Function | Type | Status | Purpose |
-|---|---|---|---|
-| `submitReport` | callable | **Live path** | Anonymous found-drone. Looks up drone, derives `ownerUserId`, rate-limits IP+slug (3 / 10 min), writes `reports`, emails owner via Resend. |
-| `bootstrapSlots` | Auth `onCreate` | **Live if deployed** | Writes base `slots/{uid}` if missing. Overlaps provision (idempotent). |
-| `createDrone` / `createOperator` / `createCertificate` / `createDocument` / `createInsurance` | callable | **Deprecated** | Kept so leftover clients do not 404. The Next.js app does **not** call them (`src/lib/firebase/callable.ts` still exports wrappers — do not add new callers). |
-| `notify-owner` | helper module | used by `submitReport` | Not a separately exported function. |
-
-Functions region: `us-central1` (`NEXT_PUBLIC_FIREBASE_FUNCTIONS_REGION`).
-`APP_CHECK_ENFORCE` defaults to **true** in `functions/src/util.ts`. If
-Functions are deployed without working App Check tokens, `submitReport` will
-reject. Set the Functions env var to `false` while in monitor mode.
+- One slug per published drone. URL: `/u/{slug}`.
+- Physical NFC badge is programmed with that URL. There is **no chip-UID
+  registry** in the data model.
+- Snapshot is built only by `POST|DELETE /api/entities/drones/[id]/publish` →
+  `syncDronePublicSnapshotAdmin`. The client cannot choose `verificationStatus`
+  or `holderDisplayName`.
+- Anonymous visitors read **only** `dronesPublic/{slug}` (and `plans`).
+- Insurance PDFs are not on the public card. Authenticated preview uses
+  `GET /api/files/proxy` (owner prefix or admin).
+- Found-drone form calls Cloud Function `submitReport`. Owner uid is derived
+  server-side. Rate limit: 3 reports / 10 minutes per IP+slug (Functions).
 
 ---
 
-## 11. Main product journeys
+## 10. Admin System
 
-### SIGNUP → onboarding → profile
+Routes under `/admin` (users, drones, verify, reports, support, NFC tooling,
+legacy plans).
 
-1. `/signup` (or Google). Terms checkbox required.
-2. Firebase Auth user created.
-3. `POST /api/account/provision` writes account + pilot + slots.
-4. Email (and optional phone) OTP.
-5. `/account` shows `OnboardingChecklist`: profile, operator, drone,
-   certificate, insurance, publish, badge URL.
-6. `/account/profile` edits identity and can open a **deletion request**
-   (support ticket — not a wipe).
+Security:
 
-### DRONE → documents → public profile
+1. Proxy bounces requests with no cookies (UX).
+2. Layout verifies token + `admin === true`.
+3. Every `/api/admin/*` handler calls `requireAdminFromRequest`.
 
-1. Create operator (`/account/operators`) then drone (`/account/drones`).
-   New drones are private.
-2. Upload certificate / insurance / documents / permits (OCR may prefill
-   metadata client-side).
-3. On drone detail, **Publish** opens `PublicationConsent` (public vs
-   withheld lists + required checkbox).
-4. Server builds `dronesPublic/{slug}`. Public URL: `/u/{slug}`.
-5. Unpublish deletes the snapshot. Cached copies cannot be recalled.
-
-### COMPLIANCE → admin verification
-
-1. Owner uploads; `verificationStatus` is server/rules-controlled (owners
-   cannot self-verify via rules).
-2. Admin `/admin/verify` reviews certificates, insurances, documents,
-   authorizations, drones.
-3. `POST /api/admin/notify-verification` emails the owner when Resend is set.
-4. Admin/user actions that change verification should resync public snapshots
-   (`/api/admin/resync-public-drones` or publish).
-
-### NFC
-
-See §12. The badge is the public URL, not a second data system.
-
-### FOUND DRONE
-
-1. Anonymous form on `/u/{slug}`.
-2. Client calls `submitReport` (not a Firestore `addDoc`).
-3. Function writes `reports` and attempts owner email.
-4. Owner sees `/account/inbox`; admin sees `/admin/reports`.
-
-### SUPPORT
-
-1. User `/account/support` → `/api/support/thread`.
-2. Admin `/admin/support` replies; `sender` is derived from the admin token.
-3. Reply can email the user (`notifySupportReply`).
-
-### ADMIN
-
-Dashboard work queue, users, verification, drones, reports, support, plans
-CRUD, NFC CSV. See §14.
+Admin APIs: list accounts, provision a user, notify verification, support
+reply, resync public snapshots.
 
 ---
 
-## 12. NFC model
-
-**Commercial rule: one NFC badge per pilot / profile.**
-
-The badge stores (or opens) the public DroneTag URL:
-
-`https://<host>/u/<slug>`
-
-It is not a second identifier. There is **no** `badges` collection and no chip
-UID registry. Admin `/admin/nfc` lists public-active drones and exports a CSV
-(`slug,url,label`) for an external writer (NXP TagWriter / Zebra). Helpers:
-`src/lib/nfc/payload.ts`.
-
-Kit prices (euro, from `src/config/pricing.ts`):
-
-| Plan | Kit |
-|---|---|
-| Free | €24.90 |
-| Pilot | €19.90 |
-| Pilot Pro | included (`kitPriceCents: 0`) |
-| Team | €17.90 per pilot |
-| Business | €15.90 per pilot |
-| Enterprise | custom quote |
-
-`KIT_BADGES_PER_PILOT = 1` is enforced in the quote calculator. Do not
-reintroduce the two-badge (certificate + insurance) model.
-
----
-
-## 13. Pricing
-
-**Catalogue (configuration / UI / quote math)** — `src/config/pricing.ts`:
-
-| Plan | Price | Interval |
-|---|---|---|
-| Free | €0 | year |
-| Pilot | €99 / year | year |
-| Pilot Pro | €139 / year | year |
-| Team | €49 / month | month (priced per configuration; operator count required) |
-| Business | €149 / month | month |
-| Enterprise | custom | quote |
-
-`POST /api/pricing/quote` and `/checkout` **recompute** amounts on the server.
-The browser cannot lower a price.
-
-**Billing (implementation)**
-
-- **Payments are not active.** No Stripe (or other) provider is wired.
-- Checkout records a request in a **process-local Map**
-  (`serverDemoRequests`). It is lost on process restart. It does **not**
-  write Firestore `orders` or a `pricingRequests` collection.
-- `/api/billing/webhook` is a no-op placeholder.
-- `/account/billing` and `/account/orders` are UI. `orders` may contain
-  older/demo documents; they are not produced by the current checkout.
-- Team / Business / Enterprise SKUs are sold as prices only. There is no
-  membership, invite, or org role model.
-- Coverdrone appears only as an external affiliate quote URL
-  (`COVERDRONE_QUOTE_URL` in `src/lib/config/features.ts`), not as billing.
-
-**Second “plans” system (do not confuse)**
-
-`/admin/plans` CRUD-writes Firestore `plans/{id}` with slot-kind prices
-(default currency in code: **CHF**). `/pricing` does **not** read that
-collection; it reads `src/config/pricing.ts`. Treat admin Plans as leftover
-quota-pricing UI unless you deliberately unify them.
-
----
-
-## 14. Admin
-
-Server-gated under `/admin`.
-
-| Surface | Works | Partial / missing |
-|---|---|---|
-| `/admin` work queue | Verification counts, unread reports, support needing reply, public-drone count | Health footer still types an older `/api/health` payload (CSP/App Check flags were removed from the API). |
-| `/admin/users`, `/new`, `/[uid]` | List, create user, edit pilot/account fields | Operator-code fields on the pilot record are the glossary defect. |
-| `/admin/verify` | Review queue. Status writes go through the **client SDK** with an admin token (rules), not a dedicated verify API. Email via `/api/admin/notify-verification`. | Depends on Admin SDK + rules deployed. |
-| `/admin/drones`, `/[id]` | Fleet view / edit | Can change visibility; must stay consistent with snapshots. |
-| `/admin/reports` | Found-drone list | |
-| `/admin/support` | Reply / close | Email on reply needs Resend. |
-| `/admin/nfc` | CSV of public URLs | No hardware, no UID registry, no write-back. |
-| `/admin/plans` | Slot-price CRUD | Not the commercial catalogue (see §13). |
-| `POST /api/admin/users` | Auth + docs provision | Comment in file still says public signup is disabled — **that is stale**; signup is on by default. |
-
-Admin is **not** a full customer-success console (no billing, no deletion
-cascade, no export).
-
----
-
-## 15. Public profile
-
-Route: **`/u/{slug}`**.
-
-Reads **only** `dronesPublic/{slug}` (`DronePublicSnapshot`). If missing →
-not found. Legacy `profiles` fallback was removed.
-
-**Published**
-
-- Holder kind + display name (pilot / private operator / company)
-- Manufacturer, model, class, engraved drone serial
-- Certificate / profile verification status + `lastVerifiedAt`
-- Insurance status (`valid` / `expiring` / `expired` / `missing`), provider,
-  expiry, **masked** policy number
-- Optional branding: photo, logo, banner
-- Found-drone form
-
-**Explicitly not public**
-
-- Email, phone, address, date of birth, VAT
-- Full policy number, policy PDF
-- Controller serial, owner uid, internal ids
-- Notes, raw verification write access
-
-**Privacy controls**
-
-- Per-drone visibility + publication consent modal (checkbox required).
-- Unpublish deletes the snapshot.
-- No visitor log. No cookie banner (legal pages say so; they are drafts).
-
-**Found-drone:** see §11. Owner contact is never shown to the finder.
-
----
-
-## 16. Email & notifications
-
-Provider: **Resend** via `https://api.resend.com/emails`.
-
-| Notification | Trigger | Needs |
-|---|---|---|
-| Signup email OTP | `/api/auth/otp/email/send` | `RESEND_API_KEY`, verified domain, `OTP_EMAIL_FROM` |
-| Found-drone | `submitReport` → `notify-owner` | Functions env: `RESEND_API_KEY`, optional `APP_URL`, `OTP_EMAIL_FROM` |
-| Verification approved / rejected | `/api/admin/notify-verification` | Next.js `RESEND_API_KEY`, `NEXT_PUBLIC_APP_URL` |
-| Support reply | admin support POST | same as verification |
-
-Recipient addresses are loaded from Auth (never from the request body).
-Templates are IT/EN (`src/lib/server/email/templates.ts`). Personal data in
-mail is minimised (no uids, no policy numbers).
-
-**Configuration (no secrets here):** create a Resend account, verify the
-sending domain (product default from-address mentions `drone-tag.com`), set
-`RESEND_API_KEY` on Netlify **and** on the Functions runtime, set
-`OTP_EMAIL_FROM` to a domain you actually verified.
-
-**Known defect:** CTA links in `src/lib/server/email/notifications.ts` point
-at `/dashboard`, `/dashboard/reports`, `/dashboard/support`. Those routes
-**do not exist**. The live app uses `/account`, `/account/inbox`,
-`/account/support`.
-
-Password-reset mail is sent by **Firebase Auth**, not Resend.
-
----
-
-## 17. Testing
-
-| Suite | Command | What |
-|---|---|---|
-| Unit + integration | `npm test` | Vitest: `tests/unit/*`, `tests/integration/*` (106 tests) |
-| Watch | `npm run test:watch` | |
-| Firestore + Storage rules | `npm run test:rules` | Starts emulators, runs `vitest.rules.config.mts` (44 + 16) |
-| Lint | `npm run lint` | ESLint. 0 errors required. Warnings do not fail. |
-| Typecheck | `npm run typecheck` or `npx tsc --noEmit` | |
-| App build | `npm run build` | Needs `NEXT_PUBLIC_FIREBASE_API_KEY`, `PROJECT_ID`, `AUTH_DOMAIN` |
-| Functions build | `cd functions && npm run build` | Separate package |
-
-Rules tests need a **JVM** on `PATH` (`java -version`).
-`brew install openjdk` and add `/opt/homebrew/opt/openjdk/bin` if the command
-dies with `Process 'java -version' has exited with code 1`.
-
-**Baseline: 166 / 166 PASS** (106 + 60), when the JVM is present.
-
-There are no browser E2E tests. Most Route Handlers are only indirectly
-covered.
-
----
-
-## 18. CI
-
-File: `.github/workflows/ci.yml`.
-
-Triggers: `pull_request` and `push` to `main`. **No deploy step. No repository
-secrets.** Concurrent runs on the same ref are cancelled.
-
-| Job | What |
-|---|---|
-| `web` | Node **20**, `npm ci`, `npm run lint`, `npx tsc --noEmit`, `npm test`, `npm run build` with **fake** `NEXT_PUBLIC_FIREBASE_*` placeholders |
-| `functions` | Node **20**, `functions/npm ci` + `npm run build` |
-
-**Java is not installed in CI.** `npm run test:rules` is **not** run on pull
-requests. A rules regression will not fail GitHub Actions. Adding
-`actions/setup-java` plus `npm run test:rules` is the highest-value remaining
-CI change.
-
-`functions` lint is not run (the functions `lint` script is not ESLint 9
-compatible and eslint is not in that package’s devDependencies).
-
----
-
-## 19. Environments
-
-There is no `APP_ENV` switch. The environment is whichever Firebase project
-the `NEXT_PUBLIC_FIREBASE_*` values point at, plus `NODE_ENV`.
-
-| Environment | Reality |
-|---|---|
-| Development | `npm run dev`. Without Firebase env → `DEMO_MODE`. With `.env.local` → the configured project (should be staging, never production). |
-| Staging | **Documented, not created in this repo.** `.firebaserc` has only `dronetag-e905d`. `.firebaserc.example` has a `staging` placeholder alias. No staging env files. |
-| Production | Same architecture as staging would have. Live project alias: `dronetag-e905d`. Whether that project already has users/badges is an owner question, not visible from git. |
-
-Treat `dronetag-e905d` as the existing Firebase project. A **separate**
-staging project still has to be created and configured (Auth, Firestore,
-Storage, Functions/Blaze, App Check keys, its own service account). See
-`DRONETAG_STAGING_SETUP.md`.
-
----
-
-## 20. Environment variables
+## 11. Environment Variables
 
 Names only. Never commit values.
 
-### Client-safe (`NEXT_PUBLIC_*`)
+`FIREBASE_SERVICE_ACCOUNT_KEY` must be the **complete service-account JSON**
+(one line on Netlify). It must **never** be committed. Local laptops may use
+`FIREBASE_SERVICE_ACCOUNT_PATH` pointing at a JSON file **outside** the repo
+instead.
 
-- `NEXT_PUBLIC_FIREBASE_API_KEY`
-- `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN`
-- `NEXT_PUBLIC_FIREBASE_PROJECT_ID`
-- `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET`
-- `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID`
-- `NEXT_PUBLIC_FIREBASE_APP_ID`
-- `NEXT_PUBLIC_FIREBASE_FUNCTIONS_REGION` (default `us-central1`)
-- `NEXT_PUBLIC_RECAPTCHA_ENTERPRISE_SITE_KEY`
-- `NEXT_PUBLIC_RECAPTCHA_SITE_KEY`
-- `NEXT_PUBLIC_APP_CHECK_DEBUG_TOKEN` (local debug only)
-- `NEXT_PUBLIC_TRUSTED_PDF_HOSTS`
-- `NEXT_PUBLIC_ALLOW_SIGNUP` (default enabled; `false` disables public signup)
-- `NEXT_PUBLIC_APP_URL` (absolute links in Next.js emails)
-- `NEXT_PUBLIC_GIT_COMMIT_SHA` (optional build stamp)
+### Client (`NEXT_PUBLIC_*` — bundled)
 
-### Server-only / Firebase Admin
+| Name | Use | Required |
+|---|---|---|
+| `NEXT_PUBLIC_FIREBASE_API_KEY` | Firebase web config | Required (else DEMO_MODE; production build refused) |
+| `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN` | Auth | Required for production build |
+| `NEXT_PUBLIC_FIREBASE_PROJECT_ID` | Project | Required |
+| `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET` | Storage | Required for uploads |
+| `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID` | Web config | Required for a complete client |
+| `NEXT_PUBLIC_FIREBASE_APP_ID` | Web config | Required for a complete client |
+| `NEXT_PUBLIC_FIREBASE_FUNCTIONS_REGION` | Callables (default `us-central1`) | Optional |
+| `NEXT_PUBLIC_RECAPTCHA_ENTERPRISE_SITE_KEY` | App Check (preferred) | Optional |
+| `NEXT_PUBLIC_RECAPTCHA_SITE_KEY` | App Check v3 fallback | Optional |
+| `NEXT_PUBLIC_APP_CHECK_DEBUG_TOKEN` | Local App Check debug | Local only |
+| `NEXT_PUBLIC_TRUSTED_PDF_HOSTS` | Extra PDF/image hosts | Optional |
+| `NEXT_PUBLIC_ALLOW_SIGNUP` | `false` disables public signup | Optional (default on) |
+| `NEXT_PUBLIC_APP_URL` | Absolute links in Next.js emails | Recommended in production |
+| `NEXT_PUBLIC_GIT_COMMIT_SHA` | Health/build stamp | Optional |
 
-- `FIREBASE_SERVICE_ACCOUNT_KEY` (JSON, one line — Netlify)
-- `FIREBASE_SERVICE_ACCOUNT_PATH` (local file path, preferred on laptops)
-- `GOOGLE_APPLICATION_CREDENTIALS` (ADC fallback)
+### Server — Next.js / Netlify
 
-### Resend / email
+| Name | Use | Required |
+|---|---|---|
+| `FIREBASE_SERVICE_ACCOUNT_KEY` | Admin SDK JSON | Required in production |
+| `FIREBASE_SERVICE_ACCOUNT_PATH` | Local file alternative | Local optional |
+| `GOOGLE_APPLICATION_CREDENTIALS` | ADC fallback | Optional |
+| `RESEND_API_KEY` | Transactional email | Required for OTP / notify |
+| `OTP_EMAIL_FROM` | From-address | Recommended |
+| `TRUSTED_PDF_HOSTS` | Server host allowlist | Optional; keep in sync with public list |
+| `CSP_ENFORCE` | `true` emits CSP | Optional (unset = no CSP header) |
+| `LOG_LEVEL` | Logger | Optional |
+| `NODE_VERSION` | Netlify build/runtime pin | Set to `22` in `netlify.toml` |
 
-- `RESEND_API_KEY` (Next.js **and** Functions)
-- `OTP_EMAIL_FROM`
-- `APP_URL` (Functions email links; sibling of `NEXT_PUBLIC_APP_URL`)
+### Cloud Functions
 
-### Security / hosting
-
-- `APP_CHECK_ENFORCE` (Functions; default true in code)
-- `CSP_ENFORCE` (`true` to emit CSP)
-- `TRUSTED_PDF_HOSTS` (server mirror of the public host list)
-- `LOG_LEVEL`
-- `NODE_VERSION` / Netlify `NODE_VERSION=20`
+| Name | Use |
+|---|---|
+| `RESEND_API_KEY` | Found-drone owner email |
+| `APP_URL` | Links in Function emails (sibling of `NEXT_PUBLIC_APP_URL`) |
+| `APP_CHECK_ENFORCE` | Function App Check (code default true; use `false` in monitor) |
 
 ### Scripts only (never commit)
 
-- `SEED_AUTH_EMAIL` / `SEED_AUTH_PASSWORD`
-- `ADMIN_BOOTSTRAP_EMAIL`
+`SEED_AUTH_EMAIL`, `SEED_AUTH_PASSWORD`, `ADMIN_BOOTSTRAP_EMAIL`
 
-CI injects fake `NEXT_PUBLIC_FIREBASE_*` values at build time only.
+### CI
 
----
+Fake `NEXT_PUBLIC_FIREBASE_*` placeholders only. CI must never receive a real
+service-account JSON.
 
-## 21. Deployment
-
-**Verified from repo config; these steps have not been executed in this
-handover pass.**
-
-1. **Web app** — Netlify builds `npm run build` with Node 20
-   (`netlify.toml`). Set every required env var in the Netlify UI. CI does
-   not deploy.
-2. **Firebase rules / indexes / functions** — separate CLI, not Netlify:
-
-   ```bash
-   firebase use <project>
-   firebase deploy --only firestore:indexes
-   firebase deploy --only firestore:rules,storage
-   cd functions && npm ci && npm run build && cd -
-   firebase deploy --only functions
-   ```
-
-3. After first rules deploy on a project that already has public drones:
-   `npm run backfill-public` (needs Admin credentials).
-4. Promote admins with `npm run grant-admin -- <email>`.
-
-**The security rules and Functions changes in this repository are not known
-to be deployed.** Repo tests prove the files in git. Production/staging
-behaviour equals those files only after `firebase deploy`. Do not assume
-the live project has the private Storage split or the `dronesPublic`
-deny-from-client rules.
-
-Do not deploy from CI: the workflow is verification-only.
-
-Detailed staging console work: `DRONETAG_STAGING_SETUP.md`. Production
-promotion gates: `docs/DEPLOY_PRODUCTION.md` (aspirational until staging
-exists).
+**Netlify contexts:** production, deploy-preview and branch-deploys must all
+have the same Admin JSON if those contexts run `/api/*`.
 
 ---
 
-## 22. Manual actions required before beta
+## 12. Local Development
 
-Owner / ops — cannot be finished from application code:
+Clone **outside** iCloud Desktop/Documents (Finder “duplicate ` 2`” files
+break TypeScript if `.next/types` is copied). Prefer `~/Developer/dronetag`.
 
-1. **Rotate historical credentials** — old admin password (formerly in
-   `create-admin.ts`), any service-account JSON that lived in git, Resend
-   keys that may have been committed historically.
-2. **Verify GitHub repository visibility** (private vs public). History may
-   contain secrets even if the current tree does not.
-3. **Deploy verified Firestore + Storage rules** to the intended project
-   (staging first).
-4. **Deploy required Functions** (`submitReport`, `bootstrapSlots`; deprecated
-   `create*` may stay until traffic is confirmed zero).
-5. **Create and configure a staging Firebase project** (not in `.firebaserc`).
-6. **Configure Resend domain** and set keys on Netlify + Functions.
-7. **App Check** — register reCAPTCHA keys, start Functions in monitor
-   (`APP_CHECK_ENFORCE=false`) until the dashboard is clean, then enforce.
-   Next.js Route Handlers still will not check App Check until someone
-   implements it.
-8. **Backup strategy** — none is implemented or verified.
-9. **Java in CI** — `actions/setup-java` + `npm run test:rules`.
-10. Confirm whether `dronetag-e905d` already has real users/badges before
-    pointing tools at it.
-11. Enable Google and (if used) Phone providers in Firebase Auth.
-12. Fix email CTA paths (`/dashboard` → `/account/…`) before relying on mail
-    in beta.
-
----
-
-## 23. Known limitations
-
-Real, current limitations — not historical findings that were already fixed.
-
-- **No real payments / subscription lifecycle.**
-- **Team / Business multi-tenancy is not built** (prices only).
-- **Account deletion is a support ticket**, not a cascade. Public pages stay
-  up until a human unpublishes/deletes.
-- **No self-service data export.**
-- **Legal pages (`/privacy`, `/terms`, `/cookies`) are drafts** pending
-  counsel. No cookie consent banner.
-- **No production backup / restore runbook.**
-- **App Check is not on Next.js APIs**; Firestore/Storage rules do not require
-  `request.app`.
-- **Session cookie `__dronetag_idt` is readable from JavaScript.**
-- **No staging Firebase project** in repo config.
-- **Rules/Functions deploy status is unverified.**
-- **No chip UID / badge entity.**
-- **DE / ES / FR exist in files but are hidden from the language switcher**
-  (~35% coverage; they fall back to English). UI languages: **IT, EN**.
-- **Functions region is `us-central1`**, not an EU region.
-- **Checkout requests are not persisted** to Firestore.
-- **Email deep links target `/dashboard/*`, which is not a route.**
-- **Two pricing systems** (`src/config/pricing.ts` vs Firestore `plans`).
-- **No E2E tests; rules tests not in CI.**
-- **Storage orphans** after delete.
-- **DEMO_MODE admin behaviour** if Firebase env is missing (blocked for
-  production builds / HTTPS).
-
----
-
-## 24. Technical debt
-
-What a new programmer will actually step in. Fixed-and-done items are omitted.
-
-- Dual architecture: server creates + client updates. New privileged writes
-  must stay on Route Handlers; do not reopen client `addDoc` on locked
-  collections.
-- Deprecated Function wrappers still exported from `callable.ts`.
-- Unused `src/lib/auth/adminAllowlist.ts` (email allowlist). Do not wire it
-  back; admin is the Firebase custom claim.
-- Live branding writes to the private Storage prefix; comments in
-  `src/lib/firebase/storage.ts` still describe `public/users/…`.
-- Legacy `profiles` collection, `src/lib/firebase/firestore.ts`,
-  `ProfileForm.tsx` (not mounted on any route), `src/lib/seed.ts`, admin
-  redirect `/admin/profiles` → `/admin/users`.
-- `scripts/seed-caffagni.ts` embeds a project web config and local paths;
-  `src/lib/demo/micheleCaffagni.ts` contains real Storage URLs. Do not treat
-  either as a secret store, but do not copy them into new docs.
-- `Pilot.operatorCode` / `operatorLicense` belong on the operator (glossary
-  §3.1) — schema not migrated.
-- Admin Plans (CHF slot prices) vs commercial EUR catalogue.
-- Email URLs and onboarding “badge” step over-promise hardware that is only a
-  URL/CSV.
-- Large account pages; 11 lint warnings (`exhaustive-deps`, unused imports).
-- Node 22 (`.nvmrc`) vs Node 20 (CI / Netlify / Functions).
-- Functions `lint` script is broken under ESLint 9.
-- iCloud `"<name> 2"` duplicates if the repo is cloned under Desktop/Documents
-  on a Mac with Desktop & Documents sync (see §29).
-
----
-
-## 25. Security status
-
-### FIXED & VERIFIED (against this working tree + emulator)
-
-- Hardcoded admin password removed from source (historical rotation still required).
-- Storage private namespace is not world-readable (`storage.rules` + 16 tests).
-- `dronesPublic` client writes denied; snapshot is server-built (44 tests cover
-  this class of rules).
-- Public card no longer carries the insurance PDF.
-- `/admin` pages gated by verified session + claim (`src/app/admin/layout.tsx`).
-  `/account/*` is **client-gated only** (`useEffect` in `src/app/account/layout.tsx`);
-  admins are redirected to `/admin`. Data still sits behind rules/APIs.
-- Signup provisioning no longer depends on client `setDoc` of `users`/`pilots`.
-- Support `sender` cannot be forged by the client.
-- Found-drone owner uid derived server-side; no `ownerUserId` on the public
-  snapshot.
-- Health endpoint no longer advertises CSP / App Check flags.
-- `isAdmin()` rules helper no longer throws `EvaluationException` on tokens
-  without the claim.
-
-“Verified” means the **files in git** plus `npm run test:rules`. It does
-**not** mean the live Firebase project was read.
-
-### FIXED BUT REQUIRES DEPLOY
-
-- Current `firestore.rules` and `storage.rules`.
-- Current Cloud Functions (`submitReport` email path, `bootstrapSlots`).
-- Any Netlify env (`RESEND_API_KEY`, service account, `CSP_ENFORCE`, App Check
-  keys) that is not set on the host.
-
-### OPEN
-
-- App Check on Route Handlers; rules-side `request.app`.
-- Rate limiting on Next.js APIs.
-- HttpOnly-only session.
-- OTP TTL / IP binding.
-- Account erasure / export.
-- Backup, legal review, payments, tenancy.
-
-### MANUAL ACTION REQUIRED
-
-See §22. Highest: rotate historical credentials, confirm GitHub visibility,
-deploy rules + functions to a staging project, Resend domain, Java in CI.
-
----
-
-## 26. Recommended next development phase
-
-### P0 — before an invited beta
-
-1. Rotate historical credentials; confirm repo visibility.
-2. Create staging Firebase; deploy **this** tree’s rules, indexes, functions.
-3. Run `npm run test:rules` against that deploy story; walk
-   `DRONETAG_MANUAL_QA.md` on staging only.
-4. Configure Resend (domain + keys on web and Functions).
-5. Enable the Auth providers you actually use (email, Google, optional phone).
-6. Fix email CTA paths.
-7. Add Java + `test:rules` to CI.
-8. Decide whether Team/Business are hidden until tenancy exists (commercial
-   honesty).
-
-### P1 — beta → production
-
-- Real payment provider (or explicitly keep “request only”).
-- App Check monitor → enforce (Functions first, then Next.js).
-- HttpOnly-only session; Route Handler rate limits.
-- Lawyer-reviewed privacy / terms / cookies.
-- Backup + restore drill.
-- Account deletion cascade **after** legal retention rules (design doc exists).
-- Persist checkout requests if you will fulfil kits manually.
-- Unify or isolate the two plans systems.
-
-### P2 — post-launch
-
-- Team/Business tenancy or remove those SKUs.
-- Badge / chip UID registry if logistics need it.
-- EU Functions region decision.
-- DE/ES/FR completion or keep hidden.
-- E2E for signup → publish → found-drone.
-- CSP enforce after a soak; nonce migration is now possible (Proxy is Node).
-- Monitoring (Sentry or equivalent) — only a logger exists today.
-
----
-
-## 27. First-day checklist for new developer
+Use Node 22 for the web app (`nvm use` / `.nvmrc`).
 
 ```bash
-# 1. Clone outside iCloud Desktop/Documents (see §29)
-git clone <repo-url> ~/Developer/dronetag
-cd ~/Developer/dronetag
-
-# 2. Node: 20.x matches CI / Netlify / Functions (nvm use 20).
-#    .nvmrc says 22 — do not treat that as the deploy version.
-node -v
-
-# 3. Install (also runs scripts/stage-vendor-assets.mjs)
 npm ci
-cd functions && npm ci && cd ..
-
-# 4. Environment
 cp .env.local.example .env.local
-# Fill NEXT_PUBLIC_FIREBASE_* from a STAGING project.
-# For API routes / admin: FIREBASE_SERVICE_ACCOUNT_PATH or KEY.
+# Fill NEXT_PUBLIC_FIREBASE_* from a STAGING project, not production.
+# For /api/* and admin: FIREBASE_SERVICE_ACCOUNT_PATH or FIREBASE_SERVICE_ACCOUNT_KEY.
 
-# 5. Baseline (no Firebase needed except build env vars)
-npx tsc --noEmit
-npm test
-npm run lint
-
-# 6. Rules suites — needs Java
-java -version
-npm run test:rules
-
-# 7. Production build (placeholders are fine locally; CI uses fakes)
-NEXT_PUBLIC_FIREBASE_API_KEY=AIzaSy-PLACEHOLDER-NOT-A-REAL-KEY-000000 \
-NEXT_PUBLIC_FIREBASE_PROJECT_ID=placeholder-ci \
-NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=placeholder-ci.firebaseapp.com \
-npm run build
-
-# 8. Dev server
 npm run dev
-# open http://localhost:3000  — DEMO_MODE if Firebase env is empty
-
-# 9. Do not run against production:
-#    npm run create-admin / grant-admin / backfill-public
-#    firebase deploy
 ```
 
-Read `DRONETAG_GLOSSARY.md` before renaming “pilot” / “operator” in the UI.
+Without Firebase env vars the app runs in `DEMO_MODE`. Do not point a laptop
+`.env.local` at production unless you intend to mutate live data.
 
----
-
-## 28. External accounts / access required
-
-| Service | Why |
-|---|---|
-| GitHub | Source, CI |
-| Firebase (Blaze) | Auth, Firestore, Storage, Functions. Existing project `dronetag-e905d` + a **new** staging project |
-| Netlify | Web hosting / Next.js |
-| Resend | Transactional email |
-| Domain / DNS | Product domain (references in code: `drone-tag.com`) |
-| Payment provider | **Future.** Not connected |
-| reCAPTCHA / App Check | Before enforcement |
-| NFC writer tooling | External (NXP / Zebra); no vendor account in repo |
-
-No credentials belong in this document or in git.
-
----
-
-## 29. Important warnings
-
-**Keep the working copy out of iCloud-synced folders.**
-
-Intended path: `~/Developer/dronetag`.
-
-macOS “Desktop & Documents Folders” iCloud Drive treats `~/Desktop` and
-`~/Documents` as synced volumes. iCloud resolves conflicts by creating
-duplicates named `"<name> 2"`. Those have appeared inside `node_modules/@types`
-and `.next/types` and break TypeScript (`TS2688`, `TS2300`, `TS2428`).
-`node_modules` and `.next` are gitignored, so the duplicates are local-only,
-but they make the project look broken.
-
-If they return:
+Do not run against production:
 
 ```bash
-find node_modules -depth -type d -name "* 2" -exec rmdir {} \;
-find .next -type f -regex '.* [0-9]\..*' -delete
+npm run create-admin
+npm run grant-admin
+npm run backfill-public
+firebase deploy
 ```
-
-Then move the repo to `~/Developer` (or another non-synced disk) and reopen
-the project from there.
-
-Other warnings:
-
-- Never run `create-admin` / `grant-admin` / `backfill-public` against
-  production without an explicit owner request.
-- Never rewrite git history to hide old secrets unless asked; rotate instead.
-- Do not add callers to deprecated `create*` Cloud Functions.
-- Do not put privileged creates back on the client SDK.
-- Do not reintroduce `insurancePdfUrl` on `dronesPublic`.
 
 ---
 
-## 30. Handover summary
+## 13. Tests & QA
 
-You are receiving a Next.js 16 + Firebase pre-beta product that already
-implements the core operator loop: signup and provisioning, entity CRUD,
-admin verification, a privacy-minimised public NFC URL, found-drone reports,
-support, and transactional email hooks. Automated tests in this tree are
-green (166/166) including the security-rules suites; CI checks lint, types,
-unit tests and build, but not rules, and it never deploys. The commercial
-NFC model is one badge → `/u/{slug}`; prices are configured, payments are
-not. Production readiness is low because billing, legal review, tenancy,
-erasure, backups, App Check on the web API, and a real staging project are
-still open, and the hardened rules exist in git until someone deploys them.
-Start by cloning outside iCloud, matching Node 20, running the first-day
-commands, then treating credential rotation + staging deploy + Resend as
-P0 before inviting anyone.
+| Command | What | Baseline (2026-09-08) |
+|---|---|---|
+| `npx tsc --noEmit` | Types | PASS |
+| `cd functions && npm run build` | Functions compile | PASS |
+| `npm test` | Unit + integration | **106 / 106** |
+| `npm run test:rules` | Firestore + Storage rules (needs Java) | **60 / 60** (44 + 16) |
+| `npm run lint` | ESLint | **0 errors, 11 warnings** |
+| `npm run build` | Production Next build | PASS (needs the three `NEXT_PUBLIC_FIREBASE_*` vars) |
+
+Total automated tests when Java is available: **166 / 166**.
+
+CI runs lint, typecheck, `npm test`, Next build (Node 22) and Functions build
+(Node 20). It does **not** run `test:rules` and does **not** deploy.
+
+Manual QA: `DRONETAG_MANUAL_QA.md`. There are no E2E tests.
+
+---
+
+## 14. Production Deployment
+
+Web (Netlify):
+
+1. Push to `main` (or trigger a production rebuild of the current commit).
+2. Netlify runs `npm run build` on Node 22 with `@netlify/plugin-nextjs`.
+3. Env changes (especially `FIREBASE_SERVICE_ACCOUNT_KEY`) require a **redeploy**
+   before Functions/Route Handlers see them.
+4. CI does not deploy.
+
+Firebase (separate CLI, not Netlify):
+
+```bash
+firebase use <project>
+firebase deploy --only firestore:indexes
+firebase deploy --only firestore:rules,storage
+cd functions && npm ci && npm run build && cd -
+firebase deploy --only functions
+```
+
+After first rules deploy on a project that already has public drones:
+`npm run backfill-public` (Admin credentials; staging first).
+
+Promote admins with `npm run grant-admin -- <email>` against the intended
+project only.
+
+---
+
+## 15. Security Status
+
+Distinguish **history exposure** (old git objects / artifacts) from **active
+credential exposure**. Revoked keys and removed source passwords are not
+active vulnerabilities.
+
+### Resolved
+
+| Item | Notes |
+|---|---|
+| Hardcoded admin password in source | Removed from the working tree. Treat the old password string in git history as **historical exposure**; rotate that Auth user password if it was ever used. |
+| Service-account JSON in the live host | Production Admin JSON rotated. Previous user-managed keys revoked. Active exposure closed. |
+| Historical `.env.local` / SA **path** in old Netlify artifacts | Filename/path only in history; not an active key. |
+| GitHub visibility | Repository is private. |
+| ERR_REQUIRE_ESM on Netlify | Fixed via jose 4.15.9 override + Node 22 (see §16). |
+| `/admin` HTML leak | Server layout verifies token + claim. |
+| Admin APIs | `requireAdminFromRequest`; unauthenticated → 401. |
+| Privileged Firestore creates | Denied from the client; go through Route Handlers. |
+| `dronesPublic` client writes | Denied; snapshot is server-built. |
+| Public card insurance PDF | Removed. |
+| Support `sender` forgery | Server sets sender. |
+| Found-drone owner uid | Derived server-side. |
+| Health reconnaissance | `/api/health` no longer advertises CSP/App Check flags. |
+| Production DEMO_MODE | Build refused without Firebase public env. |
+
+### Open — handover
+
+| Item | Why it remains |
+|---|---|
+| Live rules/functions vs git | Repo tests prove files. Production equality is unconfirmed until `firebase deploy` is verified. |
+| Browser API key HTTP-referrer restrictions | Console setting; not verified from this audit. |
+| App Check on Next.js Route Handlers | Client init exists; APIs do not verify tokens. |
+| App Check in Firestore/Storage rules | `request.app` not required. |
+| Rate limits on Next.js APIs | Only Functions rate-limit found-drone. |
+| JS-readable `__dronetag_idt` | Still accepted as a session source. |
+| OTP TTL / IP binding | Not implemented. |
+| Account deletion cascade | Support ticket only. Design doc exists. |
+| Staging Firebase project | Documented, not created in `.firebaserc`. |
+| Backups | None implemented or drilled. |
+| Resend domain / production keys | Must be confirmed in Resend + Netlify + Functions. |
+| Rules tests in CI | Need `actions/setup-java`. |
+| Storage orphans | No garbage collection on entity delete. |
+| `/account/*` server gate | Client-only layout. |
+
+### Accepted risks
+
+| Item | Why accepted for now |
+|---|---|
+| Historical git objects | May still contain old password text, env paths, or filenames. Keys those referred to are revoked or unused. History rewrite is an owner decision. |
+| Firebase download-URL tokens | By design they bypass Storage rules. Public branding images use them. Do not put insurance PDFs behind public tokens. |
+| Browser `NEXT_PUBLIC_*` Firebase keys | Expected for the client SDK. Restrict by HTTP referrer in Google Cloud. |
+| Temporary jose override | Compatibility only; see §16. |
+| Admin layout fall-through without Admin SDK | Local-dev convenience; APIs return 503. |
+
+### Not applicable as active product gaps
+
+Payments, subscriptions and team tenancy are **unimplemented features**, not
+failed security controls.
+
+---
+
+## 16. Known Compatibility Workaround
+
+### Firebase Admin / jwks-rsa / jose on Netlify AWS Lambda
+
+**Symptom (before the fix):** every Route Handler that imported Firebase Admin
+returned HTTP 500:
+
+```
+ERR_REQUIRE_ESM
+require() of ES Module .../jose/dist/webapi/index.js
+from .../jwks-rsa/src/utils.js
+```
+
+**Chain:** `firebase-admin@14.2.0` → `jwks-rsa@4.1.0` (CommonJS
+`require('jose')`) → `jose@6` (ESM-only).
+
+Auth0 designed jwks-rsa 4 to use Node’s `require(esm)` on stock
+Node 20.19+ / 22.12+. AWS Lambda `nodejs22.x` disables that feature
+(`--no-experimental-require-module`). Pinning `NODE_VERSION` /
+`AWS_LAMBDA_JS_RUNTIME` alone does **not** fix it.
+
+**Current workaround** (root `package.json`):
+
+```json
+"overrides": {
+  "jwks-rsa": {
+    "jose": "4.15.9"
+  }
+}
+```
+
+jose 4.15.9 ships a CommonJS build (`exports.require`). Firebase Admin’s
+JWKS path uses `importJWK` / `exportSPKI`, which exist on that release.
+This is the consumer workaround endorsed on
+[firebase-admin-node#3181](https://github.com/firebase/firebase-admin-node/issues/3181)
+until Auth0 ships [node-jwks-rsa#508](https://github.com/auth0/node-jwks-rsa/pull/508)
+(or firebase-admin stops depending on jwks-rsa 4 + jose 6).
+
+**Do not** bundle `firebase-admin` (it is on Next’s default
+`serverExternalPackages` list). `next.config.ts` lists `firebase-admin` only.
+
+**When to remove the override**
+
+1. Upstream jwks-rsa loads jose via dynamic `import()` (or firebase-admin
+   no longer uses that CJS `require('jose')` path).
+2. Rebuild and confirm locally: `npm ls firebase-admin jwks-rsa jose`.
+3. Deploy to Netlify and confirm `/api/health` = 200 and
+   `POST /api/session` with a garbage token = 401, with **no**
+   `ERR_REQUIRE_ESM` in function logs.
+
+Until then, keep the override.
+
+`functions/` is a separate lockfile on Node 20 (Cloud Functions). It is not
+the Netlify Lambda handler. Do not assume the override is applied there
+unless you add it.
+
+---
+
+## 17. Known Limitations
+
+- No real payments or subscription lifecycle. Checkout persists **in process
+  memory** and sets `paymentActive: false`.
+- Team / Business multi-tenancy is not built (prices exist only).
+- Account deletion is a support email, not a cascade. Public pages stay up
+  until a human unpublishes.
+- No self-service data export.
+- `/privacy`, `/terms`, `/cookies` are drafts. No cookie-consent banner.
+- No production backup / restore runbook.
+- No chip UID / badge entity.
+- DE / ES / FR translation files exist but are hidden (~35% coverage). UI
+  languages: IT, EN.
+- Functions region is `us-central1`, not EU.
+- Email deep links still mention `/dashboard/*`, which is not a route.
+- Two pricing systems: `src/config/pricing.ts` vs Firestore `plans`.
+- No E2E tests.
+- Functions `lint` script is broken under ESLint 9 (eslint not installed there).
+- Large account pages; 11 lint warnings (`exhaustive-deps`, unused imports).
+
+---
+
+## 18. Handover Backlog
+
+### P0 — before broader production rollout
+
+| Title | Why | Area | Done when |
+|---|---|---|---|
+| Confirm live Firebase rules + Functions match this tree | Git tests do not prove production rules | Firebase CLI | Staging then production `firebase deploy` verified; public publish and found-drone still work |
+| Stand up a staging Firebase project | Laptop/CI must not share production data | Firebase + Netlify preview | Separate project in `.firebaserc`; preview env points at it |
+| Confirm Resend domain and keys | OTP and found-drone mail otherwise silently skip | Resend + Netlify + Functions | Test OTP and a found-drone email arrive from the branded domain |
+| Enable intended Auth providers | Google/phone fail closed if the console is off | Firebase Auth | Email (+ Google if required) sign-in works on staging |
+| Fix email CTA paths | Mail points at `/dashboard/*` | Email templates | Links open `/account/…` |
+| Add Java + `test:rules` to CI | Rules regressions can merge unseen | GitHub Actions | PR fails if a rule test fails |
+| Restrict browser API keys | Public Firebase keys should be HTTP-referrer limited | Google Cloud | Unauthorized hosts rejected |
+| Confirm historical Auth password unused | Old `create-admin` password lived in git history | Firebase Auth | That user password rotated or user disabled |
+
+### P1 — production completion
+
+| Title | Why | Area | Done when |
+|---|---|---|---|
+| Payment provider or explicit “request only” | Checkout is a no-op | Billing | Money moves, or UI states request-only and does not imply payment |
+| App Check monitor → enforce | Bots can call Next APIs today | App Check + Route Handlers | Functions clean, then Next verifies tokens |
+| HttpOnly-only session | `__dronetag_idt` is JS-readable | Auth | APIs accept only HttpOnly cookie or Bearer |
+| Rate-limit OTP / provision / support | Abuse surface | Route Handlers | Documented limits + tests |
+| Lawyer-reviewed legal pages | Current texts are drafts | Legal | Counsel sign-off |
+| Backup + restore drill | No runbook | Ops | Restore tested on staging |
+| Account deletion cascade | GDPR/erasure is manual | Auth + data | Design doc implemented after retention rules |
+| Persist checkout if kits are sold | In-memory only today | Orders | Firestore (or provider) record |
+| Remove jose override after upstream fix | Temporary compatibility | Dependencies | §16 removal checklist green |
+
+### P2 — product evolution
+
+| Title | Why | Area | Done when |
+|---|---|---|---|
+| Team/Business tenancy or remove SKUs | Prices without tenancy | Product | Multi-account or SKUs gone |
+| Badge / chip UID registry | Logistics if needed | NFC | Entity + admin tooling |
+| EU Functions region | Data residency | Functions | Decision recorded and applied |
+| DE/ES/FR or keep hidden | Incomplete i18n | i18n | Switcher honest |
+| E2E signup → publish → found-drone | No browser tests | QA | One happy-path E2E in CI |
+| CSP enforce after soak | Header off by default | Hosting | `CSP_ENFORCE=true` with no console breaks |
+| Error monitoring | Logger only | Ops | Provider wired, no PII |
+
+---
+
+## 19. Operational Checklist
+
+First week for a new team:
+
+1. Clone outside iCloud Desktop/Documents. Node 22. `npm ci`.
+2. Create **staging** Firebase. Copy `.env.local.example` → `.env.local` with
+   staging values + a staging service-account **file outside the repo**.
+3. Run the test table in §13. Confirm 166/166 if Java is installed.
+4. Deploy staging rules, indexes, functions. Walk `DRONETAG_MANUAL_QA.md`.
+5. Confirm Resend on staging.
+6. Grant one staging admin with `grant-admin`. Never reuse production keys
+   on a laptop.
+7. Production: change env only in Netlify UI; **redeploy** after Admin JSON
+   changes. Do not commit JSON.
+8. Keep the jose override until §16 says otherwise.
+9. Do not force-push `main`. Do not rewrite history for old secrets unless
+   legal requires it — those keys are already revoked.
+
+---
+
+## 20. Appendix — Key Routes
+
+### Pages
+
+| Path | Auth | Notes |
+|---|---|---|
+| `/` | Public | Marketing |
+| `/login`, `/signup`, `/forgot-password` | Public | |
+| `/u/{slug}` | Public | NFC / public card |
+| `/pricing`, `/checkout` | Public | No real payment |
+| `/privacy`, `/terms`, `/cookies` | Public | Drafts |
+| `/account/*` | Client-gated | Profile, drones, operators, certificates, insurance, documents, permits, inbox, support, orders, billing, archive |
+| `/admin/*` | Server-gated | Users, drones, verify, reports, support, NFC, plans |
+
+### Route Handlers
+
+| Method | Path | Auth | Purpose |
+|---|---|---|---|
+| POST | `/api/session` | idToken in body | Set HttpOnly session. 204 if Admin missing. |
+| DELETE | `/api/session` | — | Clear cookie |
+| GET | `/api/health` | Public | `{ status, version, commit, now }`. 503 if Admin missing. |
+| POST | `/api/account/provision` | User | Create/repair users, pilots, slots |
+| POST | `/api/account/branding` | User | Upload branding to private Storage |
+| POST | `/api/auth/otp/email/send` + `/verify` | User | Email OTP |
+| POST | `/api/auth/contact-verification/*` | User | Email/phone verification |
+| POST | `/api/entities/operators` | User | Create operator |
+| POST | `/api/entities/drones` | User | Create drone + slug |
+| POST, DELETE | `/api/entities/drones/[id]/publish` | User | Public snapshot |
+| POST | `/api/entities/certificates` + `[id]/pdf` | User | Certificate + file |
+| POST | `/api/entities/insurances` + `[id]/pdf` | User | Insurance + file |
+| POST | `/api/entities/documents` + `[id]/file` | User | Document + file |
+| POST | `/api/entities/authorizations` + `[id]/file` | User | Permit + file |
+| GET | `/api/files/proxy` | User | Same-origin PDF stream |
+| POST | `/api/pricing/quote` | Public | Recompute amounts from `pricing.ts` |
+| POST | `/api/pricing/checkout` | Public | In-memory only |
+| POST | `/api/billing/webhook` | Public | No-op provider |
+| GET/POST/PATCH/PUT | `/api/support/thread` | User | Caller thread |
+| GET | `/api/admin/accounts` | Admin | List users |
+| POST | `/api/admin/users` | Admin | Provision user |
+| POST | `/api/admin/notify-verification` | Admin | Approval/rejection email |
+| GET/POST/PATCH | `/api/admin/support` | Admin | Support desk |
+| POST | `/api/admin/resync-public-drones` | Admin | Rebuild snapshots |
+
+### Cloud Functions
+
+| Name | Type | Status |
+|---|---|---|
+| `submitReport` | Callable | Live found-drone path |
+| `bootstrapSlots` | Auth `onCreate` | Live if deployed |
+| `createDrone` / `createOperator` / `createCertificate` / `createDocument` / `createInsurance` | Callable | Deprecated; Next.js does not call them |
+
+---
+
+## Feature status matrix
+
+| Module | Status |
+|---|---|
+| Authentication (email, Google, OTP, reset) | **WORKING / IMPLEMENTED** |
+| Profiles / pilots | **WORKING / IMPLEMENTED** |
+| Operators | **WORKING / IMPLEMENTED** |
+| Drones | **WORKING / IMPLEMENTED** |
+| Insurances | **WORKING / IMPLEMENTED** |
+| Certificates / documents / permits | **WORKING / IMPLEMENTED** |
+| NFC / public profile `/u/{slug}` | **WORKING / IMPLEMENTED** (URL badge; no chip registry) |
+| Found-drone flow | **WORKING / IMPLEMENTED** (needs Functions + Resend in the target project) |
+| Admin | **WORKING / IMPLEMENTED** |
+| Reports inbox | **WORKING / IMPLEMENTED** |
+| Support | **WORKING / IMPLEMENTED** |
+| Orders UI | **PARTIAL** (legacy docs; checkout does not persist) |
+| Payments | **NOT IMPLEMENTED** |
+| Subscriptions | **NOT IMPLEMENTED** |
+| Teams / business multi-tenancy | **NOT IMPLEMENTED** |
+| Email | **PARTIAL** (code complete; domain/keys are ops) |
+| Privacy / account deletion | **PARTIAL** (draft legal pages; deletion is manual) |
+| Analytics | **PARTIAL** (dev console allow-list; no vendor in production) |
+| Staging environment | **NEEDS PRODUCTION COMPLETION** (docs only) |
+| Backups | **NOT IMPLEMENTED** |
