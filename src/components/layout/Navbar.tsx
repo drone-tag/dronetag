@@ -129,7 +129,7 @@ export function Navbar() {
                   </span>
                 </span>
               </Link>
-              <div className="hidden lg:block">{brandLink}</div>
+              <div className="hidden md:block">{brandLink}</div>
             </>
           ) : (
             brandLink

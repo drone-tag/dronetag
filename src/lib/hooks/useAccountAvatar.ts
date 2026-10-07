@@ -2,6 +2,25 @@
 
 import { useEffect, useState } from 'react';
 import { getAccount } from '@/lib/firebase/account';
+import type { UserAccount } from '@/lib/types/account';
+
+const EVENT = 'dronetag-account-avatar';
+
+export type AccountAvatarPatch = { uid: string; name?: string; photoUrl?: string };
+
+/** The sidebar and the header load the name once. Profile saves call this so they update immediately. */
+export function notifyAccountAvatar(patch: AccountAvatarPatch): void {
+  if (typeof window === 'undefined') return;
+  window.dispatchEvent(new CustomEvent<AccountAvatarPatch>(EVENT, { detail: patch }));
+}
+
+export function accountDisplayName(
+  account: Pick<UserAccount, 'accountType' | 'companyName' | 'firstName' | 'lastName'> | null | undefined,
+): string {
+  if (!account) return '';
+  if (account.accountType === 'company') return account.companyName.trim();
+  return [account.firstName, account.lastName].filter(Boolean).join(' ').trim();
+}
 
 /** Loads account display name + profile photo for avatar chips. */
 export function useAccountAvatar(uid: string | undefined | null) {
@@ -18,20 +37,39 @@ export function useAccountAvatar(uid: string | undefined | null) {
   useEffect(() => {
     if (!uid) return;
     let cancelled = false;
+    // A save can land while the first read is still in flight. That read must
+    // not overwrite the name the save just published.
+    let saved = false;
     void getAccount(uid)
       .then((a) => {
-        if (cancelled) return;
+        if (cancelled || saved) return;
         setLoaded({
           uid,
           photoUrl: a?.profilePhotoUrl || '',
-          name: a ? [a.firstName, a.lastName].filter(Boolean).join(' ').trim() : '',
+          name: accountDisplayName(a),
         });
       })
       .catch(() => {
-        if (!cancelled) setLoaded({ uid, photoUrl: '', name: '' });
+        if (!cancelled && !saved) setLoaded({ uid, photoUrl: '', name: '' });
       });
+
+    function onUpdate(event: Event) {
+      const detail = (event as CustomEvent<AccountAvatarPatch>).detail;
+      if (!detail || detail.uid !== uid) return;
+      saved = true;
+      setLoaded((prev) => {
+        const base = prev?.uid === uid ? prev : { uid, photoUrl: '', name: '' };
+        return {
+          uid,
+          name: detail.name !== undefined ? detail.name : base.name,
+          photoUrl: detail.photoUrl !== undefined ? detail.photoUrl : base.photoUrl,
+        };
+      });
+    }
+    window.addEventListener(EVENT, onUpdate);
     return () => {
       cancelled = true;
+      window.removeEventListener(EVENT, onUpdate);
     };
   }, [uid]);
 

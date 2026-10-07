@@ -23,6 +23,7 @@ import { FormErrorBanner } from '@/components/account/FormErrorBanner';
 import { PlanSlotsSummary } from '@/components/account/PlanSlotsSummary';
 import { LoadError, PageLoading } from '@/components/ui/LoadError';
 import { useToast } from '@/contexts/ToastContext';
+import { accountDisplayName, notifyAccountAvatar } from '@/lib/hooks/useAccountAvatar';
 
 const IMAGE_ACCEPT = 'image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif';
 
@@ -178,7 +179,9 @@ function IdentityCard({
           console.warn('[account] public resync failed', err),
         );
       }
-      onSaved({ ...account, ...patch, updatedAt: new Date().toISOString() });
+      const next = { ...account, ...patch, updatedAt: new Date().toISOString() };
+      onSaved(next);
+      notifyAccountAvatar({ uid, name: accountDisplayName(next) });
       toast.success(t('account.saved'));
     } catch (err) {
       console.error('[account] identity save failed', err);
@@ -382,6 +385,7 @@ function AccountCard({
       };
       setForm(patch);
       onSaved(next);
+      notifyAccountAvatar({ uid, name: accountDisplayName(next), photoUrl: profilePhotoUrl });
       setPhotoFile(null);
       setLogoFile(null);
       setBannerFile(null);

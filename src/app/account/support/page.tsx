@@ -142,7 +142,7 @@ function AccountSupportInner() {
   }
 
   return (
-    <div className="mx-auto max-w-3xl space-y-4 px-4 py-6 sm:px-6 lg:px-8">
+    <div className="mx-auto max-w-3xl space-y-4">
       <SectionHeader title={t('support.title')} description={t('support.subtitle')} />
 
       <p className="rounded-xl border border-[var(--tone-info-border)] bg-[var(--tone-info-bg)] px-4 py-3 text-xs leading-relaxed text-[var(--tone-info-fg)]">
