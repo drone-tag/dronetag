@@ -6,6 +6,7 @@ import { loginWithGoogle } from '@/lib/firebase/auth';
 import { ensureAccount } from '@/lib/firebase/account';
 import { trackEvent } from '@/lib/analytics';
 import { adminFetch } from '@/lib/client/adminApi';
+import { splitDisplayName } from '@/lib/client/provisionAccount';
 import { Button } from '@/components/ui/Button';
 
 function GoogleIcon() {
@@ -31,58 +32,76 @@ function GoogleIcon() {
   );
 }
 
-function splitDisplayName(displayName: string | null | undefined): { firstName: string; lastName: string } {
-  const trimmed = displayName?.trim() ?? '';
-  if (!trimmed) return { firstName: '', lastName: '' };
-  const space = trimmed.indexOf(' ');
-  if (space === -1) return { firstName: trimmed, lastName: '' };
-  return {
-    firstName: trimmed.slice(0, space),
-    lastName: trimmed.slice(space + 1).trim(),
-  };
-}
-
 type GoogleAuthButtonProps = {
   disabled?: boolean;
   /** When true, the server records acceptedTermsAt on first provision. */
   acceptedTerms?: boolean;
+  /** Called right before the popup opens, e.g. to hold page redirects. */
+  onStart?: () => void;
   onError?: (message: string) => void;
-  onSignedUp?: () => void;
+  onSuccess?: (result: { isNewUser: boolean }) => void;
+  /** Called when the popup was dismissed or sign-in failed. */
+  onAbort?: () => void;
 };
+
+const SILENT_POPUP_ERRORS = new Set([
+  'auth/popup-closed-by-user',
+  'auth/cancelled-popup-request',
+  'auth/user-cancelled',
+]);
 
 export function GoogleAuthButton({
   disabled = false,
   acceptedTerms = false,
+  onStart,
   onError,
-  onSignedUp,
+  onSuccess,
+  onAbort,
 }: GoogleAuthButtonProps) {
   const { t } = useLanguage();
   const [loading, setLoading] = useState(false);
 
   async function handleClick() {
     setLoading(true);
+    onStart?.();
+    let signedIn = false;
     try {
       const result = await loginWithGoogle();
+      signedIn = true;
       const u = result.user;
       if (u) {
         const { firstName, lastName } = splitDisplayName(u.displayName);
-        await ensureAccount(u.uid, u.email ?? '', {
-          firstName,
-          lastName,
-          acceptedTerms,
-        });
+        try {
+          await ensureAccount(u.uid, u.email ?? '', {
+            firstName,
+            lastName,
+            acceptedTerms,
+          });
+        } catch (err) {
+          // The account gate repairs missing records on the next screen.
+          console.warn('[auth] google provisioning deferred', err);
+        }
         if (result.isNewUser) {
-          await adminFetch('/api/auth/contact-verification/init', {
+          void adminFetch('/api/auth/contact-verification/init', {
             method: 'POST',
             body: JSON.stringify({ channels: ['email'] }),
-          });
-          onSignedUp?.();
+          }).catch(() => undefined);
         }
       }
       trackEvent(result.isNewUser ? 'signup' : 'login');
+      onSuccess?.({ isNewUser: result.isNewUser });
     } catch (err) {
+      if (signedIn) {
+        onSuccess?.({ isNewUser: false });
+        return;
+      }
+      onAbort?.();
       const code = err && typeof err === 'object' && 'code' in err ? String(err.code) : '';
-      if (code === 'auth/popup-closed-by-user') return;
+      if (SILENT_POPUP_ERRORS.has(code)) return;
+      if (code === 'auth/popup-blocked') {
+        onError?.(t('auth.googlePopupBlocked'));
+        return;
+      }
       onError?.(t('auth.googleError'));
     } finally {
       setLoading(false);

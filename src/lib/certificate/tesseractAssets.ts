@@ -24,4 +24,6 @@ export const TESSERACT_OPTIONS = {
   corePath: BASE,
   langPath: BASE,
   gzip: false,
+  // Load the worker from its own URL: a blob: worker is blocked by `worker-src 'self'`.
+  workerBlobURL: false,
 } as const;

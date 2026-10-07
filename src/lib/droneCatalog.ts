@@ -5,8 +5,8 @@ export type DroneCatalogEntry = {
   manufacturer: string;
   model: string;
   classMarking: DroneClass;
-  /** Optional short hint shown in the picker. */
-  note?: string;
+  /** Optional i18n key for a short hint shown in the picker. */
+  noteKey?: string;
 };
 
 /**
@@ -23,7 +23,7 @@ export const DRONE_CATALOG: DroneCatalogEntry[] = [
   { id: 'dji-mini-3', manufacturer: 'DJI', model: 'Mini 3', classMarking: 'C0' },
   { id: 'dji-mini-3-pro', manufacturer: 'DJI', model: 'Mini 3 Pro', classMarking: 'C0' },
   { id: 'dji-mini-4k', manufacturer: 'DJI', model: 'Mini 4K', classMarking: 'C0' },
-  { id: 'dji-mini-4-pro', manufacturer: 'DJI', model: 'Mini 4 Pro', classMarking: 'C0', note: 'EU: C0 default · C1 upgrade available' },
+  { id: 'dji-mini-4-pro', manufacturer: 'DJI', model: 'Mini 4 Pro', classMarking: 'C0', noteKey: 'drone.catalog.note.mini4pro' },
   { id: 'dji-mini-5-pro', manufacturer: 'DJI', model: 'Mini 5 Pro', classMarking: 'C0' },
 
   // DJI — Air / Avata / Mavic
@@ -73,6 +73,11 @@ export const DRONE_CATALOG: DroneCatalogEntry[] = [
 
 export const CUSTOM_DRONE_CATALOG_ID = 'custom';
 
+/** Short class badge text: `C0`…`C4`, or the localized "not available" label. */
+export function formatDroneClass(cls: string | null | undefined, t: (key: string) => string): string {
+  return !cls || cls === 'unknown' ? t('drone.catalog.classUnknown') : cls;
+}
+
 export function droneCatalogLabel(entry: DroneCatalogEntry): string {
   return `${entry.manufacturer} ${entry.model}`.trim();
 }
@@ -81,7 +86,7 @@ export function searchDroneCatalog(query: string, limit = 40): DroneCatalogEntry
   const q = query.trim().toLowerCase();
   if (!q) return DRONE_CATALOG.slice(0, limit);
   const scored = DRONE_CATALOG.map((entry) => {
-    const hay = `${entry.manufacturer} ${entry.model} ${entry.classMarking} ${entry.note ?? ''}`.toLowerCase();
+    const hay = `${entry.manufacturer} ${entry.model} ${entry.classMarking}`.toLowerCase();
     let score = 0;
     if (hay.startsWith(q)) score += 40;
     if (entry.model.toLowerCase().startsWith(q)) score += 30;

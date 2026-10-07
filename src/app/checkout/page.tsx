@@ -101,7 +101,9 @@ function CheckoutInner() {
         requestId?: string;
       };
       if (!res.ok) {
-        setError(t((`pricing.checkout.error.${data.error ?? 'generic'}`) as TranslationKey) || t('pricing.checkout.error.generic'));
+        const key = `pricing.checkout.error.${data.error ?? 'generic'}` as TranslationKey;
+        const translated = t(key);
+        setError(translated === key ? t('pricing.checkout.error.generic') : translated);
         return;
       }
       if (data.record) {

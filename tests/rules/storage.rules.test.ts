@@ -163,8 +163,8 @@ describe('legacy and unknown paths', () => {
 });
 
 describe('size limits', () => {
-  it('rejects an image above the 5 MB public cap', async () => {
-    const big = new Uint8Array(5 * 1024 * 1024 + 16);
+  it('rejects an image above the 20 MB public cap', async () => {
+    const big = new Uint8Array(20 * 1024 * 1024 + 16);
     big.set(PNG);
     await assertFails(
       uploadBytes(ref(ownerStorage(), `public/users/${OWNER}/profiles/p1/big.png`), big, {
@@ -173,7 +173,7 @@ describe('size limits', () => {
     );
   });
 
-  it('accepts a file below the 20 MB private cap', async () => {
+  it('accepts a file below the 50 MB private cap', async () => {
     const ok = new Uint8Array(1024);
     ok.set(PDF);
     await assertSucceeds(

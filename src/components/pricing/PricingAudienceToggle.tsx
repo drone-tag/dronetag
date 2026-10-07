@@ -36,7 +36,7 @@ export function PricingAudienceToggle({
             className={classNames(
               'min-h-10 rounded-lg px-4 py-2 text-sm font-semibold transition',
               active
-                ? 'bg-[var(--color-navy)] text-[var(--color-on-brand)]'
+                ? 'bg-[var(--color-navy-surface)] text-[var(--color-on-brand)]'
                 : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-hover)] hover:text-[var(--color-text)]',
             )}
           >

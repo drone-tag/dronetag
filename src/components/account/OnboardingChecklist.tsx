@@ -54,7 +54,10 @@ function buildSteps(input: OnboardingInput): Step[] {
   const { account, operators, drones, certificates, insurances } = input;
 
   const profileDone = Boolean(
-    account && account.firstName.trim() && account.lastName.trim(),
+    account &&
+      (account.accountType === 'company'
+        ? account.companyName.trim()
+        : account.firstName.trim() && account.lastName.trim()),
   );
   const publishedDrone = drones.find((d) => d.visibility === 'public' && d.slug);
 

@@ -1,4 +1,5 @@
 import type { Insurance, PolicyStatus, Profile } from '@/lib/types';
+import { computePolicyStatus, daysUntilExpiry } from './expiry';
 
 export {
   toPublicProfile,
@@ -54,72 +55,14 @@ export function classNames(...classes: (string | boolean | undefined | null)[]):
 
 // ─── Policy status computation ──────────────────────────────────────────────
 
-const EXPIRING_THRESHOLD_DAYS = 30;
-
-/**
- * Determines the policy status from raw insurance data.
- *
- * Rules (evaluated in order):
- *  1. missing  — no provider AND no policy number, OR no expiry date
- *  2. expired  — expiry date is in the past
- *  3. expiring — expiry date is within 30 days from now
- *  4. valid    — expiry date is more than 30 days away
- */
-export function computePolicyStatus(ins: Insurance): PolicyStatus {
-  if (!ins.policyNumber && !ins.provider) return 'missing';
-  if (!ins.expiryDate) return 'missing';
-
-  const now = new Date();
-  const expiry = new Date(ins.expiryDate);
-  if (expiry < now) return 'expired';
-
-  const daysLeft = Math.ceil((expiry.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-  if (daysLeft <= EXPIRING_THRESHOLD_DAYS) return 'expiring';
-  return 'valid';
-}
-
-/** Certificate validity from expiry date (no expiry = valid if issued). */
-export function computeCertificateStatus(cert: {
-  issuedAt: string;
-  expiresAt: string;
-}): PolicyStatus {
-  if (!cert.issuedAt && !cert.expiresAt) return 'missing';
-  if (!cert.expiresAt) return 'valid';
-
-  const now = new Date();
-  const expiry = new Date(cert.expiresAt);
-  if (expiry < now) return 'expired';
-
-  const daysLeft = Math.ceil((expiry.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-  if (daysLeft <= EXPIRING_THRESHOLD_DAYS) return 'expiring';
-  return 'valid';
-}
-
-/** Authorization / permit validity from validTo (empty = open-ended / valid). */
-export function computeAuthorizationStatus(auth: {
-  validFrom: string;
-  validTo: string;
-}): PolicyStatus {
-  if (!auth.validFrom && !auth.validTo) return 'missing';
-  if (!auth.validTo) return 'valid';
-
-  const now = new Date();
-  const expiry = new Date(auth.validTo);
-  if (Number.isNaN(expiry.getTime())) return 'missing';
-  if (expiry < now) return 'expired';
-
-  const daysLeft = Math.ceil((expiry.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-  if (daysLeft <= EXPIRING_THRESHOLD_DAYS) return 'expiring';
-  return 'valid';
-}
-
-export function daysUntilExpiry(dateIso: string): number | null {
-  if (!dateIso) return null;
-  const now = new Date();
-  const target = new Date(dateIso);
-  return Math.ceil((target.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-}
-
+export {
+  computeAuthorizationStatus,
+  computeCertificateStatus,
+  computePolicyStatus,
+  daysUntilExpiry,
+  expiryInstant,
+  statusFromExpiryDate,
+} from './expiry';
 // ─── Rich policy summary ────────────────────────────────────────────────────
 
 /**

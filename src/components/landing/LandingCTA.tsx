@@ -9,7 +9,7 @@ export function LandingCTA() {
   const { user, dashboardHref } = useLandingAuth();
 
   return (
-    <div className="rounded-2xl bg-[var(--color-navy)] px-5 py-8 text-center sm:px-8 sm:py-10 lg:px-12">
+    <div className="rounded-2xl bg-[var(--color-navy-surface)] px-5 py-8 text-center sm:px-8 sm:py-10 lg:px-12">
       <h2 className="text-xl font-bold tracking-tight text-white sm:text-2xl lg:text-[1.75rem]">
         {t('home.ctaFinal.title')}
       </h2>

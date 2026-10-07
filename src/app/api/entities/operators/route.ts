@@ -117,6 +117,17 @@ export async function POST(request: Request) {
 
   const db = adminFirestore();
 
+  if (!payload.isDefault) {
+    // The first operator becomes the default: new drones need one to prefill.
+    const anyDefault = await db
+      .collection('operators')
+      .where('userId', '==', auth.uid)
+      .where('isDefault', '==', true)
+      .limit(1)
+      .get();
+    if (anyDefault.empty) payload.isDefault = true;
+  }
+
   if (payload.isDefault) {
     const existing = await db
       .collection('operators')

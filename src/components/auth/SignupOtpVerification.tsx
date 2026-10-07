@@ -14,7 +14,6 @@ import {
   toE164Phone,
 } from '@/lib/firebase/phoneAuth';
 import type { ContactVerificationChannel } from '@/lib/types/contactVerification';
-import { isContactVerificationSatisfied } from '@/lib/types/contactVerification';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 
@@ -24,10 +23,20 @@ type SignupOtpVerificationProps = {
   onComplete: () => void;
 };
 
+/**
+ * Optional contact confirmation shown right after signup.
+ *
+ * Verification is never a hard gate: the account is fully usable without
+ * it, so a delivery problem (email provider down, SMS quota) must not lock
+ * a new user out. The email code is sent automatically on arrival and the
+ * user moves on by themselves as soon as every chosen channel is confirmed.
+ */
 export function SignupOtpVerification({ channels, phone, onComplete }: SignupOtpVerificationProps) {
   const { user } = useAuth();
   const { t } = useLanguage();
   const recaptchaRef = useRef<HTMLDivElement>(null);
+  const autoSentRef = useRef(false);
+  const completedRef = useRef(false);
 
   const wantsEmail = channels.includes('email');
   const wantsPhone = channels.includes('phone');
@@ -41,6 +50,7 @@ export function SignupOtpVerification({ channels, phone, onComplete }: SignupOtp
   const [devEmailCode, setDevEmailCode] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  const [statusLoaded, setStatusLoaded] = useState(false);
   const phoneConfirmationRef = useRef<ConfirmationResult | null>(null);
 
   const phoneE164 = toE164Phone(phone);
@@ -49,17 +59,38 @@ export function SignupOtpVerification({ channels, phone, onComplete }: SignupOtp
     if (DEMO_MODE) {
       setEmailVerified(true);
       setPhoneVerified(true);
+      setStatusLoaded(true);
       return;
     }
-    if (user?.emailVerified) setEmailVerified(true);
     if (!user) return;
-    void getAccount(user.uid).then((account) => {
-      if (account?.contactVerification?.emailVerifiedAt) setEmailVerified(true);
-      if (account?.contactVerification?.phoneVerifiedAt) setPhoneVerified(true);
-    });
+    if (user.emailVerified) setEmailVerified(true);
+    let cancelled = false;
+    void getAccount(user.uid)
+      .then((account) => {
+        if (cancelled) return;
+        if (account?.contactVerification?.emailVerifiedAt) setEmailVerified(true);
+        if (account?.contactVerification?.phoneVerifiedAt) setPhoneVerified(true);
+      })
+      .catch(() => undefined)
+      .finally(() => {
+        if (!cancelled) setStatusLoaded(true);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [user]);
 
   useEffect(() => () => clearPhoneRecaptcha(), []);
+
+  const emailDone = !wantsEmail || emailVerified;
+  const phoneDone = !wantsPhone || phoneVerified;
+  const canFinish = emailDone && phoneDone;
+
+  useEffect(() => {
+    if (!statusLoaded || !canFinish || completedRef.current) return;
+    completedRef.current = true;
+    onComplete();
+  }, [statusLoaded, canFinish, onComplete]);
 
   async function sendEmailOtp() {
     setError(null);
@@ -67,17 +98,33 @@ export function SignupOtpVerification({ channels, phone, onComplete }: SignupOtp
     try {
       const res = await adminFetch('/api/auth/otp/email/send', { method: 'POST' });
       const body = (await res.json().catch(() => ({}))) as { devCode?: string; error?: string };
-      if (!res.ok) {
-        throw new Error(body.error || 'send failed');
+      if (res.status === 429) {
+        // A code from a moment ago is still valid; let the user type it.
+        setEmailSent(true);
+        setError(t('signup.otp.errorCooldown'));
+        return;
       }
+      if (res.status === 503) {
+        setError(t('signup.otp.errorDelivery'));
+        return;
+      }
+      if (!res.ok) throw new Error(body.error || 'send failed');
       setEmailSent(true);
       if (body.devCode) setDevEmailCode(body.devCode);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : t('signup.otp.errorSend'));
+    } catch {
+      setError(t('signup.otp.errorSend'));
     } finally {
       setBusy(null);
     }
   }
+
+  useEffect(() => {
+    if (!statusLoaded || !wantsEmail || emailVerified || autoSentRef.current) return;
+    autoSentRef.current = true;
+    void sendEmailOtp();
+    // sendEmailOtp only touches state setters and stable helpers.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [statusLoaded, wantsEmail, emailVerified]);
 
   async function verifyEmailOtp() {
     setError(null);
@@ -133,29 +180,6 @@ export function SignupOtpVerification({ channels, phone, onComplete }: SignupOtp
     }
   }
 
-  const emailDone = !wantsEmail || emailVerified;
-  const phoneDone = !wantsPhone || phoneVerified;
-  const canFinish = emailDone && phoneDone;
-
-  async function tryComplete() {
-    if (DEMO_MODE) {
-      onComplete();
-      return;
-    }
-    if (!canFinish) {
-      setError(t('signup.otp.errorIncomplete'));
-      return;
-    }
-    const account = user ? await getAccount(user.uid) : null;
-    if (
-      !isContactVerificationSatisfied(account?.contactVerification, user?.emailVerified ?? emailVerified)
-    ) {
-      setError(t('signup.otp.errorIncomplete'));
-      return;
-    }
-    onComplete();
-  }
-
   return (
     <div className="space-y-5">
       <div>
@@ -166,12 +190,44 @@ export function SignupOtpVerification({ channels, phone, onComplete }: SignupOtp
       {wantsEmail ? (
         <section className="space-y-3 rounded-lg border border-[var(--color-border)] bg-[var(--color-hover)] p-4">
           <p className="text-sm font-medium text-[var(--color-text)]">{t('signup.otp.emailSection')}</p>
-          <p className="text-xs text-[var(--color-text-secondary)]">{user?.email}</p>
+          <p className="break-all text-xs text-[var(--color-text-secondary)]">
+            {emailSent && user?.email ? t('signup.otp.sentTo', { email: user.email }) : user?.email}
+          </p>
           {!emailVerified ? (
             <>
+              {emailSent ? (
+                <form
+                  className="flex items-end gap-2"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    if (emailCode.length === 6 && !busy) void verifyEmailOtp();
+                  }}
+                >
+                  <div className="min-w-0 flex-1">
+                    <Input
+                      name="emailOtp"
+                      label={t('signup.otp.codeLabel')}
+                      value={emailCode}
+                      onChange={(e) => setEmailCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                      inputMode="numeric"
+                      autoComplete="one-time-code"
+                      autoFocus
+                      disabled={Boolean(busy)}
+                    />
+                  </div>
+                  <Button
+                    type="submit"
+                    className="min-h-[50px] shrink-0 sm:min-h-[42px]"
+                    loading={busy === 'email-verify'}
+                    disabled={emailCode.length !== 6 || Boolean(busy)}
+                  >
+                    {t('signup.otp.verify')}
+                  </Button>
+                </form>
+              ) : null}
               <Button
                 type="button"
-                variant="secondary"
+                variant={emailSent ? 'ghost' : 'secondary'}
                 fullWidth
                 loading={busy === 'email-send'}
                 disabled={Boolean(busy)}
@@ -182,32 +238,9 @@ export function SignupOtpVerification({ channels, phone, onComplete }: SignupOtp
               {devEmailCode ? (
                 <p className="text-xs text-[var(--tone-warning-fg)]">{t('signup.otp.devCode', { code: devEmailCode })}</p>
               ) : null}
-              {emailSent ? (
-                <div className="flex gap-2">
-                  <Input
-                    name="emailOtp"
-                    label={t('signup.otp.codeLabel')}
-                    value={emailCode}
-                    onChange={(e) => setEmailCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                    inputMode="numeric"
-                    autoComplete="one-time-code"
-                    disabled={Boolean(busy)}
-                  />
-                  <div className="flex shrink-0 items-end">
-                    <Button
-                      type="button"
-                      loading={busy === 'email-verify'}
-                      disabled={emailCode.length !== 6 || Boolean(busy)}
-                      onClick={() => void verifyEmailOtp()}
-                    >
-                      {t('signup.otp.verify')}
-                    </Button>
-                  </div>
-                </div>
-              ) : null}
             </>
           ) : (
-            <p className="text-sm text-emerald-700">{t('signup.otp.verified')}</p>
+            <p className="text-sm font-medium text-[var(--tone-success-fg)]">{t('signup.otp.verified')}</p>
           )}
         </section>
       ) : null}
@@ -218,9 +251,38 @@ export function SignupOtpVerification({ channels, phone, onComplete }: SignupOtp
           <p className="text-xs text-[var(--color-text-secondary)]">{phoneE164}</p>
           {!phoneVerified ? (
             <>
+              {phoneStarted ? (
+                <form
+                  className="flex items-end gap-2"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    if (phoneCode.length === 6 && !busy) void verifyPhoneOtp();
+                  }}
+                >
+                  <div className="min-w-0 flex-1">
+                    <Input
+                      name="phoneOtp"
+                      label={t('signup.otp.codeLabel')}
+                      value={phoneCode}
+                      onChange={(e) => setPhoneCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                      inputMode="numeric"
+                      autoComplete="one-time-code"
+                      disabled={Boolean(busy)}
+                    />
+                  </div>
+                  <Button
+                    type="submit"
+                    className="min-h-[50px] shrink-0 sm:min-h-[42px]"
+                    loading={busy === 'phone-verify'}
+                    disabled={phoneCode.length !== 6 || Boolean(busy)}
+                  >
+                    {t('signup.otp.verify')}
+                  </Button>
+                </form>
+              ) : null}
               <Button
                 type="button"
-                variant="secondary"
+                variant={phoneStarted ? 'ghost' : 'secondary'}
                 fullWidth
                 loading={busy === 'phone-send'}
                 disabled={Boolean(busy)}
@@ -228,32 +290,9 @@ export function SignupOtpVerification({ channels, phone, onComplete }: SignupOtp
               >
                 {phoneStarted ? t('signup.otp.resend') : t('signup.otp.sendPhone')}
               </Button>
-              {phoneStarted ? (
-                <div className="flex gap-2">
-                  <Input
-                    name="phoneOtp"
-                    label={t('signup.otp.codeLabel')}
-                    value={phoneCode}
-                    onChange={(e) => setPhoneCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                    inputMode="numeric"
-                    autoComplete="one-time-code"
-                    disabled={Boolean(busy)}
-                  />
-                  <div className="flex shrink-0 items-end">
-                    <Button
-                      type="button"
-                      loading={busy === 'phone-verify'}
-                      disabled={phoneCode.length !== 6 || Boolean(busy)}
-                      onClick={() => void verifyPhoneOtp()}
-                    >
-                      {t('signup.otp.verify')}
-                    </Button>
-                  </div>
-                </div>
-              ) : null}
             </>
           ) : (
-            <p className="text-sm text-emerald-700">{t('signup.otp.verified')}</p>
+            <p className="text-sm font-medium text-[var(--tone-success-fg)]">{t('signup.otp.verified')}</p>
           )}
         </section>
       ) : null}
@@ -266,16 +305,29 @@ export function SignupOtpVerification({ channels, phone, onComplete }: SignupOtp
         </div>
       ) : null}
 
-      <Button
-        type="button"
-        fullWidth
-        size="lg"
-        className="min-h-[2.75rem]"
-        disabled={!canFinish || Boolean(busy)}
-        onClick={() => void tryComplete()}
-      >
-        {t('signup.otp.continue')}
-      </Button>
+      <div className="space-y-2">
+        <Button
+          type="button"
+          fullWidth
+          size="lg"
+          className="min-h-[2.75rem]"
+          disabled={!canFinish || Boolean(busy)}
+          onClick={() => onComplete()}
+        >
+          {t('signup.otp.continue')}
+        </Button>
+        {!canFinish ? (
+          <Button
+            type="button"
+            variant="ghost"
+            fullWidth
+            disabled={Boolean(busy)}
+            onClick={() => onComplete()}
+          >
+            {t('signup.otp.skip')}
+          </Button>
+        ) : null}
+      </div>
     </div>
   );
 }

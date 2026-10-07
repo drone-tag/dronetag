@@ -7,32 +7,29 @@
  *   • Raw `drones` are now PRIVATE — only the owner and admin can read.
  *     Anonymous public visitors read sanitised snapshots from the
  *     `dronesPublic` collection (see `src/lib/firebase/dronesPublic.ts`).
- *   • Every successful write to a drone re-syncs the public snapshot,
- *     so the public card stays consistent without a Cloud Function.
+ *   • Writes go through /api/entities/drones (create, PATCH, DELETE). The
+ *     server applies the edit policy and reconciles the public snapshot in
+ *     the same request, so the public card cannot drift from the record.
  *   • Active-operator override timestamps are stored as Firestore
- *     `Timestamp` values so rules can clamp the TTL to ≤ 24h with
- *     arithmetic (V-007). The data layer converts to/from ISO strings
- *     at the boundary so the rest of the codebase keeps using strings.
- *   • `setActiveOperator()` requires a non-empty `setBy` (the rules
- *     verify it equals `request.auth.uid`); callers that don't provide
- *     one will be rejected by Firestore.
+ *     `Timestamp` values (V-007); the server sets them from its own clock.
+ *     The data layer converts them to ISO strings at the boundary.
  */
 
 import {
-  Timestamp,
-  collection, deleteDoc, doc, getDoc, getDocs,
-  limit, orderBy, query, serverTimestamp, updateDoc, where,
+  collection, doc, getDoc, getDocs,
+  limit, query, where,
 } from 'firebase/firestore';
 
 import { awaitFirebaseAuthReady } from '@/lib/firebase/auth';
 import { DEMO_MODE, getFirebaseDb } from '@/lib/firebase/config';
 import * as demo from '@/lib/demo/entitiesStore';
-import { generateDroneSlug } from '@/lib/utils/entities';
+import { generateDroneSlug, lockedAtFromRaw } from '@/lib/utils/entities';
 import {
   deleteDronePublicBySlug,
   syncDronePublicSnapshot,
 } from '@/lib/firebase/dronesPublic';
 import { adminFetch } from '@/lib/client/adminApi';
+import { readJsonOrThrow } from '@/lib/client/apiError';
 import type {
   Drone,
   DroneClass,
@@ -95,7 +92,7 @@ function droneFromRaw(id: string, raw: Record<string, unknown>): Drone {
     updatedAt: str('updatedAt'),
     publishedAt: str('publishedAt'),
     lastVerifiedAt: str('lastVerifiedAt'),
-    dataLockedAt: str('dataLockedAt'),
+    dataLockedAt: lockedAtFromRaw(raw),
   };
 }
 
@@ -183,53 +180,65 @@ export async function createDrone(
       insuranceId: data.insuranceId,
       status: data.status,
       visibility: data.visibility,
+      dataLocked: Boolean(data.dataLockedAt),
     }),
   });
-  const body = (await res.json().catch(() => ({}))) as {
-    id?: string;
-    slug?: string;
-    error?: string;
-  };
-  if (!res.ok) {
-    throw new Error(body.error || `create drone failed (${res.status})`);
-  }
+  // The route also publishes the drone when it was created public.
+  const body = await readJsonOrThrow<{ id?: string; slug?: string }>(res, 'create drone');
   if (!body.id || !body.slug) {
     throw new Error('create drone failed: missing id or slug');
   }
-  const result = { id: body.id, slug: body.slug };
-  const fresh = await getDrone(result.id);
-  if (fresh) await syncDronePublicSnapshot(fresh);
-  return result;
+  return { id: body.id, slug: body.slug };
 }
 
-export async function updateDrone(id: string, patch: Partial<Drone>): Promise<void> {
+/** Body accepted by PATCH /api/entities/drones/[id]. */
+type DronePatchBody = Partial<Drone> & {
+  activeOperator?: { operatorId: string; reason?: string } | null;
+};
+
+/**
+ * Update a drone and bring its public page in line, in one request. The
+ * server applies the edit policy (locking, suspension, 24h switch) and
+ * reports whether the drone is public afterwards.
+ */
+async function patchDrone(id: string, body: DronePatchBody): Promise<{ published: boolean }> {
+  const res = await adminFetch(`/api/entities/drones/${encodeURIComponent(id)}`, {
+    method: 'PATCH',
+    body: JSON.stringify(body),
+  });
+  return readJsonOrThrow<{ published: boolean }>(res, 'update drone');
+}
+
+export async function updateDrone(
+  id: string,
+  patch: Partial<Drone>,
+): Promise<{ published: boolean }> {
   if (DEMO_MODE) {
     await demo.updateDrone(id, patch);
     const fresh = await demo.getDrone(id);
     if (fresh) await syncDronePublicSnapshot(fresh);
-    return;
+    return { published: Boolean(fresh && fresh.status === 'active' && fresh.visibility === 'public') };
   }
   await awaitFirebaseAuthReady();
-  const db = getFirebaseDb();
-  const payload = Object.fromEntries(
+  const body = Object.fromEntries(
     Object.entries(patch).filter(([k, v]) => k !== 'id' && v !== undefined),
   );
-  await updateDoc(doc(db, DRONES, id), { ...payload, updatedAt: new Date().toISOString() });
-  const fresh = await getDrone(id);
-  if (fresh) await syncDronePublicSnapshot(fresh);
+  return patchDrone(id, body);
 }
 
 export async function deleteDrone(id: string): Promise<void> {
-  // Capture slug BEFORE delete so we can drop the public snapshot too.
-  const before = await getDrone(id);
   if (DEMO_MODE) {
+    const before = await demo.getDrone(id);
     await demo.deleteDrone(id);
-  } else {
-    await awaitFirebaseAuthReady();
-    const db = getFirebaseDb();
-    await deleteDoc(doc(db, DRONES, id));
+    if (before?.slug) await deleteDronePublicBySlug(before.slug);
+    return;
   }
-  if (before?.slug) await deleteDronePublicBySlug(before.slug);
+  // The server removes the public page and the policy links with the drone.
+  await awaitFirebaseAuthReady();
+  const res = await adminFetch(`/api/entities/drones/${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+  });
+  await readJsonOrThrow(res, 'delete drone');
 }
 
 // ─── Active-operator switch (PRD §5, PR-SEC-1 hardened) ────────────────────
@@ -238,9 +247,8 @@ export const TWENTY_FOUR_HOURS_MS = 24 * 60 * 60 * 1000;
 
 export interface SetActiveOperatorOptions {
   /**
-   * Uid of the user activating the switch. Required: Firestore rules
-   * verify `activeOperatorSetBy == request.auth.uid` so a malicious
-   * client cannot pretend the switch was set by someone else.
+   * Uid of the user activating the switch. Recorded as-is in demo mode; the
+   * server records the verified caller instead.
    */
   setBy: string;
   /** Optional free-text reason supplied by the user. */
@@ -250,23 +258,12 @@ export interface SetActiveOperatorOptions {
 /**
  * Set a temporary active operator. Auto-expires after 24h via the lazy
  * `effectiveOperatorId()` helper at read time.
- *
- * Wire format:
- *   • `activeOperatorUntil` is written as a Firestore `Timestamp`
- *     (now + 24h). Rules clamp this server-side.
- *   • `activeOperatorSetAt` is written as `serverTimestamp()` so the
- *     server, not the client clock, decides the audit timestamp.
- *   • `activeOperatorSetBy` MUST equal the authenticated uid; rules
- *     reject mismatches.
  */
 export async function setActiveOperator(
   droneId: string,
   operatorId: string,
   options: SetActiveOperatorOptions,
 ): Promise<void> {
-  if (!options.setBy) {
-    throw new Error('setActiveOperator: setBy is required (must be the authenticated uid)');
-  }
   if (DEMO_MODE) {
     const nowIso = new Date().toISOString();
     const untilIso = new Date(Date.now() + TWENTY_FOUR_HOURS_MS).toISOString();
@@ -281,22 +278,12 @@ export async function setActiveOperator(
     if (fresh) await syncDronePublicSnapshot(fresh);
     return;
   }
+  // The server sets the 24h window from its own clock, so a phone whose
+  // clock runs fast is not refused.
   await awaitFirebaseAuthReady();
-  const db = getFirebaseDb();
-  // Client timestamp, used only to compute the 24h target. The rule
-  // accepts a slack of a few minutes between this value and request.time
-  // so client clock drift doesn't reject legitimate writes.
-  const until = Timestamp.fromMillis(Date.now() + TWENTY_FOUR_HOURS_MS);
-  await updateDoc(doc(db, DRONES, droneId), {
-    activeOperatorId: operatorId,
-    activeOperatorUntil: until,
-    activeOperatorSetAt: serverTimestamp(),
-    activeOperatorSetBy: options.setBy,
-    activeOperatorReason: options.reason ?? '',
-    updatedAt: new Date().toISOString(),
+  await patchDrone(droneId, {
+    activeOperator: { operatorId, reason: options.reason ?? '' },
   });
-  const fresh = await getDrone(droneId);
-  if (fresh) await syncDronePublicSnapshot(fresh);
 }
 
 /** Clear any active-operator override and revert to the default. */
@@ -314,17 +301,7 @@ export async function clearActiveOperator(droneId: string): Promise<void> {
     return;
   }
   await awaitFirebaseAuthReady();
-  const db = getFirebaseDb();
-  await updateDoc(doc(db, DRONES, droneId), {
-    activeOperatorId: null,
-    activeOperatorUntil: null,
-    activeOperatorSetAt: '',
-    activeOperatorSetBy: '',
-    activeOperatorReason: '',
-    updatedAt: new Date().toISOString(),
-  });
-  const fresh = await getDrone(droneId);
-  if (fresh) await syncDronePublicSnapshot(fresh);
+  await patchDrone(droneId, { activeOperator: null });
 }
 
 /** Admin-only: list every drone across users (newest first). */

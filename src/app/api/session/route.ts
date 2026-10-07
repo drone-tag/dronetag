@@ -27,7 +27,7 @@ import {
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-const SESSION_MAX_AGE = 60 * 60; // 1 hour, matching ID token TTL
+const SESSION_MAX_AGE = 60 * 60; // 1 hour, the ID token TTL
 
 export async function POST(request: Request) {
   if (!isFirebaseAdminConfigured()) {
@@ -45,10 +45,13 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'missing idToken' }, { status: 400 });
   }
 
+  let maxAge = SESSION_MAX_AGE;
   try {
     // checkRevoked=true rejects tokens whose refresh tokens have been
     // revoked — important for grant-admin's revokeRefreshTokens path.
-    await adminAuth().verifyIdToken(idToken, true);
+    const decoded = await adminAuth().verifyIdToken(idToken, true);
+    // The cookie must not outlive the token it carries.
+    maxAge = Math.max(60, Math.min(SESSION_MAX_AGE, decoded.exp - Math.floor(Date.now() / 1000)));
   } catch (err) {
     return NextResponse.json(
       { error: 'invalid token', code: (err as { code?: string }).code ?? 'unknown' },
@@ -65,7 +68,7 @@ export async function POST(request: Request) {
     secure: isHttps,
     sameSite: 'strict',
     path: '/',
-    maxAge: SESSION_MAX_AGE,
+    maxAge,
   });
   return res;
 }

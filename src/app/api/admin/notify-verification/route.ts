@@ -29,7 +29,7 @@ export const dynamic = 'force-dynamic';
 
 const schema = z.object({
   userId: z.string().trim().min(1).max(128),
-  entity: z.enum(['certificate', 'insurance', 'document', 'authorization']),
+  entity: z.enum(['certificate', 'insurance', 'document', 'authorization', 'drone']),
   outcome: z.enum(['approved', 'rejected']),
   /** e.g. "EASA A1/A3" — shown to the user so they know which item. */
   itemLabel: z.string().trim().max(200).optional(),

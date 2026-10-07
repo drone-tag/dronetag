@@ -43,9 +43,18 @@ async function adminUploadFile(path: string, data: Buffer, contentType: string):
     resumable: false,
     metadata: {
       contentType,
+      // Safe to cache for long: each upload gets a new token, hence a new URL.
+      cacheControl: 'private, max-age=31536000',
       metadata: { firebaseStorageDownloadTokens: token },
     },
   });
+  return storageDownloadUrl(bucket.name, path, token);
+}
+
+/** Persistent Firebase download URL for an object carrying `token`. */
+export function storageDownloadUrl(bucketName: string, path: string, token: string): string {
   const encoded = encodeURIComponent(path);
-  return `https://firebasestorage.googleapis.com/v0/b/${bucket.name}/o/${encoded}?alt=media&token=${token}`;
+  const emulatorHost = process.env.FIREBASE_STORAGE_EMULATOR_HOST?.trim();
+  const origin = emulatorHost ? `http://${emulatorHost}` : 'https://firebasestorage.googleapis.com';
+  return `${origin}/v0/b/${bucketName}/o/${encoded}?alt=media&token=${token}`;
 }

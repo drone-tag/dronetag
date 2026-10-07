@@ -13,16 +13,16 @@
  * - A 30-second per-page cooldown stored in `sessionStorage` keyed by
  *   slug prevents accidental double submissions and trivial spam.
  *
- * Privacy: the report write goes to `reports/{id}` and the firestore.rules
- * (M1 + M3 update) prevent the reporter from setting `read`,
- * `emailNotified`, `pushNotified`, or impersonating another owner. The
- * reporter's contact is sent only to the drone owner via the inbox.
+ * Privacy: the report is written by `POST /api/reports`, which derives the
+ * owner from the drone and sets every audit field itself. The reporter's
+ * contact is sent only to the drone owner via the inbox.
  */
 
 import { useEffect, useState } from 'react';
 import type { ChangeEvent, FormEvent } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { createReport } from '@/lib/firebase/reports';
+import { ApiError } from '@/lib/client/apiError';
 import { trackEvent } from '@/lib/analytics';
 import type { ReportLocation } from '@/lib/types/entities';
 import { Button } from '@/components/ui/Button';
@@ -57,6 +57,16 @@ export type ReportFoundDroneFormProps = {
   isOpen: boolean;
   onClose: () => void;
 };
+
+function submitErrorKey(err: unknown): string {
+  if (err instanceof ApiError) {
+    if (err.status === 429) return 'reportFound.errorRateLimited';
+    if (err.status === 404) return 'reportFound.errorUnavailable';
+  }
+  if (typeof navigator !== 'undefined' && navigator.onLine === false) return 'error.network';
+  if (err instanceof TypeError) return 'error.network';
+  return 'reportFound.errorBody';
+}
 
 export function ReportFoundDroneForm({
   droneId,
@@ -188,7 +198,7 @@ export function ReportFoundDroneForm({
       setSuccess(true);
     } catch (err) {
       console.error('[reportFound] submit failed', err);
-      setSubmitError(t('reportFound.errorBody'));
+      setSubmitError(t(submitErrorKey(err)));
     } finally {
       setSubmitting(false);
     }
@@ -281,7 +291,7 @@ export function ReportFoundDroneForm({
           <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-hover)] p-4">
             {location ? (
               <div className="space-y-3">
-                <div className="flex items-start gap-2 text-sm text-emerald-700">
+                <div className="flex items-start gap-2 text-sm text-[var(--tone-success-fg)]">
                   <svg
                     className="mt-0.5 h-4 w-4 shrink-0"
                     viewBox="0 0 20 20"
@@ -318,7 +328,7 @@ export function ReportFoundDroneForm({
               </div>
             ) : (
               <div className="space-y-3">
-                <p className="text-sm text-[var(--color-text-secondary)]">{t('reportFound.geolocation.add')}</p>
+                <p className="text-sm text-[var(--color-text-secondary)]">{t('reportFound.geolocation.hint')}</p>
                 <Button
                   variant="secondary"
                   onClick={captureLocation}
@@ -332,7 +342,7 @@ export function ReportFoundDroneForm({
                 </Button>
               </div>
             )}
-            {geoError ? <p className="text-xs text-red-600">{geoError}</p> : null}
+            {geoError ? <p className="text-xs text-[var(--tone-danger-fg)]">{geoError}</p> : null}
           </div>
 
           {/* Honeypot — visually hidden from real users, irresistible to bots. */}
@@ -364,7 +374,7 @@ function SuccessPanel({ onClose }: { onClose: () => void }) {
   return (
     <div className="space-y-4 py-2">
       <div className="flex flex-col items-center gap-3 text-center">
-        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
+        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[var(--tone-success-bg)] text-[var(--tone-success-fg)]">
           <svg viewBox="0 0 20 20" fill="currentColor" className="h-7 w-7" aria-hidden>
             <path
               fillRule="evenodd"
@@ -378,7 +388,7 @@ function SuccessPanel({ onClose }: { onClose: () => void }) {
       </div>
       <div className="flex justify-center pt-2">
         <Button onClick={onClose} fullWidth size="lg" className="tap-44 sm:w-auto">
-          {t('common.confirm')}
+          {t('common.close')}
         </Button>
       </div>
     </div>

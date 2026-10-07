@@ -6,11 +6,11 @@ import { classNames } from '@/lib/utils';
 
 const variantClasses = {
   primary:
-    'bg-[var(--color-action)] hover:bg-[var(--color-action-hover)] text-white disabled:hover:bg-[var(--color-action)]',
+    'bg-[var(--color-action-solid)] hover:bg-[var(--color-action-solid-hover)] text-white disabled:hover:bg-[var(--color-action-solid)]',
   secondary:
     'bg-[var(--color-card)] border border-[var(--color-border)] hover:bg-[var(--color-hover)] text-[var(--color-text)] disabled:hover:bg-[var(--color-card)]',
   danger:
-    'bg-[var(--color-expired)] hover:opacity-90 text-white disabled:hover:bg-[var(--color-expired)]',
+    'bg-[var(--color-danger-solid)] hover:opacity-90 text-white disabled:hover:bg-[var(--color-danger-solid)]',
   ghost:
     'bg-transparent hover:bg-[var(--color-hover)] text-[var(--color-text-secondary)] disabled:hover:bg-transparent',
 } as const;
@@ -28,6 +28,8 @@ export type ButtonProps = {
   children: ReactNode;
   /** When set, renders a Next.js `Link` with the same styles as a button. */
   href?: string;
+  /** With `href`: open in a new tab as a plain anchor (other sites, public pages). */
+  external?: boolean;
   onClick?: ButtonHTMLAttributes<HTMLButtonElement>['onClick'];
   type?: 'button' | 'submit';
   variant?: ButtonVariant;
@@ -69,6 +71,7 @@ function Spinner({ className }: { className?: string }) {
 export function Button({
   children,
   href,
+  external = false,
   onClick,
   type = 'button',
   variant = 'primary',
@@ -89,6 +92,14 @@ export function Button({
     isDisabled && 'cursor-not-allowed opacity-70',
     className
   );
+
+  if (href && external) {
+    return (
+      <a href={href} target="_blank" rel="noopener noreferrer" className={sharedClassName}>
+        {children}
+      </a>
+    );
+  }
 
   if (href) {
     return (

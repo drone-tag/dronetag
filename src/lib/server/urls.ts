@@ -36,6 +36,10 @@ export function sanitizeAllowedUrl(v: unknown, fieldName: string): string {
   } catch {
     throw new UrlValidationError(`${fieldName} is not a valid URL`);
   }
+  const emulatorHost = process.env.FIREBASE_STORAGE_EMULATOR_HOST?.trim().toLowerCase();
+  if (emulatorHost && u.protocol === 'http:' && u.host.toLowerCase() === emulatorHost) {
+    return s;
+  }
   if (u.protocol !== 'https:') {
     throw new UrlValidationError(`${fieldName} must use https://`);
   }

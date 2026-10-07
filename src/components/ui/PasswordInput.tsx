@@ -5,7 +5,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { classNames } from '@/lib/utils';
 
 const inputBase =
-  'w-full rounded-lg border px-4 py-2.5 pr-11 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20';
+  'w-full rounded-lg border bg-[var(--color-card)] px-4 py-3 pr-11 text-base text-[var(--color-text)] outline-none transition placeholder:text-[var(--color-text-secondary)] focus:border-[var(--color-action)] focus:ring-2 focus:ring-[var(--color-action)]/20 sm:py-2.5 sm:text-sm';
 
 export type PasswordInputProps = {
   label: string;
@@ -47,7 +47,7 @@ export function PasswordInput({
       >
         {label}
         {required ? (
-          <span className="ml-0.5 text-red-500" aria-hidden>
+          <span className="ml-0.5 text-[var(--color-danger)]" aria-hidden>
             *
           </span>
         ) : null}
@@ -67,7 +67,7 @@ export function PasswordInput({
           className={classNames(
             inputBase,
             error
-              ? 'border-red-500 focus:border-red-500 focus:ring-red-500/20'
+              ? 'border-[var(--color-danger)] focus:border-[var(--color-danger)] focus:ring-[var(--color-danger)]/20'
               : 'border-[var(--color-border)]',
             disabled && 'cursor-not-allowed bg-[var(--color-hover)] opacity-70',
           )}
@@ -102,7 +102,7 @@ export function PasswordInput({
         </button>
       </div>
       {error ? (
-        <p id={`${inputId}-error`} className="mt-1.5 text-sm text-red-600" role="alert">
+        <p id={`${inputId}-error`} className="mt-1.5 text-sm text-[var(--tone-danger-fg)]" role="alert">
           {error}
         </p>
       ) : null}

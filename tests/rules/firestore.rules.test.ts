@@ -5,7 +5,17 @@ import {
   initializeTestEnvironment,
   type RulesTestEnvironment,
 } from '@firebase/rules-unit-testing';
-import { addDoc, collection, deleteDoc, doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
+import {
+  addDoc,
+  collection,
+  deleteDoc,
+  doc,
+  getDoc,
+  getDocs,
+  setDoc,
+  Timestamp,
+  updateDoc,
+} from 'firebase/firestore';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
 /**
@@ -200,6 +210,15 @@ describe('dronesPublic — the only anonymous-readable collection', () => {
     );
   });
 
+  it('denies listing the collection, so owners cannot be enumerated', async () => {
+    await assertFails(getDocs(collection(anonDb(), 'dronesPublic')));
+    await assertFails(getDocs(collection(ownerDb(), 'dronesPublic')));
+  });
+
+  it('still lets admin list snapshots for diagnostics', async () => {
+    await assertSucceeds(getDocs(collection(adminDb(), 'dronesPublic')));
+  });
+
   it('still allows admin writes for support and backfill', async () => {
     await assertSucceeds(
       updateDoc(doc(adminDb(), 'dronesPublic', SLUG), { verificationStatus: 'verified' }),
@@ -259,7 +278,7 @@ describe('drones — raw records are never anonymous', () => {
   it('lets the owner publish a locked record by flipping visibility', async () => {
     await assertSucceeds(
       updateDoc(doc(ownerDb(), 'drones', DRONE_ID), {
-        status: 'published',
+        status: 'active',
         visibility: 'public',
         publishedAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
@@ -281,6 +300,69 @@ describe('drones — raw records are never anonymous', () => {
     await assertFails(
       updateDoc(doc(ownerDb(), 'drones', DRONE_ID), {
         droneSerialNumber: 'SN-CHANGED',
+        updatedAt: new Date().toISOString(),
+      }),
+    );
+  });
+
+  it('denies the owner suspending or archiving — those are admin states', async () => {
+    for (const status of ['suspended', 'archived']) {
+      await assertFails(
+        updateDoc(doc(ownerDb(), 'drones', DRONE_ID), {
+          status,
+          updatedAt: new Date().toISOString(),
+        }),
+      );
+    }
+  });
+
+  it('denies the owner lifting an admin suspension', async () => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await updateDoc(doc(ctx.firestore(), 'drones', DRONE_ID), { status: 'suspended' });
+    });
+    await assertFails(
+      updateDoc(doc(ownerDb(), 'drones', DRONE_ID), {
+        status: 'active',
+        visibility: 'public',
+        updatedAt: new Date().toISOString(),
+      }),
+    );
+  });
+
+  it('lets the owner edit an explicitly unlocked record saved more than once', async () => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await updateDoc(doc(ctx.firestore(), 'drones', DRONE_ID), { dataLockedAt: '' });
+    });
+    await assertSucceeds(
+      updateDoc(doc(ownerDb(), 'drones', DRONE_ID), {
+        droneSerialNumber: 'SN-FIXED',
+        updatedAt: new Date().toISOString(),
+      }),
+    );
+  });
+
+  it('does not let an expired override block unrelated edits', async () => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await updateDoc(doc(ctx.firestore(), 'drones', DRONE_ID), {
+        activeOperatorId: 'op-1',
+        activeOperatorSetBy: ADMIN,
+        activeOperatorUntil: Timestamp.fromMillis(Date.now() - 60_000),
+      });
+    });
+    await assertSucceeds(
+      updateDoc(doc(ownerDb(), 'drones', DRONE_ID), {
+        status: 'active',
+        updatedAt: new Date().toISOString(),
+      }),
+    );
+  });
+
+  it('still clamps an override the owner sets to 24 hours', async () => {
+    await assertFails(
+      updateDoc(doc(ownerDb(), 'drones', DRONE_ID), {
+        activeOperatorId: 'op-1',
+        activeOperatorSetBy: OWNER,
+        activeOperatorUntil: Timestamp.fromMillis(Date.now() + 3 * 24 * 60 * 60 * 1000),
         updatedAt: new Date().toISOString(),
       }),
     );
@@ -392,6 +474,13 @@ describe('reports — written by the function, read by the owner', () => {
     await assertSucceeds(updateDoc(doc(ownerDb(), 'reports', 'rep-1'), { read: true }));
   });
 
+  it('denies the owner flipping a report back to unread', async () => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await updateDoc(doc(ctx.firestore(), 'reports', 'rep-1'), { read: true });
+    });
+    await assertFails(updateDoc(doc(ownerDb(), 'reports', 'rep-1'), { read: false }));
+  });
+
   it('denies the owner rewriting the finder message', async () => {
     await assertFails(updateDoc(doc(ownerDb(), 'reports', 'rep-1'), { message: 'edited' }));
   });
@@ -473,7 +562,7 @@ it('sanity: dronesPublic is the only collection with an unconditional read', () 
     .split('\n')
     .filter((line) => !line.trim().startsWith('//'))
     .join('\n');
-  const publicReads = withoutComments.match(/allow read:\s*if\s+true/g) ?? [];
+  const publicReads = withoutComments.match(/allow (read|get):\s*if\s+true/g) ?? [];
   // `dronesPublic/{slug}` and `plans/{planId}`; nothing else may join them
   // without a deliberate change to this expectation.
   expect(publicReads).toHaveLength(2);

@@ -14,6 +14,8 @@ export type InputProps = {
   placeholder?: string;
   required?: boolean;
   error?: string;
+  /** Helper line under the field; hidden while an error is shown. */
+  hint?: string;
   disabled?: boolean;
   className?: string;
 } & Omit<
@@ -33,6 +35,7 @@ export function Input({
   placeholder,
   required,
   error,
+  hint,
   disabled,
   className,
   id,
@@ -63,7 +66,7 @@ export function Input({
         required={required}
         disabled={disabled}
         aria-invalid={Boolean(error)}
-        aria-describedby={error ? `${inputId}-error` : undefined}
+        aria-describedby={error ? `${inputId}-error` : hint ? `${inputId}-hint` : undefined}
         className={classNames(
           inputBase,
           error
@@ -76,6 +79,10 @@ export function Input({
       {error ? (
         <p id={`${inputId}-error`} className="mt-1.5 text-sm text-[var(--color-expired)]" role="alert">
           {error}
+        </p>
+      ) : hint ? (
+        <p id={`${inputId}-hint`} className="mt-1.5 text-xs text-[var(--color-text-secondary)]">
+          {hint}
         </p>
       ) : null}
     </div>

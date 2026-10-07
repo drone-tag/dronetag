@@ -8,6 +8,9 @@ import { adminFirestore } from '@/lib/server/firebaseAdmin';
 import { enforceQuota, QuotaError } from '@/lib/server/quota';
 import { requireUserFromRequest } from '@/lib/server/requestAuth';
 import { cleanString } from '@/lib/server/strings';
+import { droneFromRaw, syncLoadedDrone } from '@/lib/server/syncPublicDrones';
+import { logger } from '@/lib/server/logger';
+import { FieldValue } from 'firebase-admin/firestore';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -15,7 +18,8 @@ export const dynamic = 'force-dynamic';
 const SLUG_ALPHABET = '0123456789abcdefghjkmnpqrstvwxyz';
 const SLUG_RETRIES = 8;
 const DRONE_CLASSES = new Set(['C0', 'C1', 'C2', 'C3', 'C4', 'unknown']);
-const STATUSES = new Set(['draft', 'active', 'suspended', 'archived']);
+// Suspension and archiving are admin decisions, not something an owner picks.
+const STATUSES = new Set(['draft', 'active']);
 const VISIBILITIES = new Set(['private', 'public']);
 
 type Body = {
@@ -28,6 +32,8 @@ type Body = {
   insuranceId?: unknown;
   status?: unknown;
   visibility?: unknown;
+  /** The owner confirmed the identity fields; lock them on creation. */
+  dataLocked?: unknown;
 };
 
 function nowIso(): string {
@@ -83,16 +89,15 @@ export async function POST(request: Request) {
 
   const db = adminFirestore();
 
-  const opSnap = await db.collection('operators').doc(defaultOperatorId).get();
+  const [opSnap, insSnap] = await Promise.all([
+    db.collection('operators').doc(defaultOperatorId).get(),
+    insuranceId ? db.collection('insurances').doc(insuranceId).get() : Promise.resolve(null),
+  ]);
   if (!opSnap.exists || (opSnap.data() as { userId?: string }).userId !== auth.uid) {
     return NextResponse.json({ error: 'operator does not belong to user' }, { status: 400 });
   }
-
-  if (insuranceId) {
-    const insSnap = await db.collection('insurances').doc(insuranceId).get();
-    if (!insSnap.exists || (insSnap.data() as { userId?: string }).userId !== auth.uid) {
-      return NextResponse.json({ error: 'insurance does not belong to user' }, { status: 400 });
-    }
+  if (insSnap && (!insSnap.exists || (insSnap.data() as { userId?: string }).userId !== auth.uid)) {
+    return NextResponse.json({ error: 'insurance does not belong to user' }, { status: 400 });
   }
 
   try {
@@ -123,7 +128,7 @@ export async function POST(request: Request) {
 
   const ref = db.collection('drones').doc();
   const now = nowIso();
-  await ref.set({
+  const record = {
     userId: auth.uid,
     slug,
     status,
@@ -144,10 +149,26 @@ export async function POST(request: Request) {
     insuranceId,
     createdAt: now,
     updatedAt: now,
-    publishedAt: '',
+    publishedAt: status === 'active' && visibility === 'public' ? now : '',
     lastVerifiedAt: '',
-    dataLockedAt: '',
-  });
+    dataLockedAt: body.dataLocked === true ? now : '',
+  };
+  const batch = db.batch();
+  batch.set(ref, record);
+  if (insuranceId) {
+    batch.update(db.collection('insurances').doc(insuranceId), {
+      droneIds: FieldValue.arrayUnion(ref.id),
+    });
+  }
+  await batch.commit();
 
-  return NextResponse.json({ id: ref.id, slug });
+  let published = false;
+  try {
+    published = await syncLoadedDrone(droneFromRaw(ref.id, record));
+  } catch (err) {
+    // The drone exists; the owner can publish again from its page.
+    logger.warn('drones.create.publish_failed', { droneId: ref.id }, err);
+  }
+
+  return NextResponse.json({ id: ref.id, slug, published });
 }

@@ -103,22 +103,54 @@ export async function sendPasswordReset(email: string): Promise<void> {
 }
 
 export type AwaitFirebaseAuthOptions = {
+  /**
+   * Make sure the token carries the latest custom claims before an
+   * admin-only read. Costs a network round trip at most once per signed-in
+   * identity, and only when the cached token has no admin claim yet.
+   */
   refresh?: boolean;
 };
+
+let identityRefresh: { uid: string; promise: Promise<void> } | null = null;
+
+function refreshTokenOncePerIdentity(u: User): Promise<void> {
+  if (!identityRefresh || identityRefresh.uid !== u.uid) {
+    const promise: Promise<void> = u.getIdToken(true).then(
+      () => undefined,
+      () => {
+        if (identityRefresh?.promise === promise) identityRefresh = null;
+      },
+    );
+    identityRefresh = { uid: u.uid, promise };
+  }
+  return identityRefresh.promise;
+}
+
+/**
+ * Resolve once the cached token is good enough for admin-gated reads and
+ * API calls: a token that already carries `admin: true` is used as is, any
+ * other token is refreshed once so a freshly granted claim is picked up.
+ */
+export async function ensureFreshClaims(u: User): Promise<void> {
+  if (DEMO_MODE) return;
+  try {
+    const result = await u.getIdTokenResult();
+    if (result.claims.admin === true) return;
+  } catch {
+    /* fall through to a forced refresh */
+  }
+  await refreshTokenOncePerIdentity(u);
+}
 
 export async function awaitFirebaseAuthReady(
   options: AwaitFirebaseAuthOptions = {},
 ): Promise<void> {
   if (DEMO_MODE) return;
   const auth = getFirebaseAuth();
-  await new Promise<void>((resolve) => {
-    const unsub = onAuthStateChanged(auth, () => {
-      unsub();
-      resolve();
-    });
-  });
+  await auth.authStateReady();
   const u = auth.currentUser;
-  if (u) await u.getIdToken(Boolean(options.refresh));
+  if (!u) return;
+  if (options.refresh) await ensureFreshClaims(u);
 }
 
 export function onAuthChange(

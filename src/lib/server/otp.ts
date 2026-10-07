@@ -43,6 +43,8 @@ export async function sendEmailOtp(uid: string, email: string): Promise<{ devCod
     return { devCode: code };
   }
   if (!sent) {
+    // A code nobody received must not start the resend cooldown.
+    await ref.delete().catch(() => undefined);
     throw new Error('otp_email_delivery_failed');
   }
   return {};
@@ -80,20 +82,28 @@ async function deliverEmailOtp(email: string, code: string): Promise<boolean> {
   if (!apiKey) return false;
 
   const from = process.env.OTP_EMAIL_FROM?.trim() || 'DroneTag <noreply@drone-tag.com>';
-  const res = await fetch('https://api.resend.com/emails', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      from,
-      to: [email],
-      subject: 'DroneTag — codice di verifica',
-      text: `Il tuo codice di verifica DroneTag è: ${code}\n\nIl codice scade tra 10 minuti.`,
-      html: `<p>Il tuo codice di verifica DroneTag è:</p><p style="font-size:28px;font-weight:bold;letter-spacing:4px">${code}</p><p>Il codice scade tra 10 minuti.</p>`,
-    }),
-  });
-
-  return res.ok;
+  try {
+    const res = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        from,
+        to: [email],
+        subject: 'DroneTag — codice di verifica',
+        text: `Il tuo codice di verifica DroneTag è: ${code}\n\nIl codice scade tra 10 minuti.`,
+        html: `<p>Il tuo codice di verifica DroneTag è:</p><p style="font-size:28px;font-weight:bold;letter-spacing:4px">${code}</p><p>Il codice scade tra 10 minuti.</p>`,
+      }),
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!res.ok) {
+      console.warn('[otp] email provider rejected the message', res.status);
+    }
+    return res.ok;
+  } catch (err) {
+    console.warn('[otp] email provider unreachable', err);
+    return false;
+  }
 }

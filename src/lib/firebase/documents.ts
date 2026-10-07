@@ -11,8 +11,13 @@
  */
 
 import {
-  collection, deleteDoc, doc, getDoc, getDocs,
-  query, updateDoc, where,
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  query,
+  updateDoc,
+  where,
 } from 'firebase/firestore';
 
 import { awaitFirebaseAuthReady } from '@/lib/firebase/auth';
@@ -20,6 +25,8 @@ import { DEMO_MODE, getFirebaseDb } from '@/lib/firebase/config';
 import * as demo from '@/lib/demo/entitiesStore';
 import { fileToDataUrl } from '@/lib/demo/fileToDataUrl';
 import { adminFetch } from '@/lib/client/adminApi';
+import { attachFile, prepareFile } from '@/lib/client/fileUpload';
+import { deleteEntityOnServer } from '@/lib/client/entityApi';
 import type { DocumentRef, DocumentKind } from '@/lib/types/entities';
 import type { VerificationStatus } from '@/lib/types';
 
@@ -94,8 +101,12 @@ export async function createDocument(
   return body.id;
 }
 
-/** Upload document file (PDF or image) via Admin SDK. */
-export async function uploadDocumentFile(documentId: string, file: File): Promise<string> {
+/** Upload a document file (PDF or image) and attach it to the document. */
+export async function uploadDocumentFile(
+  documentId: string,
+  file: File,
+  onProgress?: (fraction: number) => void,
+): Promise<string> {
   if (DEMO_MODE) {
     await new Promise((r) => setTimeout(r, 300));
     const fileUrl = await fileToDataUrl(file);
@@ -108,16 +119,15 @@ export async function uploadDocumentFile(documentId: string, file: File): Promis
     });
     return fileUrl;
   }
-  const form = new FormData();
-  form.append('file', file);
-  const res = await adminFetch(`/api/entities/documents/${documentId}/file`, {
-    method: 'POST',
-    body: form,
+  const prepared = await prepareFile(file, 'pdf-or-image');
+  const body = await attachFile<{ fileUrl?: string }>({
+    route: `/api/entities/documents/${documentId}/file`,
+    objectPath: `documents/${documentId}/file.${prepared.ext}`,
+    file: prepared.file,
+    contentType: prepared.contentType,
+    fileName: file.name,
+    onProgress,
   });
-  const body = (await res.json().catch(() => ({}))) as { fileUrl?: string; error?: string };
-  if (!res.ok) {
-    throw new Error(body.error || `upload document failed (${res.status})`);
-  }
   if (!body.fileUrl) throw new Error('upload document failed: missing fileUrl');
   return body.fileUrl;
 }
@@ -134,9 +144,7 @@ export async function updateDocument(id: string, patch: Partial<DocumentRef>): P
 
 export async function deleteDocument(id: string): Promise<void> {
   if (DEMO_MODE) return demo.deleteDocument(id);
-  await awaitFirebaseAuthReady();
-  const db = getFirebaseDb();
-  await deleteDoc(doc(db, DOCUMENTS, id));
+  await deleteEntityOnServer('documents', id);
 }
 
 /** Admin-only: list every document across users. */

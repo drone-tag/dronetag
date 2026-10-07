@@ -39,8 +39,8 @@ async function sync(request: Request, context: RouteContext) {
 
   try {
     // Ownership is enforced inside the sync helper against the uid from the
-    // verified token, never from the request body.
-    const result = await syncDronePublicSnapshotAdmin(id.trim(), auth.uid);
+    // verified token, never from the request body. Admins may sync any drone.
+    const result = await syncDronePublicSnapshotAdmin(id.trim(), auth.admin ? null : auth.uid);
     return NextResponse.json({ ok: true, ...result });
   } catch (err) {
     if (err instanceof PublicSyncError) {

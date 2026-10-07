@@ -20,7 +20,7 @@ export type TextareaProps = {
 >;
 
 const fieldBase =
-  'w-full rounded-lg border px-4 py-3 text-base outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 resize-y min-h-[2.75rem] sm:py-2.5 sm:text-sm';
+  'w-full rounded-lg border bg-[var(--color-card)] px-4 py-3 text-base text-[var(--color-text)] placeholder:text-[var(--color-text-secondary)] outline-none transition focus:border-[var(--color-action)] focus:ring-2 focus:ring-[var(--color-action)]/20 resize-y min-h-[2.75rem] sm:py-2.5 sm:text-sm';
 
 export function Textarea({
   label,
@@ -46,7 +46,7 @@ export function Textarea({
       >
         {label}
         {required ? (
-          <span className="ml-0.5 text-red-500" aria-hidden>
+          <span className="ml-0.5 text-[var(--color-danger)]" aria-hidden>
             *
           </span>
         ) : null}
@@ -65,7 +65,7 @@ export function Textarea({
         className={classNames(
           fieldBase,
           error
-            ? 'border-red-500 focus:border-red-500 focus:ring-red-500/20'
+            ? 'border-[var(--color-danger)] focus:border-[var(--color-danger)] focus:ring-[var(--color-danger)]/20'
             : 'border-[var(--color-border)]',
           disabled && 'cursor-not-allowed bg-[var(--color-hover)] opacity-70'
         )}
@@ -74,7 +74,7 @@ export function Textarea({
       {error ? (
         <p
           id={`${textareaId}-error`}
-          className="mt-1.5 text-sm text-red-600"
+          className="mt-1.5 text-sm text-[var(--tone-danger-fg)]"
           role="alert"
         >
           {error}

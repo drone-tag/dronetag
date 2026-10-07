@@ -72,9 +72,21 @@ function loadServiceAccount(): Parameters<typeof cert>[0] | null {
   return null;
 }
 
+/**
+ * Local Emulator Suite: firebase-admin routes Auth/Firestore/Storage to the
+ * emulators on its own when these variables are set, and needs no
+ * credentials. Never set in a deployed environment.
+ */
+function usingEmulators(): boolean {
+  return Boolean(
+    process.env.FIRESTORE_EMULATOR_HOST?.trim() || process.env.FIREBASE_AUTH_EMULATOR_HOST?.trim(),
+  );
+}
+
 export function isFirebaseAdminConfigured(): boolean {
   if (cached) return true;
   if (initError) return false;
+  if (usingEmulators()) return true;
   if (process.env.FIREBASE_SERVICE_ACCOUNT_KEY?.trim()) return true;
   const filePath = serviceAccountPath();
   if (filePath && existsSync(filePath)) return true;
@@ -90,6 +102,14 @@ export function getFirebaseAdmin(): App {
     if (existing) {
       cached = existing;
       return existing;
+    }
+    if (usingEmulators()) {
+      cached = initializeApp({
+        projectId:
+          process.env.GCLOUD_PROJECT?.trim() || process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID?.trim(),
+        storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET?.trim() || undefined,
+      });
+      return cached;
     }
     const sa = loadServiceAccount();
     if (sa) {

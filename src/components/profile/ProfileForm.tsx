@@ -267,7 +267,7 @@ export function ProfileForm({ initialData, onSave }: ProfileFormProps) {
       // away from the submit button, the toast catches the eye immediately.
       toast.error(message);
     } finally { setSaving(false); }
-  }, [formData, initialData?.id, isEdit, photoFile, logoFile, bannerFile, pdfFile, qrFile, onSave, t, validate, user?.uid]);
+  }, [formData, initialData?.id, isEdit, photoFile, logoFile, bannerFile, pdfFile, qrFile, onSave, t, toast, validate, user?.uid]);
 
   // ─── Option lists ───────────────────────────────────────────────────
 
@@ -475,10 +475,10 @@ export function ProfileForm({ initialData, onSave }: ProfileFormProps) {
           <div className="min-w-0">
             {submitError ? (
               <div className="flex items-center gap-2" role="alert">
-                <svg viewBox="0 0 16 16" fill="currentColor" className="h-4 w-4 shrink-0 text-red-500">
+                <svg viewBox="0 0 16 16" fill="currentColor" className="h-4 w-4 shrink-0 text-[var(--color-danger)]">
                   <path fillRule="evenodd" d="M8 15A7 7 0 108 1a7 7 0 000 14zm.75-9.25a.75.75 0 00-1.5 0v2.5a.75.75 0 001.5 0v-2.5zM8 11a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
                 </svg>
-                <p className="text-sm font-medium text-red-600">{submitError}</p>
+                <p className="text-sm font-medium text-[var(--tone-danger-fg)]">{submitError}</p>
               </div>
             ) : null}
             {saved ? (

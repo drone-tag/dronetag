@@ -352,7 +352,13 @@ export interface Report {
   locationText: string;
   /** Optional reporter contact. NEVER displayed publicly elsewhere. */
   contactEmail: string;
+  /** Read by the drone owner. */
   read: boolean;
+  /**
+   * When an admin handled it. Kept apart from `read` so an admin opening a
+   * report never hides it from the owner's inbox.
+   */
+  adminReadAt?: string;
   /**
    * Notification fan-out fields. Reserved for later (email + push); the
    * shape is committed now so reports created in M3 don't need a follow-up
@@ -360,6 +366,10 @@ export interface Report {
    */
   emailNotified: boolean;
   pushNotified: boolean;
+  /** Set once the owner email was attempted; empty on older reports. */
+  notificationAttemptedAt?: string;
+  /** Stable failure code when the owner email did not go out. */
+  notificationError?: string;
   createdAt: string;
 }
 

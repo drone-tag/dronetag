@@ -1,13 +1,18 @@
 /**
- * POST /api/entities/insurances/[id]/pdf — upload policy PDF via Admin SDK.
+ * POST /api/entities/insurances/[id]/pdf — attach the policy PDF.
+ *
+ * Accepts either a Storage path the browser already uploaded to, or the raw
+ * file as multipart (see src/lib/server/uploadedFile.ts).
  */
 
 import { NextResponse } from 'next/server';
+import type { VerificationStatus } from '@/lib/types';
 import { adminFirestore } from '@/lib/server/firebaseAdmin';
-import { adminUploadPdf } from '@/lib/server/storage';
+import { resyncUserPublicDronesAdmin } from '@/lib/server/syncPublicDrones';
 import { requireUserFromRequest } from '@/lib/server/requestAuth';
 import { sanitizeAllowedUrl } from '@/lib/server/urls';
 import { storageErrorResponse } from '@/lib/server/storageErrors';
+import { PDF_TYPE, receiveUpload } from '@/lib/server/uploadedFile';
 import {
   insuranceFromFirestore,
   resolveInsuranceVerificationAfterPdfUpload,
@@ -16,7 +21,7 @@ import {
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-const MAX_PDF_SIZE = 20 * 1024 * 1024;
+const ALLOWED_TYPES = new Set([PDF_TYPE]);
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -25,7 +30,7 @@ export async function POST(request: Request, context: RouteContext) {
   if (auth instanceof NextResponse) return auth;
 
   const { id } = await context.params;
-  if (!id?.trim()) {
+  if (!id?.trim() || id.includes('/')) {
     return NextResponse.json({ error: 'missing insurance id' }, { status: 400 });
   }
 
@@ -39,49 +44,33 @@ export async function POST(request: Request, context: RouteContext) {
     return NextResponse.json({ error: 'forbidden' }, { status: 403 });
   }
 
-  let form: FormData;
+  const upload = await receiveUpload(request, {
+    prefix: `users/${auth.uid}/insurances/${id}/`,
+    relayName: () => 'policy.pdf',
+    allowedTypes: ALLOWED_TYPES,
+    needBytes: true,
+    context: 'insurance pdf',
+  });
+  if (upload instanceof NextResponse) return upload;
+  const pdfUrl = upload.url;
+
+  const insurance = insuranceFromFirestore(id, snap.data() as Record<string, unknown>);
+  // A new document always goes back to review unless the parser vouches for it.
+  let verificationStatus: VerificationStatus = 'pending';
+  if (upload.bytes) {
+    try {
+      verificationStatus = await resolveInsuranceVerificationAfterPdfUpload({
+        pdfBuffer: upload.bytes,
+        insurance,
+        parserTrustedByUser: upload.fields.parserTrusted === '1',
+      });
+    } catch (err) {
+      console.warn('[insurance/pdf] parser auto-verify skipped', err);
+    }
+  }
+
   try {
-    form = await request.formData();
-  } catch {
-    return NextResponse.json({ error: 'invalid form data' }, { status: 400 });
-  }
-
-  const raw = form.get('file');
-  if (!(raw instanceof Blob)) {
-    return NextResponse.json({ error: 'file is required' }, { status: 400 });
-  }
-  const parserTrustedByUser = form.get('parserTrusted') === '1';
-  if (raw.type && raw.type !== 'application/pdf') {
-    return NextResponse.json({ error: 'only application/pdf is allowed' }, { status: 400 });
-  }
-  if (raw.size > MAX_PDF_SIZE) {
-    return NextResponse.json({ error: 'file exceeds 20 MB limit' }, { status: 400 });
-  }
-
-  const buffer = Buffer.from(await raw.arrayBuffer());
-  const path = `users/${auth.uid}/insurances/${id}/policy.pdf`;
-
-  let pdfUrl: string;
-  try {
-    pdfUrl = await adminUploadPdf(path, buffer);
     sanitizeAllowedUrl(pdfUrl, 'pdfUrl');
-  } catch (err) {
-    return storageErrorResponse(err, 'insurance pdf upload');
-  }
-
-  let verificationStatus = insuranceFromFirestore(id, snap.data() as Record<string, unknown>).verificationStatus;
-  try {
-    const insurance = insuranceFromFirestore(id, snap.data() as Record<string, unknown>);
-    verificationStatus = await resolveInsuranceVerificationAfterPdfUpload({
-      pdfBuffer: buffer,
-      insurance,
-      parserTrustedByUser,
-    });
-  } catch (err) {
-    console.warn('[insurance/pdf] parser auto-verify skipped', err);
-  }
-
-  try {
     await db.collection('insurances').doc(id).update({
       pdfUrl,
       verificationStatus,
@@ -89,6 +78,12 @@ export async function POST(request: Request, context: RouteContext) {
     });
   } catch (err) {
     return storageErrorResponse(err, 'insurance pdf firestore update');
+  }
+
+  try {
+    await resyncUserPublicDronesAdmin(auth.uid);
+  } catch (err) {
+    console.warn('[insurance pdf] public resync failed', err);
   }
 
   return NextResponse.json({ pdfUrl, verificationStatus });

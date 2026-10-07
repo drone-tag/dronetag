@@ -44,6 +44,14 @@ export function isAllowedFileUrl(input: string): boolean {
   if (!input) return false;
   try {
     const u = new URL(input);
+    if (
+      process.env.NEXT_PUBLIC_FIREBASE_USE_EMULATORS === 'true' &&
+      u.protocol === 'http:' &&
+      u.port === '9199' &&
+      u.hostname === (process.env.NEXT_PUBLIC_FIREBASE_EMULATOR_HOST || '127.0.0.1')
+    ) {
+      return true;
+    }
     if (u.protocol !== 'https:') return false;
     const host = u.hostname.toLowerCase();
     return getAllowedFileHosts().includes(host);

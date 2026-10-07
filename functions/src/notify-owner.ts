@@ -89,7 +89,7 @@ function render(input: Omit<OwnerNotification, 'ownerUserId'>, italian: boolean)
     ? 'DroneTag — qualcuno ha trovato il tuo drone'
     : 'DroneTag — someone found your drone';
   const cta = italian ? 'Vedi la segnalazione' : 'View the report';
-  const url = appUrl('/dashboard/reports');
+  const url = appUrl('/account/inbox');
 
   const html = [
     '<div style="font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif;max-width:560px;margin:0 auto;color:#111827;line-height:1.55">',

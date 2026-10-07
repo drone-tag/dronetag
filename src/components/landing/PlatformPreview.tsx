@@ -23,13 +23,13 @@ export function PlatformPreview() {
   return (
     <div className="mx-auto w-full max-w-[22rem] sm:max-w-none lg:max-w-[24rem]">
       {/* Phone frame */}
-      <div className="relative rounded-[1.75rem] border-[6px] border-[var(--color-navy)] bg-[var(--color-navy)] p-1 shadow-[0_20px_50px_rgb(7_21_47_/_0.18)]">
+      <div className="relative rounded-[1.75rem] border-[6px] border-[var(--color-navy-surface)] bg-[var(--color-navy-surface)] p-1 shadow-[0_20px_50px_rgb(7_21_47_/_0.18)]">
         <div className="overflow-hidden rounded-[1.25rem] bg-[var(--color-app-bg)]">
           {/* Profile card */}
           <div className="space-y-2.5 p-3">
             <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-card)] p-3 shadow-[var(--shadow-card)]">
               <div className="flex items-start gap-2.5">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--color-navy)] text-xs font-bold text-white">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--color-navy-surface)] text-xs font-bold text-white">
                   MB
                 </div>
                 <div className="min-w-0 flex-1">

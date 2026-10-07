@@ -23,6 +23,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { ChangeEvent, FormEvent } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { errorMessage } from '@/lib/client/errorMessage';
 import {
   clearActiveOperator,
   setActiveOperator,
@@ -118,7 +119,7 @@ export function ActiveOperatorPanel({
       setSwitchOpen(false);
     } catch (err) {
       console.error('[activeOp] activate failed', err);
-      setError(t('activeOp.errorBody'));
+      setError(errorMessage(err, t, 'activeOp.errorBody'));
     } finally {
       setBusy(false);
     }
@@ -133,7 +134,7 @@ export function ActiveOperatorPanel({
       setConfirmingClear(false);
     } catch (err) {
       console.error('[activeOp] clear failed', err);
-      setError(t('activeOp.errorBody'));
+      setError(errorMessage(err, t, 'activeOp.errorBody'));
     } finally {
       setBusy(false);
     }
@@ -160,13 +161,11 @@ export function ActiveOperatorPanel({
               {t('activeOp.cta.clearNow')}
             </Button>
           ) : null}
-          <Button
-            size="sm"
-            onClick={() => setSwitchOpen(true)}
-            disabled={alternativeOperators.length === 0}
-          >
-            {t('activeOp.cta.switch')}
-          </Button>
+          {alternativeOperators.length > 0 ? (
+            <Button size="sm" onClick={() => setSwitchOpen(true)}>
+              {t('activeOp.cta.switch')}
+            </Button>
+          ) : null}
         </div>
       </header>
 
@@ -180,6 +179,9 @@ export function ActiveOperatorPanel({
           <p className="mt-1 text-xs text-[var(--color-text-secondary)]">
             {t('activeOp.empty.noAlternativeDesc')}
           </p>
+          <Button href="/account/operators" variant="secondary" size="sm" className="mt-3">
+            {t('activeOp.empty.addOperator')}
+          </Button>
         </div>
       ) : null}
 
@@ -289,7 +291,7 @@ function SlotTile({
       <p
         className={
           highlight
-            ? 'mt-1 text-sm font-semibold text-blue-900'
+            ? 'mt-1 text-sm font-semibold text-[var(--tone-info-fg)]'
             : 'mt-1 text-sm font-medium text-[var(--color-text)]'
         }
       >
@@ -428,7 +430,7 @@ function SwitchModal({
           </span>
         </label>
         {errors.responsibility ? (
-          <p className="-mt-2 text-xs text-red-600" role="alert">
+          <p className="-mt-2 text-xs text-[var(--tone-danger-fg)]" role="alert">
             {errors.responsibility}
           </p>
         ) : null}

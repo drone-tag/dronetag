@@ -10,6 +10,9 @@ import { requireUserFromRequest } from '@/lib/server/requestAuth';
 import { cleanString } from '@/lib/server/strings';
 import { sanitizeAllowedUrl, UrlValidationError } from '@/lib/server/urls';
 import { normalizeInsuranceDroneIds } from '@/lib/utils/insurance';
+import { resyncUserPublicDronesAdmin } from '@/lib/server/syncPublicDrones';
+import { logger } from '@/lib/server/logger';
+import { FieldValue } from 'firebase-admin/firestore';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -71,17 +74,17 @@ export async function POST(request: Request) {
       : null;
 
   const db = adminFirestore();
-  for (const id of droneIds) {
-    const ds = await db.collection('drones').doc(id).get();
-    if (!ds.exists || (ds.data() as { userId?: string }).userId !== auth.uid) {
-      return NextResponse.json({ error: 'linked drone does not belong to user' }, { status: 400 });
-    }
+  const [droneDocs, opDoc] = await Promise.all([
+    droneIds.length > 0
+      ? db.getAll(...droneIds.map((id) => db.collection('drones').doc(id)))
+      : Promise.resolve([]),
+    operatorId ? db.collection('operators').doc(operatorId).get() : Promise.resolve(null),
+  ]);
+  if (droneDocs.some((d) => !d.exists || d.get('userId') !== auth.uid)) {
+    return NextResponse.json({ error: 'linked drone does not belong to user' }, { status: 400 });
   }
-  if (operatorId) {
-    const os = await db.collection('operators').doc(operatorId).get();
-    if (!os.exists || (os.data() as { userId?: string }).userId !== auth.uid) {
-      return NextResponse.json({ error: 'linked operator does not belong to user' }, { status: 400 });
-    }
+  if (opDoc && (!opDoc.exists || opDoc.get('userId') !== auth.uid)) {
+    return NextResponse.json({ error: 'linked operator does not belong to user' }, { status: 400 });
   }
 
   let pdfUrl = '';
@@ -115,14 +118,40 @@ export async function POST(request: Request) {
     dataLockedAt: nowIso(),
   });
 
-  for (const id of droneIds) {
-    batch.update(db.collection('drones').doc(id), {
-      insuranceId: ref.id,
-      updatedAt: nowIso(),
-    });
+  // Linking is not an edit of the drone's own data, so `updatedAt` stays:
+  // bumping it would freeze drones still checked by the legacy lock rule.
+  const previousIds = [
+    ...new Set(
+      droneDocs
+        .map((d) => d.get('insuranceId'))
+        .filter((v): v is string => typeof v === 'string' && v.length > 0),
+    ),
+  ];
+  const previousDocs =
+    previousIds.length > 0
+      ? await db.getAll(...previousIds.map((id) => db.collection('insurances').doc(id)))
+      : [];
+  for (const prev of previousDocs) {
+    if (!prev.exists || prev.get('userId') !== auth.uid) continue;
+    const moved = droneDocs.filter((d) => d.get('insuranceId') === prev.id).map((d) => d.id);
+    batch.update(prev.ref, { droneIds: FieldValue.arrayRemove(...moved) });
+  }
+  for (const d of droneDocs) {
+    batch.update(d.ref, { insuranceId: ref.id });
   }
 
-  await batch.commit();
+  try {
+    await batch.commit();
+  } catch (err) {
+    logger.error('insurances.create.failed', { droneCount: droneIds.length }, err);
+    return NextResponse.json({ error: 'create insurance failed' }, { status: 500 });
+  }
+
+  if (droneIds.length > 0) {
+    await resyncUserPublicDronesAdmin(auth.uid).catch((err) =>
+      logger.warn('insurances.create.resync_failed', {}, err),
+    );
+  }
 
   return NextResponse.json({ id: ref.id });
 }

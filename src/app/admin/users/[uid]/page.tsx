@@ -17,8 +17,13 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
 import type { ChangeEvent, FormEvent } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { getAccount, updateAccount } from '@/lib/firebase/account';
+import { useToast } from '@/contexts/ToastContext';
+import { adminUpdateUserEmail, getAccount, updateAccount } from '@/lib/firebase/account';
+import { errorMessage } from '@/lib/client/errorMessage';
+import { notifyUserVerification, type VerifiableKind } from '@/lib/client/notifyVerification';
+import { ENFORCE_SLOT_QUOTAS } from '@/lib/config/features';
 import { getPilot, updatePilot } from '@/lib/firebase/pilots';
 import { listOperators } from '@/lib/firebase/operators';
 import { listDronesByUser, clearActiveOperator } from '@/lib/firebase/drones';
@@ -58,6 +63,8 @@ import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { FormErrorBanner } from '@/components/account/FormErrorBanner';
 import { VerifyControls } from '@/components/admin/VerifyControls';
+import { LoadError } from '@/components/ui/LoadError';
+import { formatDroneClass } from '@/lib/droneCatalog';
 
 type AccountForm = Pick<
   UserAccount,
@@ -111,11 +118,21 @@ export default function AdminUserDetailPage() {
   const [documents, setDocuments] = useState<DocumentRef[]>([]);
   const [authorizations, setAuthorizations] = useState<Authorization[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const reload = useCallback(async () => {
     if (!uid) return;
-    const [a, p, s, opList, dList, iList, cList, docList, azList] = await Promise.all([
-      getAccount(uid),
+    let a: UserAccount | null;
+    try {
+      a = await getAccount(uid);
+    } catch (err) {
+      console.error('[admin user] load failed', err);
+      setLoadError(errorMessage(err, t, 'loadError.body'));
+      return;
+    }
+    // The sections render independently: one failed list must not hide the
+    // rest of the user.
+    const results = await Promise.allSettled([
       getPilot(uid),
       ensureSlots(uid),
       listOperators(uid),
@@ -124,18 +141,21 @@ export default function AdminUserDetailPage() {
       listCertificates(uid),
       listDocuments(uid),
       listAuthorizations(uid),
-    ]);
+    ] as const);
+    const [p, s, opList, dList, iList, cList, docList, azList] = results;
     setAccount(a);
-    setPilot(p);
-    setSlotsState(s);
-    setOperators(opList);
-    setDrones(dList);
-    setInsurances(iList);
-    setCertificates(cList);
-    setDocuments(docList);
-    setAuthorizations(azList);
-    await requestPublicDroneResync(uid);
-  }, [uid]);
+    if (p.status === 'fulfilled') setPilot(p.value);
+    if (s.status === 'fulfilled') setSlotsState(s.value);
+    if (opList.status === 'fulfilled') setOperators(opList.value);
+    if (dList.status === 'fulfilled') setDrones(dList.value);
+    if (iList.status === 'fulfilled') setInsurances(iList.value);
+    if (cList.status === 'fulfilled') setCertificates(cList.value);
+    if (docList.status === 'fulfilled') setDocuments(docList.value);
+    if (azList.status === 'fulfilled') setAuthorizations(azList.value);
+    const failed = results.find((r): r is PromiseRejectedResult => r.status === 'rejected');
+    if (failed) console.error('[admin user] partial load failure', failed.reason);
+    setLoadError(failed ? t('admin.overview.partialFailure') : null);
+  }, [uid, t]);
 
   useEffect(() => {
     let cancelled = false;
@@ -151,13 +171,27 @@ export default function AdminUserDetailPage() {
     };
   }, [reload]);
 
+  /** After an identity edit the public cards may show stale names. */
+  const reloadAndResync = useCallback(async () => {
+    await reload();
+    void requestPublicDroneResync(uid);
+  }, [reload, uid]);
+
   if (loading) {
     return (
       <div className="mx-auto max-w-[1400px] px-4 py-8 sm:px-6 lg:px-8">
         <div className="flex items-center gap-3 text-sm text-[var(--color-text-secondary)]">
-          <div className="h-4 w-4 animate-spin rounded-full border-2 border-[var(--color-border)] border-t-gray-600" />
+          <div className="h-4 w-4 animate-spin rounded-full border-2 border-[var(--color-border)] border-t-[var(--color-text-secondary)]" />
           {t('common.loading')}
         </div>
+      </div>
+    );
+  }
+
+  if (!account && loadError) {
+    return (
+      <div className="mx-auto max-w-[1400px] px-4 py-8 sm:px-6 lg:px-8">
+        <LoadError message={loadError} onRetry={reload} />
       </div>
     );
   }
@@ -198,10 +232,10 @@ export default function AdminUserDetailPage() {
         </div>
       </div>
 
-      <Card padding="md" className="border-sky-100 bg-sky-50/50">
-        <h3 className="text-sm font-semibold text-sky-900">{t('admin.users.loginHint.title')}</h3>
-        <p className="mt-1.5 text-sm text-sky-900/90">{t('admin.users.loginHint.body')}</p>
-        <p className="mt-2 font-mono text-xs text-sky-800">
+      <Card padding="md" className="border-[var(--tone-info-border)] bg-[var(--tone-info-bg)]">
+        <h3 className="text-sm font-semibold text-[var(--tone-info-fg)]">{t('admin.users.loginHint.title')}</h3>
+        <p className="mt-1.5 text-sm text-[var(--color-text)]">{t('admin.users.loginHint.body')}</p>
+        <p className="mt-2 font-mono text-xs text-[var(--tone-info-fg)]">
           /login · {account.email || '—'}
         </p>
       </Card>
@@ -223,7 +257,7 @@ export default function AdminUserDetailPage() {
                     href={getPublicProfileUrl(d.slug)}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="rounded-md border border-sky-200 bg-sky-50 px-2.5 py-1 text-xs font-medium text-sky-800 transition hover:bg-sky-100"
+                    className="rounded-md border border-[var(--tone-info-border)] bg-[var(--tone-info-bg)] px-2.5 py-1 text-xs font-medium text-[var(--tone-info-fg)] transition hover:bg-[var(--tone-info-hover)]"
                   >
                     {t('dashboard.viewPublicProfile')}
                   </a>
@@ -244,8 +278,10 @@ export default function AdminUserDetailPage() {
       </Card>
       </div>
 
-      <AccountSection account={account} onSaved={reload} />
-      {pilot ? <PilotSection pilot={pilot} onSaved={reload} /> : null}
+      {loadError ? <LoadError message={loadError} onRetry={reload} /> : null}
+
+      <AccountSection account={account} onSaved={reloadAndResync} />
+      {pilot ? <PilotSection pilot={pilot} onSaved={reloadAndResync} /> : null}
       {slots ? <SlotsSection uid={uid} slots={slots} usage={{
         operator: operators.length,
         drone: drones.length,
@@ -282,6 +318,7 @@ function AccountSection({
   onSaved: () => Promise<void> | void;
 }) {
   const { t } = useLanguage();
+  const toast = useToast();
   const [form, setForm] = useState<AccountForm>(() => ({
     accountType: account.accountType,
     firstName: account.firstName,
@@ -311,12 +348,15 @@ function AccountSection({
     setSaving(true);
     setError(null);
     try {
+      const email = form.email.trim().toLowerCase();
+      if (email && email !== (account.email ?? '').trim().toLowerCase()) {
+        await adminUpdateUserEmail(account.uid, email);
+      }
       await updateAccount(account.uid, {
         accountType: form.accountType,
         firstName: form.firstName,
         lastName: form.lastName,
         dateOfBirth: form.dateOfBirth,
-        email: form.email,
         phone: form.phone,
         companyName: form.companyName,
         companyContactPerson: form.companyContactPerson,
@@ -331,9 +371,10 @@ function AccountSection({
         },
       });
       await onSaved();
+      toast.success(t('account.saved'));
     } catch (err) {
       console.error('[admin user account] save failed', err);
-      setError(t('account.saveError'));
+      setError(errorMessage(err, t));
     } finally {
       setSaving(false);
     }
@@ -358,6 +399,7 @@ function AccountSection({
             ]}
           />
           <Input label={t('field.email')} name="email" type="email"
+            hint={t('admin.users.detail.emailHint')}
             value={form.email} onChange={(e) => set('email', e.target.value)} />
           <Input label={t('field.firstName')} name="firstName"
             value={form.firstName} onChange={(e) => set('firstName', e.target.value)} />
@@ -405,6 +447,7 @@ function PilotSection({
   onSaved: () => Promise<void> | void;
 }) {
   const { t } = useLanguage();
+  const toast = useToast();
   const [form, setForm] = useState<PilotForm>(() => ({
     firstName: pilot.firstName,
     lastName: pilot.lastName,
@@ -430,9 +473,10 @@ function PilotSection({
     try {
       await updatePilot(pilot.userId, form);
       await onSaved();
+      toast.success(t('account.saved'));
     } catch (err) {
       console.error('[admin user pilot] save failed', err);
-      setError(t('account.saveError'));
+      setError(errorMessage(err, t));
     } finally {
       setSaving(false);
     }
@@ -497,6 +541,7 @@ function SlotsSection({
   onSaved: () => Promise<void> | void;
 }) {
   const { t } = useLanguage();
+  const toast = useToast();
   const [form, setForm] = useState<SlotForm>(() => ({
     drone: slots.drone,
     operator: slots.operator,
@@ -522,9 +567,10 @@ function SlotsSection({
     try {
       await setSlots(uid, form);
       await onSaved();
+      toast.success(t('account.saved'));
     } catch (err) {
       console.error('[admin slots] save failed', err);
-      setError(t('account.saveError'));
+      setError(errorMessage(err, t));
     } finally {
       setSaving(false);
     }
@@ -534,6 +580,11 @@ function SlotsSection({
     <Card padding="md">
       <h3 className="text-base font-semibold text-[var(--color-text)]">{t('admin.slots.title')}</h3>
       <p className="mt-1 text-sm text-[var(--color-text-secondary)]">{t('admin.slots.subtitle')}</p>
+      {!ENFORCE_SLOT_QUOTAS ? (
+        <p className="mt-3 rounded-lg bg-[var(--tone-info-bg)] px-3 py-2 text-xs text-[var(--tone-info-fg)] ring-1 ring-inset ring-[var(--tone-info-ring)]">
+          {t('admin.slots.notEnforced')}
+        </p>
+      ) : null}
       <form onSubmit={handleSubmit} className="mt-4 space-y-4" noValidate>
         <FormErrorBanner show={Boolean(error)} message={error ?? undefined} />
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -558,6 +609,58 @@ function SlotsSection({
       </form>
     </Card>
   );
+}
+
+// ─── Verification decisions ───────────────────────────────────────────────
+
+/** Saves a decision, then tells the owner; a failed save never notifies. */
+function useVerificationDecision(onChanged: () => Promise<void> | void) {
+  const { t } = useLanguage();
+  const { user } = useAuth();
+  const toast = useToast();
+  const [busyId, setBusyId] = useState<string | null>(null);
+
+  async function decide(input: {
+    id: string;
+    userId: string;
+    kind: VerifiableKind;
+    label: string;
+    status: VerificationStatus;
+    reason?: string;
+    apply: () => Promise<void>;
+  }) {
+    setBusyId(input.id);
+    try {
+      await input.apply();
+      toast.success(
+        t(
+          input.status === 'verified'
+            ? 'toast.verify.approved'
+            : input.status === 'rejected'
+              ? 'toast.verify.rejected'
+              : 'toast.verify.reset',
+        ),
+      );
+      await onChanged();
+      const warning = await notifyUserVerification({
+        userId: input.userId,
+        kind: input.kind,
+        label: input.label,
+        status: input.status,
+        reason: input.reason,
+        adminUid: user?.uid,
+        t,
+      });
+      if (warning) toast.error(warning);
+    } catch (err) {
+      console.error('[admin user] verification failed', err);
+      toast.error(errorMessage(err, t, 'toast.verify.failed'));
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  return { busyId, decide };
 }
 
 // ─── Operators / Drones / Insurances / Certificates / Documents ──────────
@@ -588,7 +691,7 @@ function OperatorsSection({ operators, drones }: { operators: Operator[]; drones
                     </span>
                   ) : null}
                 </div>
-                <span className="text-xs text-[var(--color-text-secondary)]">{usage} drone(s)</span>
+                <span className="text-xs text-[var(--color-text-secondary)]">{t('admin.users.detail.droneCount', { count: usage })}</span>
               </li>
             );
           })}
@@ -608,6 +711,7 @@ function DronesSection({
   onChanged: () => Promise<void> | void;
 }) {
   const { t } = useLanguage();
+  const toast = useToast();
   const [busyId, setBusyId] = useState<string | null>(null);
 
   async function handleClear(id: string) {
@@ -615,6 +719,9 @@ function DronesSection({
     try {
       await clearActiveOperator(id);
       await onChanged();
+    } catch (err) {
+      console.error('[admin user] clear override failed', err);
+      toast.error(errorMessage(err, t));
     } finally {
       setBusyId(null);
     }
@@ -642,7 +749,7 @@ function DronesSection({
                     {[d.manufacturer, d.model].filter(Boolean).join(' ').trim() || d.slug}
                   </Link>
                   <span className="ml-2 rounded-full bg-[var(--color-hover)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-[var(--color-text)]">
-                    {d.classMarking}
+                    {formatDroneClass(d.classMarking, t)}
                   </span>
                   <p className="mt-0.5 text-xs text-[var(--color-text-secondary)]">
                     {t('drone.field.defaultOperator')}: {op ? operatorDisplayName(op) : '—'}
@@ -664,7 +771,7 @@ function DronesSection({
                       href={getPublicProfileUrl(d.slug)}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="rounded-md border border-sky-200 bg-sky-50 px-2.5 py-1 text-xs font-medium text-sky-800 transition hover:bg-sky-100"
+                      className="rounded-md border border-[var(--tone-info-border)] bg-[var(--tone-info-bg)] px-2.5 py-1 text-xs font-medium text-[var(--tone-info-fg)] transition hover:bg-[var(--tone-info-hover)]"
                     >
                       {t('dashboard.viewPublicProfile')}
                     </a>
@@ -692,16 +799,18 @@ function InsurancesSection({
   onChanged: () => Promise<void> | void;
 }) {
   const { t } = useLanguage();
-  const [busyId, setBusyId] = useState<string | null>(null);
+  const { busyId, decide } = useVerificationDecision(onChanged);
 
-  async function verify(ins: Insurance, next: VerificationStatus) {
-    setBusyId(ins.id);
-    try {
-      await updateInsurance(ins.id, { verificationStatus: next });
-      await onChanged();
-    } finally {
-      setBusyId(null);
-    }
+  function verify(ins: Insurance, next: VerificationStatus, reason?: string) {
+    return decide({
+      id: ins.id,
+      userId: ins.userId,
+      kind: 'insurance',
+      label: ins.provider || ins.policyNumber || '—',
+      status: next,
+      reason,
+      apply: () => updateInsurance(ins.id, { verificationStatus: next }),
+    });
   }
 
   return (
@@ -728,7 +837,7 @@ function InsurancesSection({
                     {drone ? ` · ${drone.slug}` : null}
                   </p>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   {i.pdfUrl ? (
                     <a
                       href={i.pdfUrl}
@@ -742,7 +851,7 @@ function InsurancesSection({
                   <VerifyControls
                     current={i.verificationStatus}
                     busy={busyId === i.id}
-                    onSet={(s) => verify(i, s)}
+                    onSet={(s, r) => verify(i, s, r)}
                   />
                 </div>
               </li>
@@ -762,16 +871,18 @@ function CertificatesSection({
   onChanged: () => Promise<void> | void;
 }) {
   const { t } = useLanguage();
-  const [busyId, setBusyId] = useState<string | null>(null);
+  const { busyId, decide } = useVerificationDecision(onChanged);
 
-  async function verify(c: Certificate, next: VerificationStatus) {
-    setBusyId(c.id);
-    try {
-      await updateCertificate(c.id, { verificationStatus: next });
-      await onChanged();
-    } finally {
-      setBusyId(null);
-    }
+  function verify(c: Certificate, next: VerificationStatus, reason?: string) {
+    return decide({
+      id: c.id,
+      userId: c.userId,
+      kind: 'certificate',
+      label: c.registrationNumber || c.label || c.kind,
+      status: next,
+      reason,
+      apply: () => updateCertificate(c.id, { verificationStatus: next }),
+    });
   }
 
   return (
@@ -797,11 +908,11 @@ function CertificatesSection({
                   {c.expiresAt ? formatDate(c.expiresAt) : '—'}
                 </p>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <VerifyControls
                   current={c.verificationStatus}
                   busy={busyId === c.id}
-                  onSet={(s) => verify(c, s)}
+                  onSet={(s, r) => verify(c, s, r)}
                 />
               </div>
             </li>
@@ -820,16 +931,18 @@ function AuthorizationsSection({
   onChanged: () => Promise<void> | void;
 }) {
   const { t } = useLanguage();
-  const [busyId, setBusyId] = useState<string | null>(null);
+  const { busyId, decide } = useVerificationDecision(onChanged);
 
-  async function verify(a: Authorization, next: VerificationStatus) {
-    setBusyId(a.id);
-    try {
-      await updateAuthorization(a.id, { verificationStatus: next });
-      await onChanged();
-    } finally {
-      setBusyId(null);
-    }
+  function verify(a: Authorization, next: VerificationStatus, reason?: string) {
+    return decide({
+      id: a.id,
+      userId: a.userId,
+      kind: 'authorization',
+      label: a.label || a.kind,
+      status: next,
+      reason,
+      apply: () => updateAuthorization(a.id, { verificationStatus: next }),
+    });
   }
 
   return (
@@ -856,7 +969,7 @@ function AuthorizationsSection({
                   {computeAuthorizationStatus(a) === 'expired' ? ` · ${t('policy.expired')}` : null}
                 </p>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 {a.fileUrl ? (
                   <a
                     href={a.fileUrl}
@@ -870,7 +983,7 @@ function AuthorizationsSection({
                 <VerifyControls
                   current={a.verificationStatus}
                   busy={busyId === a.id}
-                  onSet={(s) => verify(a, s)}
+                  onSet={(s, r) => verify(a, s, r)}
                 />
               </div>
             </li>
@@ -889,16 +1002,18 @@ function DocumentsSection({
   onChanged: () => Promise<void> | void;
 }) {
   const { t } = useLanguage();
-  const [busyId, setBusyId] = useState<string | null>(null);
+  const { busyId, decide } = useVerificationDecision(onChanged);
 
-  async function verify(d: DocumentRef, next: VerificationStatus) {
-    setBusyId(d.id);
-    try {
-      await updateDocument(d.id, { verificationStatus: next });
-      await onChanged();
-    } finally {
-      setBusyId(null);
-    }
+  function verify(d: DocumentRef, next: VerificationStatus, reason?: string) {
+    return decide({
+      id: d.id,
+      userId: d.userId,
+      kind: 'document',
+      label: d.label || d.fileName || d.kind,
+      status: next,
+      reason,
+      apply: () => updateDocument(d.id, { verificationStatus: next }),
+    });
   }
 
   return (
@@ -922,7 +1037,7 @@ function DocumentsSection({
                   {d.updatedAt ? ` · ${formatDateTime(d.updatedAt)}` : null}
                 </p>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 {d.fileUrl ? (
                   <a
                     href={d.fileUrl}
@@ -936,7 +1051,7 @@ function DocumentsSection({
                 <VerifyControls
                   current={d.verificationStatus}
                   busy={busyId === d.id}
-                  onSet={(s) => verify(d, s)}
+                  onSet={(s, r) => verify(d, s, r)}
                 />
               </div>
             </li>

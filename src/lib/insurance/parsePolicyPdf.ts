@@ -228,9 +228,22 @@ function isPlausibleHolderName(name: string): boolean {
   return true;
 }
 
+/** `Contraente: Mario Rossi` on its own line: the line end bounds the name. */
+function extractHolderFromLines(lines: string[]): string {
+  const rx =
+    /(?:nome\s+dell['’‘]?assicurat[oa]|contraente|titolare|nominativo|\bassicurat[oa](?!r))\s*:\s*(.+?)(?=\s+uso\b|\s+assicuratori\b|\s+premio\b|$)/i;
+  for (const line of lines) {
+    const m = line.match(rx);
+    if (!m?.[1]) continue;
+    const name = cleanExtractedPhrase(m[1]);
+    if (isPlausibleHolderName(name)) return name;
+  }
+  return '';
+}
+
 function extractHolderName(text: string): string {
   const patterns = [
-    /nome\s+dell[''']?assicurat[oa]\s*[:.]?\s*(.+?)(?=\s+uso\b|\s+assicuratori\b|\s+contraente\b|\s+premio\b|$)/i,
+    /nome\s+dell['’‘]?assicurat[oa]\s*[:.]?\s*(.+?)(?=\s+uso\b|\s+assicuratori\b|\s+contraente\b|\s+premio\b|$)/i,
     /(?:contraente|titolare|nominativo)\s*[:.]?\s*(.+?)(?=\s+uso\b|\s+assicuratori\b|\s+premio\b|$)/i,
     /\bassicurat[oa](?!r)\s*[:.]?\s*(.+?)(?=\s+uso\b|\s+assicuratori\b|\s+premio\b|$)/i,
     /(?:nome\s+e\s+cognome|cognome\s+e\s+nome)\s*[:.]?\s*(.+?)(?=\s+uso\b|$)/i,
@@ -247,7 +260,7 @@ function extractHolderName(text: string): string {
 
 function extractInsurerFromTable(text: string): string {
   const m = text.match(
-    /\bassicuratori\b\s*[:.]?\s*(.+?)(?=\s+nome\s+dell[''']?assicurat|\s+uso\b|\s+contraente\b|$)/i,
+    /\bassicuratori\b\s*[:.]?\s*(.+?)(?=\s+nome\s+dell['’‘]?assicurat|\s+uso\b|\s+contraente\b|$)/i,
   );
   if (!m?.[1]) return '';
   const first = cleanExtractedPhrase(m[1])
@@ -316,8 +329,9 @@ function extractDateRange(text: string): { issueDate: string; expiryDate: string
 
 export function parsePolicyPdfText(text: string): ParsedPolicyFields {
   const normalized = text.replace(/\s+/g, ' ').trim();
+  const lines = text.split('\n').map((l) => l.replace(/\s+/g, ' ').trim()).filter(Boolean);
   const { issueDate, expiryDate } = extractDateRange(normalized);
-  const holderName = extractHolderName(normalized);
+  const holderName = extractHolderFromLines(lines) || extractHolderName(normalized);
   const provider = extractProvider(normalized);
   const policyNumber = extractPolicyNumber(normalized);
   const coveredDrones = extractCoveredDrones(normalized);

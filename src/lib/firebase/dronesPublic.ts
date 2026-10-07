@@ -39,6 +39,7 @@ import {
 } from 'firebase/firestore';
 
 import { adminFetch } from '@/lib/client/adminApi';
+import { syncPublicPagesOnServer } from '@/lib/client/entityApi';
 import { awaitFirebaseAuthReady } from '@/lib/firebase/auth';
 import { DEMO_MODE, getFirebaseDb } from '@/lib/firebase/config';
 import * as demo from '@/lib/demo/entitiesStore';
@@ -56,7 +57,7 @@ import type {
   Pilot,
 } from '@/lib/types/entities';
 import type { AccountBranding } from '@/lib/types/account';
-import type { PolicyStatus, VerificationStatus } from '@/lib/types';
+import type { PolicyStatus } from '@/lib/types';
 import {
   deriveCertificateVerification,
   effectiveOperatorId,
@@ -65,45 +66,9 @@ import {
 } from '@/lib/utils/entities';
 import { computePolicyStatus } from '@/lib/utils';
 import { maskPolicyNumber } from '@/lib/utils/publicProjection';
+import { snapshotFromRaw } from '@/lib/utils/publicSnapshot';
 
 const DRONES_PUBLIC = 'dronesPublic';
-
-// ─── Raw → typed conversion ────────────────────────────────────────────────
-
-function snapshotFromRaw(slug: string, raw: Record<string, unknown>): DronePublicSnapshot {
-  const str = (k: string) => (typeof raw[k] === 'string' ? (raw[k] as string) : '');
-  return {
-    slug,
-    droneId: str('droneId'),
-    verificationStatus: (str('verificationStatus') || 'unverified') as VerificationStatus,
-    lastVerifiedAt: str('lastVerifiedAt'),
-    publishedAt: str('publishedAt'),
-    holderKind: ((['pilot', 'operator-private', 'operator-company'] as const).includes(
-      str('holderKind') as 'pilot' | 'operator-private' | 'operator-company',
-    )
-      ? (str('holderKind') as DronePublicSnapshot['holderKind'])
-      : 'pilot') as DronePublicSnapshot['holderKind'],
-    holderDisplayName: str('holderDisplayName'),
-    manufacturer: str('manufacturer'),
-    model: str('model'),
-    classMarking: (str('classMarking') || 'unknown') as DronePublicSnapshot['classMarking'],
-    droneSerialNumber: str('droneSerialNumber'),
-    insuranceStatus: ((['valid', 'expiring', 'expired', 'missing'] as const).includes(
-      str('insuranceStatus') as PolicyStatus,
-    )
-      ? (str('insuranceStatus') as DronePublicSnapshot['insuranceStatus'])
-      : 'missing') as DronePublicSnapshot['insuranceStatus'],
-    insuranceProvider: str('insuranceProvider'),
-    insuranceValidUntil: str('insuranceValidUntil'),
-    insuranceMaskedPolicyNumber: str('insuranceMaskedPolicyNumber'),
-    // `insurancePdfUrl` is deliberately not read back even if a legacy
-    // document still carries it — see DronePublicSnapshot for why.
-    profilePhotoUrl: str('profilePhotoUrl'),
-    logoUrl: str('logoUrl'),
-    bannerUrl: str('bannerUrl'),
-    updatedAt: str('updatedAt'),
-  };
-}
 
 // ─── Reads ─────────────────────────────────────────────────────────────────
 
@@ -289,23 +254,21 @@ export async function requestPublicSync(droneId: string): Promise<{ published: b
 }
 
 /**
- * Re-sync every public-active drone owned by `uid`. Called from the
- * owner-side update paths for pilot, operators and insurances so a
- * change in those entities propagates to all of the user's public
- * drone cards without each callsite knowing which drones to touch.
- *
- * Cost: O(public drones owned by user) Firestore reads + writes per
- * invocation. Acceptable for a per-user dashboard with single-digit drones.
+ * Re-sync every drone owned by `uid`. Called from the update paths for
+ * pilot, operators, insurances, certificates and branding so a change in
+ * those entities propagates to all of the user's public drone cards
+ * without each callsite knowing which drones to touch.
  */
 export async function resyncUserPublicDrones(uid: string): Promise<void> {
   if (!uid) return;
   try {
+    if (!DEMO_MODE) {
+      // One request: the server reconciles every drone of the user.
+      await syncPublicPagesOnServer(uid);
+      return;
+    }
     const drones = await listDronesByUser(uid);
-    await Promise.all(
-      drones
-        .filter((d) => d.status === 'active' && d.visibility === 'public')
-        .map((d) => syncDronePublicSnapshot(d)),
-    );
+    await Promise.all(drones.map((d) => syncDronePublicSnapshot(d)));
   } catch (err) {
     console.warn('[dronesPublic] resyncUserPublicDrones failed', { uid, err });
   }

@@ -1,6 +1,9 @@
 /logo.png
   Cache-Control: public, max-age=0, must-revalidate
 
+/logo-mark.webp
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800
+
 /favicon.png
   Cache-Control: public, max-age=0, must-revalidate
 

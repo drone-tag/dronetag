@@ -3,45 +3,62 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { getAccount } from '@/lib/firebase/account';
+import { accountNeedsProvisioning, getAccount } from '@/lib/firebase/account';
 import { logout } from '@/lib/firebase/auth';
 import { DEMO_MODE } from '@/lib/firebase/config';
+import { provisionAccount, splitDisplayName } from '@/lib/client/provisionAccount';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 
+type GateState = 'checking' | 'ready' | 'error';
+
+/**
+ * Makes sure the signed-in user has their account records before the
+ * workspace renders. A missing or partial record is repaired on the spot
+ * (provisioning is idempotent server-side), so a user who reaches /account
+ * before the signup or Google flow finished provisioning never gets stuck.
+ */
 export function AccountProvisionGate({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
   const { t } = useLanguage();
-  const [checking, setChecking] = useState(true);
-  const [provisioned, setProvisioned] = useState(false);
+  const [attempt, setAttempt] = useState(0);
+  // Results carry the check they answer, so a new user or a retry reads as
+  // "checking" by derivation instead of by a reset inside the effect.
+  const [result, setResult] = useState<{ key: string; status: Exclude<GateState, 'checking'> } | null>(null);
+  const [readyUid, setReadyUid] = useState<string | null>(null);
+  const key = user ? `${user.uid}:${attempt}` : '';
+  const ready = DEMO_MODE || Boolean(user && readyUid === user.uid);
 
   useEffect(() => {
-    if (loading) return;
-    if (!user) return;
-
-    if (DEMO_MODE) {
-      setProvisioned(true);
-      setChecking(false);
-      return;
-    }
-
+    if (loading || !user || ready) return;
     let cancelled = false;
     (async () => {
       try {
-        const account = await getAccount(user.uid);
-        if (!cancelled) setProvisioned(Boolean(account));
-      } catch {
-        if (!cancelled) setProvisioned(false);
-      } finally {
-        if (!cancelled) setChecking(false);
+        let account = await getAccount(user.uid);
+        if (!account || accountNeedsProvisioning(account)) {
+          await provisionAccount(splitDisplayName(user.displayName));
+          account = await getAccount(user.uid);
+        }
+        if (cancelled) return;
+        if (account) {
+          setReadyUid(user.uid);
+          setResult({ key, status: 'ready' });
+        } else {
+          setResult({ key, status: 'error' });
+        }
+      } catch (err) {
+        console.warn('[account] provisioning check failed', err);
+        if (!cancelled) setResult({ key, status: 'error' });
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, [user, loading]);
+  }, [user, loading, key, ready]);
 
-  if (loading || checking) {
+  const state: GateState = ready ? 'ready' : result?.key === key ? result.status : 'checking';
+
+  if (loading || (user && state === 'checking')) {
     return (
       <div className="flex min-h-[calc(100dvh-4rem)] flex-col items-center justify-center gap-3 bg-[var(--color-app-bg)]">
         <div
@@ -56,7 +73,7 @@ export function AccountProvisionGate({ children }: { children: React.ReactNode }
 
   if (!user) return null;
 
-  if (!provisioned) {
+  if (state === 'error') {
     return (
       <div className="mx-auto flex min-h-[calc(100dvh-4rem)] max-w-lg items-center px-4 py-16 sm:px-6">
         <Card padding="lg" className="w-full text-center">
@@ -67,6 +84,9 @@ export function AccountProvisionGate({ children }: { children: React.ReactNode }
             {t('account.notProvisioned.body')}
           </p>
           <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:justify-center">
+            <Button type="button" onClick={() => setAttempt((n) => n + 1)}>
+              {t('common.retry')}
+            </Button>
             <Button type="button" variant="secondary" onClick={() => void logout()}>
               {t('nav.logout')}
             </Button>

@@ -2,8 +2,6 @@
 
 import type { Language } from '@/lib/i18n';
 export type { Language };
-// LANGUAGES is the selectable set; ALL_LANGUAGES also covers the incomplete
-// translations, which are hidden from selectors but still valid stored values.
 export { ALL_LANGUAGES, LANGUAGES } from '@/lib/i18n';
 
 // ─── Enums ───────────────────────────────────────────────────────────────────

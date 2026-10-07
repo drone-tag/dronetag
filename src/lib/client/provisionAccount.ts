@@ -37,8 +37,22 @@ export interface ProvisionResult {
   slots: boolean;
 }
 
+/** Best-effort first/last name split of a provider display name ("Ada Lovelace"). */
+export function splitDisplayName(
+  displayName: string | null | undefined,
+): { firstName: string; lastName: string } {
+  const trimmed = displayName?.trim() ?? '';
+  if (!trimmed) return { firstName: '', lastName: '' };
+  const space = trimmed.indexOf(' ');
+  if (space === -1) return { firstName: trimmed, lastName: '' };
+  return {
+    firstName: trimmed.slice(0, space),
+    lastName: trimmed.slice(space + 1).trim(),
+  };
+}
+
 export class ProvisionError extends Error {
-  constructor(message: string, readonly created?: Partial<ProvisionResult>) {
+  constructor(message: string) {
     super(message);
     this.name = 'ProvisionError';
   }
@@ -62,7 +76,7 @@ export async function provisionAccount(seed: ProvisionSeed = {}): Promise<Provis
   };
 
   if (!res.ok) {
-    throw new ProvisionError(payload.error ?? `provisioning failed (${res.status})`, payload.created);
+    throw new ProvisionError(payload.error ?? `provisioning failed (${res.status})`);
   }
 
   return payload.created ?? { account: false, pilot: false, slots: false };

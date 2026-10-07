@@ -19,7 +19,7 @@ export function HowItWorksStep({ step, titleKey, descKey, isLast }: HowItWorksSt
         <span className="absolute top-10 bottom-0 left-[1.125rem] w-px bg-[var(--color-border)] sm:hidden" aria-hidden />
       ) : null}
 
-      <div className="relative z-[1] flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--color-navy)] text-sm font-bold text-white sm:mx-auto">
+      <div className="relative z-[1] flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--color-navy-surface)] text-sm font-bold text-white sm:mx-auto">
         {step}
       </div>
 

@@ -74,17 +74,17 @@ service firebase.storage {
       );
     }
     function isWithinImageSize() {
-      return request.resource.size < 5 * 1024 * 1024;
+      return request.resource.size <= 20 * 1024 * 1024;
     }
     function isWithinFileSize() {
-      // 20 MB hard cap, mirroring the client-side limit in
-      // src/lib/firebase/storage.ts.
-      return request.resource.size < 20 * 1024 * 1024;
+      // 50 MB hard cap, mirroring DIRECT_MAX_BYTES in
+      // src/lib/client/fileUpload.ts and MAX_UPLOAD_BYTES on the server.
+      return request.resource.size <= 50 * 1024 * 1024;
     }
 
     // ─── Public branding namespace ───────────────────────────────────────
     // Anonymous read is intentional here: these assets render on /u/{slug}
-    // for a visitor who has just tapped an NFC badge. Images only, 5 MB.
+    // for a visitor who has just tapped an NFC badge. Images only, 20 MB.
     match /public/users/{uid}/{allPaths=**} {
       allow read: if true;
 

@@ -98,7 +98,7 @@ export default function AdminUsersListPage() {
 
       {loading ? (
         <div className="mt-6 flex items-center gap-3 text-sm text-[var(--color-text-secondary)]">
-          <div className="h-4 w-4 animate-spin rounded-full border-2 border-[var(--color-border)] border-t-gray-600" />
+          <div className="h-4 w-4 animate-spin rounded-full border-2 border-[var(--color-border)] border-t-[var(--color-text-secondary)]" />
           {t('common.loading')}
         </div>
       ) : loadError ? (
@@ -113,27 +113,27 @@ export default function AdminUsersListPage() {
         <Card className="mt-6 overflow-x-auto" padding="none">
           <table className="w-full min-w-[960px] border-collapse text-left text-sm">
             <thead>
-              <tr className="border-b border-[var(--color-border)] bg-slate-50/80">
-                <th className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+              <tr className="border-b border-[var(--color-border)] bg-[var(--color-hover)]">
+                <th className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-[var(--color-text-secondary)]">
                   {t('admin.users.col.name')}
                 </th>
-                <th className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                <th className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-[var(--color-text-secondary)]">
                   {t('admin.users.col.type')}
                 </th>
-                <th className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                <th className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-[var(--color-text-secondary)]">
                   {t('admin.users.col.email')}
                 </th>
-                <th className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                <th className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-[var(--color-text-secondary)]">
                   {t('admin.users.col.created')}
                 </th>
-                <th className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                <th className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-[var(--color-text-secondary)]">
                   {t('common.actions')}
                 </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[var(--color-border)]">
               {filtered.map((u) => (
-                <tr key={u.uid} className="transition hover:bg-slate-50/60">
+                <tr key={u.uid} className="transition hover:bg-[var(--color-hover)]">
                   <td className="px-4 py-3.5 font-medium text-[var(--color-text)]">
                     {accountDisplayName(u)}
                   </td>
@@ -159,7 +159,7 @@ export default function AdminUsersListPage() {
                           href={getPublicProfileUrl(publicSlugByUser.get(u.uid)!)}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="rounded-md border border-sky-200 bg-sky-50 px-2.5 py-1.5 text-xs font-medium text-sky-800 transition hover:bg-sky-100"
+                          className="rounded-md border border-[var(--tone-info-border)] bg-[var(--tone-info-bg)] px-2.5 py-1.5 text-xs font-medium text-[var(--tone-info-fg)] transition hover:bg-[var(--tone-info-hover)]"
                         >
                           {t('dashboard.viewPublicProfile')}
                         </a>

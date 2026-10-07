@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
@@ -9,18 +9,22 @@ import { resyncUserPublicDrones } from '@/lib/firebase/dronesPublic';
 import {
   ensureAccount,
   updateAccount,
-  uploadAccountBanner,
-  uploadAccountLogo,
-  uploadAccountProfilePhoto,
+  uploadAccountBranding,
 } from '@/lib/firebase/account';
+import { errorMessage } from '@/lib/client/errorMessage';
 import { DEMO_MODE } from '@/lib/firebase/config';
-import { ensurePilot } from '@/lib/firebase/pilots';
+import { ensurePilot, updatePilot } from '@/lib/firebase/pilots';
 import type { Address, UserAccount } from '@/lib/types/account';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
+import { Input } from '@/components/ui/Input';
 import { UploadField } from '@/components/ui/UploadField';
 import { FormErrorBanner } from '@/components/account/FormErrorBanner';
 import { PlanSlotsSummary } from '@/components/account/PlanSlotsSummary';
+import { LoadError, PageLoading } from '@/components/ui/LoadError';
+import { useToast } from '@/contexts/ToastContext';
+
+const IMAGE_ACCEPT = 'image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif';
 
 const EMPTY_ADDRESS: Address = { line1: '', line2: '', city: '', postalCode: '', country: '' };
 
@@ -47,43 +51,56 @@ export default function AccountProfilePage() {
   const { t } = useLanguage();
   const [account, setAccount] = useState<UserAccount | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    if (!user) return;
+    try {
+      const a = await ensureAccount(user.uid, user.email ?? '');
+      setAccount(a);
+      setLoadError(null);
+      // The pilot record mirrors the account; it must not hold up the page.
+      void ensurePilot(user.uid, {
+        firstName: a.firstName,
+        lastName: a.lastName,
+        email: a.email,
+        phone: a.phone,
+        address: a.address,
+        dateOfBirth: a.dateOfBirth,
+      }).catch((err) => console.warn('[account] ensurePilot failed', err));
+    } catch (err) {
+      console.error('[account] load failed', err);
+      setLoadError(errorMessage(err, t, 'loadError.body'));
+    }
+  }, [user, t]);
 
   useEffect(() => {
     if (!user) return;
     let cancelled = false;
     (async () => {
       try {
-        const a = await ensureAccount(user.uid, user.email ?? '');
-        await ensurePilot(user.uid, {
-          firstName: a.firstName,
-          lastName: a.lastName,
-          email: a.email,
-          phone: a.phone,
-          address: a.address,
-          dateOfBirth: a.dateOfBirth,
-        });
-        if (cancelled) return;
-        setAccount(a);
+        await load();
       } finally {
         if (!cancelled) setLoading(false);
       }
     })();
     return () => { cancelled = true; };
-  }, [user]);
+  }, [user, load]);
 
-  if (loading) {
+  if (loading) return <PageLoading />;
+
+  if (!user) return null;
+  if (!account) {
     return (
-      <div className="mt-8 flex items-center gap-3 text-sm text-[var(--color-text-secondary)]">
-        <div className="h-4 w-4 animate-spin rounded-full border-2 border-[var(--color-border)] border-t-gray-600" />
-        {t('common.loading')}
+      <div className="space-y-4 sm:space-y-6">
+        <LoadError message={loadError} onRetry={load} />
       </div>
     );
   }
 
-  if (!account || !user) return null;
-
   return (
     <div className="space-y-4 sm:space-y-6">
+      <IdentityCard uid={user.uid} account={account} onSaved={(next) => setAccount(next)} />
       <PlanSlotsSummary />
       <AccountCard
         uid={user.uid}
@@ -112,6 +129,134 @@ export default function AccountProfilePage() {
   );
 }
 
+/**
+ * Registered identity, read-only once set (changes go through support). A
+ * name that was never filled in — accounts created by an admin, or a Google
+ * profile without one — can be completed here once.
+ */
+function IdentityCard({
+  uid,
+  account,
+  onSaved,
+}: {
+  uid: string;
+  account: UserAccount;
+  onSaved: (a: UserAccount) => void;
+}) {
+  const { t } = useLanguage();
+  const toast = useToast();
+  const isCompany = account.accountType === 'company';
+  const missingName = isCompany
+    ? !account.companyName.trim()
+    : !account.firstName.trim() || !account.lastName.trim();
+  const [firstName, setFirstName] = useState(account.firstName);
+  const [lastName, setLastName] = useState(account.lastName);
+  const [companyName, setCompanyName] = useState(account.companyName);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const canSave = isCompany
+    ? companyName.trim().length > 0
+    : firstName.trim().length > 0 && lastName.trim().length > 0;
+
+  async function handleSave(e: FormEvent) {
+    e.preventDefault();
+    if (!canSave) return;
+    setSaving(true);
+    setError(null);
+    try {
+      const patch = isCompany
+        ? { companyName: companyName.trim() }
+        : { firstName: firstName.trim(), lastName: lastName.trim() };
+      await updateAccount(uid, patch);
+      if (!isCompany) {
+        await updatePilot(uid, patch).catch((err) =>
+          console.warn('[account] pilot name sync failed', err),
+        );
+      } else {
+        void resyncUserPublicDrones(uid).catch((err) =>
+          console.warn('[account] public resync failed', err),
+        );
+      }
+      onSaved({ ...account, ...patch, updatedAt: new Date().toISOString() });
+      toast.success(t('account.saved'));
+    } catch (err) {
+      console.error('[account] identity save failed', err);
+      setError(errorMessage(err, t));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const displayName = isCompany
+    ? account.companyName
+    : [account.firstName, account.lastName].filter(Boolean).join(' ');
+  const rows: { label: string; value: string }[] = [
+    { label: isCompany ? t('field.companyName') : t('account.identity.name'), value: displayName },
+    { label: t('field.email'), value: account.email },
+    { label: t('field.phone'), value: account.phone },
+  ];
+
+  return (
+    <Card padding="md">
+      <h2 className="text-base font-semibold text-[var(--color-text)]">
+        {isCompany ? t('account.section.companyInfo') : t('account.section.privateInfo')}
+      </h2>
+      {missingName ? (
+        <form onSubmit={handleSave} noValidate className="mt-3 space-y-4">
+          <p className="text-xs leading-relaxed text-[var(--color-text-secondary)]">
+            {t('account.identity.completeHint')}
+          </p>
+          <FormErrorBanner show={Boolean(error)} message={error ?? undefined} />
+          {isCompany ? (
+            <Input
+              label={t('field.companyName')}
+              name="companyName"
+              value={companyName}
+              onChange={(e) => setCompanyName(e.target.value)}
+              autoComplete="organization"
+              required
+            />
+          ) : (
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <Input
+                label={t('field.firstName')}
+                name="firstName"
+                value={firstName}
+                onChange={(e) => setFirstName(e.target.value)}
+                autoComplete="given-name"
+                required
+              />
+              <Input
+                label={t('field.lastName')}
+                name="lastName"
+                value={lastName}
+                onChange={(e) => setLastName(e.target.value)}
+                autoComplete="family-name"
+                required
+              />
+            </div>
+          )}
+          <div className="flex justify-end">
+            <Button type="submit" loading={saving} disabled={!canSave}>
+              {t('common.save')}
+            </Button>
+          </div>
+        </form>
+      ) : (
+        <dl className="mt-3 grid grid-cols-1 gap-x-6 gap-y-3 text-sm sm:grid-cols-3">
+          {rows.map((row) => (
+            <div key={row.label} className="min-w-0">
+              <dt className="text-xs text-[var(--color-text-secondary)]">{row.label}</dt>
+              <dd className="mt-0.5 truncate font-medium text-[var(--color-text)]">{row.value || '—'}</dd>
+            </div>
+          ))}
+        </dl>
+      )}
+    </Card>
+  );
+}
+
 function AccountCard({
   uid,
   initial,
@@ -134,6 +279,7 @@ function AccountCard({
   const [logoObjUrl, setLogoObjUrl] = useState<string>();
   const [bannerObjUrl, setBannerObjUrl] = useState<string>();
   const blobUrlsRef = useRef(new Set<string>());
+  const [progress, setProgress] = useState<Partial<Record<'photo' | 'logo' | 'banner', number>>>({});
 
   useEffect(() => {
     setForm(toAccountForm(initial));
@@ -195,25 +341,32 @@ function AccountCard({
 
     setSaving(true);
     try {
-      let profilePhotoUrl = form.profilePhotoUrl;
-      let logoUrl = form.logoUrl;
-      let bannerUrl = form.bannerUrl;
+      // The three images go up in parallel; each route stores its own URL.
+      const track = (kind: 'photo' | 'logo' | 'banner') => (fraction: number) =>
+        setProgress((p) => ({ ...p, [kind]: fraction }));
+      const [profilePhotoUrl, logoUrl, bannerUrl] = await Promise.all([
+        photoFile ? uploadAccountBranding('photo', photoFile, track('photo')) : form.profilePhotoUrl,
+        logoFile ? uploadAccountBranding('logo', logoFile, track('logo')) : form.logoUrl,
+        bannerFile ? uploadAccountBranding('banner', bannerFile, track('banner')) : form.bannerUrl,
+      ]);
 
-      if (photoFile) profilePhotoUrl = await uploadAccountProfilePhoto(uid, photoFile);
-      if (logoFile) logoUrl = await uploadAccountLogo(uid, logoFile);
-      if (bannerFile) bannerUrl = await uploadAccountBanner(uid, bannerFile);
-
-      // Live: POST /api/account/branding already writes Firestore.
-      // Demo: upload only returns a data URL — persist it on the account.
-      if (DEMO_MODE || (!photoFile && !logoFile && !bannerFile)) {
-        await updateAccount(uid, {
-          profilePhotoUrl,
-          logoUrl,
-          bannerUrl,
-        });
+      // Removals (and every demo-mode change) are written here; uploads
+      // in live mode were already stored by POST /api/account/branding.
+      const removed = {
+        ...(!photoFile && initial.profilePhotoUrl !== profilePhotoUrl ? { profilePhotoUrl } : {}),
+        ...(!logoFile && initial.logoUrl !== logoUrl ? { logoUrl } : {}),
+        ...(!bannerFile && initial.bannerUrl !== bannerUrl ? { bannerUrl } : {}),
+      };
+      if (DEMO_MODE) {
+        await updateAccount(uid, { profilePhotoUrl, logoUrl, bannerUrl });
+      } else if (Object.keys(removed).length > 0) {
+        await updateAccount(uid, removed);
       }
 
-      await resyncUserPublicDrones(uid);
+      // Public pages pick up the new branding in the background.
+      void resyncUserPublicDrones(uid).catch((err) =>
+        console.warn('[account] public resync failed', err),
+      );
 
       const patch = {
         ...form,
@@ -239,13 +392,21 @@ function AccountCard({
       setSavedAt(Date.now());
     } catch (err) {
       console.error('[account] save failed', err);
-      const msg = err instanceof Error ? err.message : '';
-      setErrors({
-        submit: msg === 'storage_billing_required' ? t('account.storageBillingRequired') : t('account.saveError'),
-      });
+      setErrors({ submit: errorMessage(err, t) });
     } finally {
       setSaving(false);
+      setProgress({});
     }
+  }
+
+  function removeImage(
+    key: 'profilePhotoUrl' | 'logoUrl' | 'bannerUrl',
+    setFile: (f: File | null) => void,
+    setPreview: (url: string | undefined) => void,
+  ) {
+    setFile(null);
+    setPreview(undefined);
+    setField(key, '');
   }
 
   const photoPreview = photoObjUrl || form.profilePhotoUrl || undefined;
@@ -282,23 +443,29 @@ function AccountCard({
         <div className="space-y-4">
           <UploadField
             label={t('field.photo')}
-            accept="image/jpeg,image/png,image/webp"
+            accept={IMAGE_ACCEPT}
             currentUrl={photoPreview}
             onUpload={(file) => handleImageSelect(file, setPhotoFile, setPhotoObjUrl, photoObjUrl)}
+            onRemove={photoPreview && !saving ? () => removeImage('profilePhotoUrl', setPhotoFile, setPhotoObjUrl) : undefined}
+            progress={saving && photoFile ? progress.photo ?? 0 : null}
             preview
           />
           <UploadField
             label={t('field.logo')}
-            accept="image/jpeg,image/png,image/webp"
+            accept={IMAGE_ACCEPT}
             currentUrl={logoPreview}
             onUpload={(file) => handleImageSelect(file, setLogoFile, setLogoObjUrl, logoObjUrl)}
+            onRemove={logoPreview && !saving ? () => removeImage('logoUrl', setLogoFile, setLogoObjUrl) : undefined}
+            progress={saving && logoFile ? progress.logo ?? 0 : null}
             preview
           />
           <UploadField
             label={t('field.banner')}
-            accept="image/jpeg,image/png,image/webp"
+            accept={IMAGE_ACCEPT}
             currentUrl={bannerPreview}
             onUpload={(file) => handleImageSelect(file, setBannerFile, setBannerObjUrl, bannerObjUrl)}
+            onRemove={bannerPreview && !saving ? () => removeImage('bannerUrl', setBannerFile, setBannerObjUrl) : undefined}
+            progress={saving && bannerFile ? progress.banner ?? 0 : null}
             preview
           />
         </div>

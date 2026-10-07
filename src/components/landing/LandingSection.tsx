@@ -12,7 +12,7 @@ type LandingSectionProps = {
 const bgClasses = {
   default: 'bg-[var(--color-app-bg)]',
   white: 'bg-[var(--color-card)]',
-  navy: 'bg-[var(--color-navy)] text-white',
+  navy: 'bg-[var(--color-navy-surface)] text-white',
 };
 
 export function LandingSection({ id, children, className, innerClassName, bg = 'default' }: LandingSectionProps) {

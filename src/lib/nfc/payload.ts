@@ -76,7 +76,10 @@ export function validateNfcUrl(url: string, baseHost: string): NfcUrlValidationR
   return { valid: true, slug };
 }
 
-function csvEscape(s: string): string {
+function csvEscape(raw: string): string {
+  // A cell starting with = + - @ is run as a formula by spreadsheet apps; the
+  // quote keeps a drone named "=HYPERLINK(...)" inert.
+  const s = /^[=+\-@\t\r]/.test(raw) ? `'${raw}` : raw;
   if (/[",\n\r]/.test(s)) {
     return `"${s.replace(/"/g, '""')}"`;
   }

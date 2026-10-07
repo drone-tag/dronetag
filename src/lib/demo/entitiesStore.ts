@@ -407,6 +407,13 @@ export async function markReportRead(id: string): Promise<void> {
   reports.set(id, { ...cur, read: true });
 }
 
+export async function markReportAdminRead(id: string, at: string): Promise<void> {
+  await delay();
+  const cur = reports.get(id);
+  if (!cur) return;
+  reports.set(id, { ...cur, adminReadAt: at });
+}
+
 // ─── DronePublic (PR-SEC-1: sanitised public snapshot) ─────────────────────
 
 export async function getDronePublicBySlug(slug: string): Promise<DronePublicSnapshot | null> {

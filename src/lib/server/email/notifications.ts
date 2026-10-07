@@ -58,6 +58,14 @@ async function recipient(uid: string): Promise<{ email: string; locale: EmailLoc
   }
 }
 
+const ENTITY_PATH: Record<VerifiableEntity, string> = {
+  certificate: '/account/certificates',
+  insurance: '/account/insurances',
+  document: '/account/documents',
+  authorization: '/account/permits',
+  drone: '/account/drones',
+};
+
 export async function notifyVerificationOutcome(input: {
   uid: string;
   entity: VerifiableEntity;
@@ -74,7 +82,7 @@ export async function notifyVerificationOutcome(input: {
     outcome: input.outcome,
     itemLabel: input.itemLabel,
     reason: input.reason,
-    dashboardUrl: appUrl('/dashboard'),
+    dashboardUrl: appUrl(ENTITY_PATH[input.entity]),
   });
 
   return sendEmail({ kind: 'verification', to: to.email, subject, text, html });
@@ -96,7 +104,7 @@ export async function notifyFoundDrone(input: {
     finderName: input.finderName,
     finderMessage: input.finderMessage,
     location: input.location,
-    dashboardUrl: appUrl('/dashboard/reports'),
+    dashboardUrl: appUrl('/account/inbox'),
   });
 
   return sendEmail({ kind: 'found_drone', to: to.email, subject, text, html });
@@ -112,7 +120,7 @@ export async function notifySupportReply(
   const { subject, text, html } = supportReplyEmail({
     locale: to.locale,
     ticketSubject: ticketSubject || (to.locale === 'it' ? 'Richiesta di supporto' : 'Support request'),
-    ticketUrl: appUrl('/dashboard/support'),
+    ticketUrl: appUrl('/account/support'),
   });
 
   return sendEmail({ kind: 'support_reply', to: to.email, subject, text, html });

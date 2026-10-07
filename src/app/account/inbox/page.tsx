@@ -14,9 +14,11 @@
  */
 
 import Link from 'next/link';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useToast } from '@/contexts/ToastContext';
+import { errorMessage } from '@/lib/client/errorMessage';
 import { listDronesByUser } from '@/lib/firebase/drones';
 import { listReportsForOwner, markReportRead } from '@/lib/firebase/reports';
 import type { Drone, Report } from '@/lib/types/entities';
@@ -26,6 +28,7 @@ import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { EntityListShell } from '@/components/account/EntityListShell';
+import { LoadError, PageLoading } from '@/components/ui/LoadError';
 
 export default function AccountInboxPage() {
   const { user } = useAuth();
@@ -34,19 +37,25 @@ export default function AccountInboxPage() {
   const [drones, setDrones] = useState<Drone[]>([]);
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const toast = useToast();
 
-  const reload = useMemo(
-    () => async () => {
-      if (!user) return;
+  const [loadError, setLoadError] = useState<string | null>(null);
+
+  const reload = useCallback(async () => {
+    if (!user) return;
+    try {
       const [list, dronesList] = await Promise.all([
         listReportsForOwner(user.uid),
-        listDronesByUser(user.uid),
+        listDronesByUser(user.uid).catch(() => [] as Drone[]),
       ]);
       setReports(list);
       setDrones(dronesList);
-    },
-    [user],
-  );
+      setLoadError(null);
+    } catch (err) {
+      console.error('[inbox] load failed', err);
+      setLoadError(errorMessage(err, t, 'loadError.body'));
+    }
+  }, [user, t]);
 
   useEffect(() => {
     if (!user) return;
@@ -63,14 +72,7 @@ export default function AccountInboxPage() {
     };
   }, [user, reload]);
 
-  if (loading) {
-    return (
-      <div className="mt-8 flex items-center gap-3 text-sm text-[var(--color-text-secondary)]">
-        <div className="h-4 w-4 animate-spin rounded-full border-2 border-[var(--color-border)] border-t-gray-600" />
-        {t('common.loading')}
-      </div>
-    );
-  }
+  if (loading) return <PageLoading />;
 
   function droneLabel(droneId: string, fallbackSlug: string): string {
     const d = drones.find((x) => x.id === droneId);
@@ -86,6 +88,9 @@ export default function AccountInboxPage() {
       setReports((prev) =>
         prev.map((r) => (r.id === report.id ? { ...r, read: true } : r)),
       );
+    } catch (err) {
+      console.error('[inbox] mark read failed', err);
+      toast.error(errorMessage(err, t));
     } finally {
       setBusyId(null);
     }
@@ -100,13 +105,15 @@ export default function AccountInboxPage() {
       rightActions={
         unreadCount > 0 ? (
           <span className="inline-flex items-center gap-2 rounded-full bg-[var(--tone-info-bg)] px-3 py-1 text-xs font-medium text-[var(--tone-info-fg)] ring-1 ring-inset ring-[var(--tone-info-ring)]">
-            <span className="h-1.5 w-1.5 rounded-full bg-blue-600" aria-hidden />
+            <span className="h-1.5 w-1.5 rounded-full bg-[var(--color-action)]" aria-hidden />
             {unreadCount} {t('inbox.unread').toLowerCase()}
           </span>
         ) : null
       }
     >
-      {reports.length === 0 ? (
+      {loadError ? (
+        <LoadError message={loadError} onRetry={reload} />
+      ) : reports.length === 0 ? (
         <EmptyState
           title={t('inbox.empty')}
           description={t('inbox.emptyDesc')}
@@ -273,7 +280,7 @@ function ReadBadge({ read }: { read: boolean }) {
       <span
         className={classNames(
           'h-1.5 w-1.5 rounded-full',
-          read ? 'bg-gray-400' : 'bg-blue-600',
+          read ? 'bg-[var(--color-border)]' : 'bg-[var(--color-action)]',
         )}
         aria-hidden
       />

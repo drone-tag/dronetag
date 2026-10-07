@@ -11,3 +11,36 @@
  */
 export const ID_TOKEN_COOKIE = '__dronetag_idt';
 export const SESSION_COOKIE = '__dronetag_session';
+
+/** `exp` claim of a JWT (seconds), read without verifying it; 0 if unreadable. */
+export function tokenExpiry(token: string): number {
+  const payload = token.split('.')[1];
+  if (!payload) return 0;
+  try {
+    const json = atob(payload.replace(/-/g, '+').replace(/_/g, '/'));
+    const exp = (JSON.parse(json) as { exp?: unknown }).exp;
+    return typeof exp === 'number' ? exp : 0;
+  } catch {
+    return 0;
+  }
+}
+
+/**
+ * Of the session cookie and the client-set token cookie, the one that expires
+ * last. The HttpOnly session cookie is only rewritten on sign-in, so after a
+ * token refresh it can hold an expired token while the other is fresh.
+ * Only picks a candidate; the caller still verifies it.
+ */
+export function freshestToken(...tokens: (string | null | undefined)[]): string | null {
+  let best: string | null = null;
+  let bestExp = -1;
+  for (const token of tokens) {
+    if (!token) continue;
+    const exp = tokenExpiry(token);
+    if (exp > bestExp) {
+      best = token;
+      bestExp = exp;
+    }
+  }
+  return best;
+}

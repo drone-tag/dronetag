@@ -2,6 +2,8 @@
  * Real Michele Caffagni branding URLs from production Firestore
  * (`dronesPublic/sj58afq8` → Storage under users/gI1rhpimZtNlPqwcUgUTkvgSrun2).
  * Used by the demo-michele seed so the client demo shows a truthful profile.
+ * Private documents (insurance policy PDF) are never referenced here: the
+ * demo uses the bundled sample PDF instead.
  */
 export const MICHELE_CAFFAGNI_BRANDING = {
   profilePhotoUrl:
@@ -10,8 +12,6 @@ export const MICHELE_CAFFAGNI_BRANDING = {
     'https://firebasestorage.googleapis.com/v0/b/dronetag-e905d.firebasestorage.app/o/users%2FgI1rhpimZtNlPqwcUgUTkvgSrun2%2Fprofiles%2Faccount%2Flogo.webp?alt=media&token=6058d610-4967-4eb2-9054-0b418dc575b3',
   bannerUrl:
     'https://firebasestorage.googleapis.com/v0/b/dronetag-e905d.firebasestorage.app/o/users%2FgI1rhpimZtNlPqwcUgUTkvgSrun2%2Fprofiles%2Faccount%2Fbanner.png?alt=media&token=c045cfd8-e482-47fd-9a8c-57e1954cca8a',
-  insurancePdfUrl:
-    'https://firebasestorage.googleapis.com/v0/b/dronetag-e905d.firebasestorage.app/o/users%2FgI1rhpimZtNlPqwcUgUTkvgSrun2%2Finsurances%2FPGmxoWkldwb3vrouZ1vX%2Fpolicy.pdf?alt=media&token=baa35b54-dd37-4458-bd21-a4440759b56f',
   /** Production public slug (Firestore dronesPublic). */
   publicSlug: 'sj58afq8',
   operatorCode: 'ITA532aojeuto7j9',

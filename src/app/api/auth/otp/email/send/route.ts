@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 
-import { adminFirestore } from '@/lib/server/firebaseAdmin';
 import { sendEmailOtp } from '@/lib/server/otp';
 import { requireUserFromRequest } from '@/lib/server/requestAuth';
 

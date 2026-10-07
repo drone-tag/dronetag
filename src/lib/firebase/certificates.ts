@@ -6,15 +6,23 @@
  */
 
 import {
-  collection, deleteDoc, doc, getDoc, getDocs,
-  query, updateDoc, where,
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  query,
+  updateDoc,
+  where,
 } from 'firebase/firestore';
 
 import { awaitFirebaseAuthReady } from '@/lib/firebase/auth';
 import { DEMO_MODE, getFirebaseDb } from '@/lib/firebase/config';
 import * as demo from '@/lib/demo/entitiesStore';
+import { lockedAtFromRaw } from '@/lib/utils/entities';
 import { fileToDataUrl } from '@/lib/demo/fileToDataUrl';
 import { adminFetch } from '@/lib/client/adminApi';
+import { attachFile, prepareFile } from '@/lib/client/fileUpload';
+import { deleteEntityOnServer } from '@/lib/client/entityApi';
 import { requestPublicDroneResync } from '@/lib/client/resyncPublicDrones';
 import type { Certificate, CertificateKind } from '@/lib/types/entities';
 import type { VerificationStatus } from '@/lib/types';
@@ -40,7 +48,7 @@ function certificateFromRaw(id: string, raw: Record<string, unknown>): Certifica
     notes: str('notes'),
     createdAt: str('createdAt'),
     updatedAt: str('updatedAt'),
-    dataLockedAt: str('dataLockedAt'),
+    dataLockedAt: lockedAtFromRaw(raw),
   };
 }
 
@@ -94,11 +102,12 @@ export async function createCertificate(
   return body.id;
 }
 
-/** Upload certificate PDF via Admin SDK (avoids client Storage rules). */
+/** Upload the certificate PDF and attach it to the certificate. */
 export async function uploadCertificatePdf(
   certificateId: string,
   file: File,
   parserTrusted = false,
+  onProgress?: (fraction: number) => void,
 ): Promise<string> {
   if (DEMO_MODE) {
     await new Promise((r) => setTimeout(r, 300));
@@ -111,20 +120,18 @@ export async function uploadCertificatePdf(
     if (cert?.userId) await requestPublicDroneResync(cert.userId);
     return fileUrl;
   }
-  const before = await getCertificate(certificateId);
-  const form = new FormData();
-  form.append('file', file);
-  if (parserTrusted) form.append('parserTrusted', '1');
-  const res = await adminFetch(`/api/entities/certificates/${certificateId}/pdf`, {
-    method: 'POST',
-    body: form,
+  const prepared = await prepareFile(file, 'pdf');
+  // The route also refreshes the owner's public pages (the badge).
+  const body = await attachFile<{ fileUrl?: string }>({
+    route: `/api/entities/certificates/${certificateId}/pdf`,
+    objectPath: `certificates/${certificateId}/certificate.pdf`,
+    file: prepared.file,
+    contentType: prepared.contentType,
+    fileName: file.name,
+    fields: parserTrusted ? { parserTrusted: '1' } : undefined,
+    onProgress,
   });
-  const body = (await res.json().catch(() => ({}))) as { fileUrl?: string; error?: string };
-  if (!res.ok) {
-    throw new Error(body.error || `upload certificate pdf failed (${res.status})`);
-  }
   if (!body.fileUrl) throw new Error('upload certificate pdf failed: missing fileUrl');
-  if (before?.userId) await requestPublicDroneResync(before.userId);
   return body.fileUrl;
 }
 
@@ -153,11 +160,8 @@ export async function deleteCertificate(id: string): Promise<void> {
     if (before?.userId) await requestPublicDroneResync(before.userId);
     return;
   }
-  await awaitFirebaseAuthReady();
-  const db = getFirebaseDb();
-  const before = await getCertificate(id);
-  await deleteDoc(doc(db, CERTIFICATES, id));
-  if (before?.userId) await requestPublicDroneResync(before.userId);
+  // The server also refreshes the owner's public pages (the badge).
+  await deleteEntityOnServer('certificates', id);
 }
 
 /** Admin-only: list every certificate across users. */

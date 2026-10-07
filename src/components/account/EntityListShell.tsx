@@ -37,11 +37,11 @@ export function EntityListShell({
   children,
   rightActions,
 }: EntityListShellProps) {
-  const showSlots = typeof used === 'number' && typeof max === 'number';
+  const showSlots = typeof used === 'number' && typeof max === 'number' && Number.isFinite(max);
   const hasFab = Boolean(newLabel && onNew);
 
   return (
-    <div className={classNames('space-y-3 sm:space-y-4', hasFab && 'pb-bottom-nav-fab sm:pb-0')}>
+    <div className={classNames('space-y-3 sm:space-y-4', hasFab && 'pb-fab sm:pb-0')}>
       <header className="flex flex-wrap items-start justify-between gap-2 sm:gap-3">
         <div className="min-w-0 flex-1">
           <h2 className="text-base font-bold tracking-tight text-[var(--color-text)] sm:text-xl">{title}</h2>
@@ -57,12 +57,15 @@ export function EntityListShell({
         <div className="flex shrink-0 items-center gap-2">
           {rightActions}
           {newLabel && onNew ? (
-            <Button onClick={onNew} disabled={newDisabled} className="hidden sm:inline-flex">
-              <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24" aria-hidden>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-              </svg>
-              {newLabel}
-            </Button>
+            // Wrapped: `hidden` on the Button itself loses to its own `inline-flex`.
+            <div className="hidden sm:block">
+              <Button onClick={onNew} disabled={newDisabled}>
+                <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24" aria-hidden>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                </svg>
+                {newLabel}
+              </Button>
+            </div>
           ) : null}
         </div>
       </header>
@@ -73,7 +76,7 @@ export function EntityListShell({
         <div className="fixed right-4 z-30 sm:hidden" style={{ bottom: 'calc(var(--bottom-nav-height) + var(--safe-bottom) + 0.5rem)' }}>
           <button
             type="button"
-            className="tap-44 flex h-12 w-12 items-center justify-center rounded-full bg-[var(--color-action)] text-white shadow-lg transition hover:bg-blue-700 disabled:opacity-50"
+            className="tap-44 flex h-12 w-12 items-center justify-center rounded-full bg-[var(--color-action-solid)] text-white shadow-lg transition hover:bg-[var(--color-action-solid-hover)] disabled:opacity-50"
             aria-label={newLabel}
             disabled={newDisabled}
             onClick={onNew}

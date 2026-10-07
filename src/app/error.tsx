@@ -14,13 +14,15 @@ import { ErrorPanel } from '@/components/system/ErrorPanel';
 export default function AppError({
   error,
   reset,
+  unstable_retry,
 }: {
   error: Error & { digest?: string };
   reset: () => void;
+  unstable_retry?: () => void;
 }) {
   return (
     <div className="min-h-[60dvh] bg-[var(--color-app-bg)] py-12">
-      <ErrorPanel error={error} reset={reset} context="global" />
+      <ErrorPanel error={error} reset={unstable_retry ?? reset} context="global" />
     </div>
   );
 }

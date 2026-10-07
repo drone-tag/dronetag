@@ -46,7 +46,10 @@ import {
   pilotDisplayName,
 } from '@/lib/utils/entities';
 import { getPublicProfileUrl } from '@/lib/utils';
+import { PublicLinkCard } from '@/components/account/PublicLinkCard';
+import { errorMessage } from '@/lib/client/errorMessage';
 import { useToast } from '@/contexts/ToastContext';
+import { LoadError, PageLoading } from '@/components/ui/LoadError';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
@@ -105,26 +108,35 @@ export default function DroneDetailPage() {
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [confirmingLock, setConfirmingLock] = useState(false);
   const [confirmingPublish, setConfirmingPublish] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [linkedInsuranceId, setLinkedInsuranceId] = useState('');
 
   const reload = useCallback(async () => {
     if (!user || !droneId) return;
-    const d = await getDrone(droneId);
-    if (!d || d.userId !== user.uid) {
-      setDrone(null);
-      return;
+    try {
+      const [d, opList, insList, p] = await Promise.all([
+        getDrone(droneId),
+        listOperators(user.uid),
+        listInsurances(user.uid),
+        getPilot(user.uid),
+      ]);
+      setLoadError(null);
+      if (!d || d.userId !== user.uid) {
+        setDrone(null);
+        return;
+      }
+      setDrone(d);
+      setOperators(opList);
+      setInsurances(insList);
+      setPilot(p);
+      setForm(droneToForm(d));
+      setLinkedInsuranceId(d.insuranceId ?? '');
+      setDirty(false);
+    } catch (err) {
+      console.error('[drone detail] load failed', err);
+      setLoadError(errorMessage(err, t, 'loadError.body'));
     }
-    const [opList, insList, p] = await Promise.all([
-      listOperators(user.uid),
-      listInsurances(user.uid),
-      getPilot(user.uid),
-    ]);
-    setDrone(d);
-    setOperators(opList);
-    setInsurances(insList);
-    setPilot(p);
-    setForm(droneToForm(d));
-    setDirty(false);
-  }, [user, droneId]);
+  }, [user, droneId, t]);
 
   useEffect(() => {
     if (!user || !droneId) return;
@@ -139,11 +151,12 @@ export default function DroneDetailPage() {
     return () => { cancelled = true; };
   }, [user, droneId, reload]);
 
-  if (loading) {
+  if (loading) return <PageLoading />;
+
+  if (loadError && !drone) {
     return (
-      <div className="mt-8 flex items-center gap-3 text-sm text-[var(--color-text-secondary)]">
-        <div className="h-4 w-4 animate-spin rounded-full border-2 border-[var(--color-border)] border-t-gray-600" />
-        {t('common.loading')}
+      <div className="mt-4">
+        <LoadError message={loadError} onRetry={reload} />
       </div>
     );
   }
@@ -199,7 +212,7 @@ export default function DroneDetailPage() {
       toast.success(t('toast.drone.saved'));
     } catch (err) {
       console.error('[drone detail] save failed', err);
-      setErrors({ submit: t('account.saveError') });
+      setErrors({ submit: errorMessage(err, t) });
       setConfirmingLock(false);
     } finally {
       setSaving(false);
@@ -209,17 +222,17 @@ export default function DroneDetailPage() {
   async function handlePublish() {
     setSaving(true);
     try {
-      await updateDrone(drone!.id, {
+      const { published } = await updateDrone(drone!.id, {
         status: 'active',
         visibility: 'public',
-        publishedAt: new Date().toISOString(),
       });
       await reload();
       setConfirmingPublish(false);
-      toast.success(t('drone.publish.success'));
+      if (published) toast.success(t('drone.publish.success'));
+      else toast.error(t('drone.publish.notLive'));
     } catch (err) {
       console.error('[drone detail] publish failed', err);
-      toast.error(t('account.saveError'));
+      toast.error(errorMessage(err, t));
       setConfirmingPublish(false);
     } finally {
       setSaving(false);
@@ -234,7 +247,21 @@ export default function DroneDetailPage() {
       toast.success(t('drone.unpublish.success'));
     } catch (err) {
       console.error('[drone detail] unpublish failed', err);
-      toast.error(t('account.saveError'));
+      toast.error(errorMessage(err, t));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleSaveInsuranceLink() {
+    setSaving(true);
+    try {
+      await updateDrone(drone!.id, { insuranceId: linkedInsuranceId || null });
+      await reload();
+      toast.success(t('toast.drone.saved'));
+    } catch (err) {
+      console.error('[drone detail] insurance link failed', err);
+      toast.error(errorMessage(err, t));
     } finally {
       setSaving(false);
     }
@@ -251,7 +278,7 @@ export default function DroneDetailPage() {
       router.push('/account/drones');
     } catch (err) {
       console.error('[drone detail] delete failed', err);
-      toast.error(t('toast.drone.deleteFailed'));
+      toast.error(errorMessage(err, t, 'toast.drone.deleteFailed'));
       setConfirmingDelete(false);
     } finally {
       setSaving(false);
@@ -262,7 +289,6 @@ export default function DroneDetailPage() {
   const isPublic = drone.status === 'active' && drone.visibility === 'public';
   const droneInsurances = insurances;
   const defaultOperator = operators.find((o) => o.id === drone.defaultOperatorId);
-  const linkedInsurance = insurances.find((i) => i.id === drone.insuranceId);
   const classLabel = t(
     DRONE_CLASSES.find((c) => c.value === drone.classMarking)?.labelKey ?? 'drone.class.unknown',
   );
@@ -309,6 +335,8 @@ export default function DroneDetailPage() {
         </div>
       </header>
 
+      {isPublic ? <PublicLinkCard url={getPublicProfileUrl(drone.slug)} /> : null}
+
       <ActiveOperatorPanel
         drone={drone}
         operators={operators}
@@ -345,15 +373,30 @@ export default function DroneDetailPage() {
                 label={t('drone.field.defaultOperator')}
                 value={defaultOperator ? operatorDisplayName(defaultOperator) : '—'}
               />
-              <ReadOnlyField
-                label={t('drone.field.insurance')}
-                value={
-                  linkedInsurance
-                    ? `${linkedInsurance.provider || '—'} · ${linkedInsurance.policyNumber || '—'}`
-                    : t('drone.field.insuranceNone')
-                }
-                className="sm:col-span-2"
-              />
+              <div className="sm:col-span-2">
+                <Select
+                  label={t('drone.field.insurance')} name="linkedInsuranceId"
+                  value={linkedInsuranceId}
+                  onChange={(e: ChangeEvent<HTMLSelectElement>) => setLinkedInsuranceId(e.target.value)}
+                  options={[
+                    { value: '', label: t('drone.field.insuranceNone') },
+                    ...droneInsurances.map((i) => ({
+                      value: i.id,
+                      label: `${i.provider || '—'} · ${i.policyNumber || '—'}`,
+                    })),
+                  ]}
+                />
+                <p className="mt-1.5 text-[11px] text-[var(--color-text-secondary)]">
+                  {t('drone.insuranceLink.hint')}
+                </p>
+                {linkedInsuranceId !== (drone.insuranceId ?? '') ? (
+                  <div className="mt-3 flex justify-end">
+                    <Button size="sm" loading={saving} onClick={handleSaveInsuranceLink}>
+                      {t('common.save')}
+                    </Button>
+                  </div>
+                ) : null}
+              </div>
             </div>
           </Card>
         </div>

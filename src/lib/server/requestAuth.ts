@@ -3,7 +3,7 @@
  */
 
 import { NextResponse } from 'next/server';
-import { ID_TOKEN_COOKIE, SESSION_COOKIE } from '@/lib/auth/sessionCookieNames';
+import { freshestToken, ID_TOKEN_COOKIE, SESSION_COOKIE } from '@/lib/auth/sessionCookieNames';
 import { adminAuth, isFirebaseAdminConfigured } from '@/lib/server/firebaseAdmin';
 
 function readCookie(header: string | null, name: string): string | null {
@@ -25,7 +25,7 @@ export function tokenFromRequest(request: Request): string | null {
     if (t) return t;
   }
   const cookie = request.headers.get('cookie');
-  return readCookie(cookie, SESSION_COOKIE) ?? readCookie(cookie, ID_TOKEN_COOKIE);
+  return freshestToken(readCookie(cookie, SESSION_COOKIE), readCookie(cookie, ID_TOKEN_COOKIE));
 }
 
 export type VerifiedUser = {

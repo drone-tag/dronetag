@@ -170,6 +170,24 @@ describe('verification outcome notification', () => {
       ...base,
     });
 
-    expect(subject).toContain('assicurazione');
+    expect(subject).toMatch(/assicurazione approvata/i);
+  });
+
+  it('agrees the Italian article with the entity gender', () => {
+    const insurance = verificationEmail({
+      locale: 'it',
+      entity: 'insurance',
+      outcome: 'rejected',
+      ...base,
+    });
+    const certificate = verificationEmail({
+      locale: 'it',
+      entity: 'certificate',
+      outcome: 'rejected',
+      ...base,
+    });
+
+    expect(insurance.text).toContain('La tua assicurazione non è stata approvata.');
+    expect(certificate.text).toContain('Il tuo certificato non è stato approvato.');
   });
 });

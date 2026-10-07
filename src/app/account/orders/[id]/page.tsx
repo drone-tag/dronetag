@@ -6,6 +6,8 @@ import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { getOrderForUser } from '@/lib/firebase/orders';
+import { errorMessage } from '@/lib/client/errorMessage';
+import { LoadError } from '@/components/ui/LoadError';
 import type {
   Order,
   OrderEvent,
@@ -24,6 +26,8 @@ export default function OrderDetailPage() {
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     if (!user || !params.id) return;
@@ -32,8 +36,12 @@ export default function OrderDetailPage() {
       try {
         const o = await getOrderForUser(params.id, user.uid);
         if (cancelled) return;
+        setLoadError(null);
         if (!o) setNotFound(true);
         else setOrder(o);
+      } catch (err) {
+        console.error('[order] load failed', err);
+        if (!cancelled) setLoadError(errorMessage(err, t, 'loadError.body'));
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -41,13 +49,21 @@ export default function OrderDetailPage() {
     return () => {
       cancelled = true;
     };
-  }, [user, params.id]);
+  }, [user, params.id, attempt, t]);
 
   if (loading) {
     return (
       <div className="mt-8 flex items-center gap-3 text-sm text-[var(--color-text-secondary)]">
-        <div className="h-4 w-4 animate-spin rounded-full border-2 border-[var(--color-border)] border-t-gray-600" />
+        <div className="h-4 w-4 animate-spin rounded-full border-2 border-[var(--color-border)] border-t-[var(--color-text-secondary)]" />
         {t('common.loading')}
+      </div>
+    );
+  }
+
+  if (loadError && !order) {
+    return (
+      <div className="mt-6">
+        <LoadError message={loadError} onRetry={() => setAttempt((n) => n + 1)} />
       </div>
     );
   }
@@ -60,7 +76,7 @@ export default function OrderDetailPage() {
           <button
             type="button"
             onClick={() => router.push('/account/orders')}
-            className="mt-4 inline-flex items-center gap-2 rounded-lg bg-gray-900 px-4 py-2 text-sm font-semibold text-white hover:bg-gray-800"
+            className="mt-4 inline-flex items-center gap-2 rounded-lg bg-[var(--color-action-solid)] px-4 py-2 text-sm font-semibold text-white hover:bg-[var(--color-action-solid-hover)]"
           >
             {t('common.back')}
           </button>
@@ -126,7 +142,7 @@ export default function OrderDetailPage() {
                 href={order.shipping.trackingUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-slate-800"
+                className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-[var(--color-action-solid)] px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-[var(--color-action-solid-hover)]"
               >
                 {t('orders.openTracking')}
                 <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} aria-hidden>
@@ -162,7 +178,7 @@ export default function OrderDetailPage() {
       <Card padding="md">
         <div className="mb-4 flex items-center justify-between">
           <h3 className="text-sm font-semibold text-[var(--color-text)]">{t('orders.items')}</h3>
-          <span className="rounded-md bg-indigo-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-indigo-700">
+          <span className="rounded-md bg-[var(--tone-info-bg)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-[var(--tone-info-fg)]">
             {t('orders.professionalTrace')}
           </span>
         </div>
@@ -319,9 +335,9 @@ function StatusProgress({ status }: { status: OrderStatus }) {
               className={[
                 'flex h-7 w-7 items-center justify-center rounded-full border-2 text-[11px] font-bold transition',
                 isActive
-                  ? 'border-blue-600 bg-blue-600 text-white'
+                  ? 'border-[var(--color-action-solid)] bg-[var(--color-action-solid)] text-white'
                   : isDone
-                    ? 'border-blue-600 bg-[var(--color-card)] text-blue-700'
+                    ? 'border-[var(--color-action)] bg-[var(--color-card)] text-[var(--color-action)]'
                     : 'border-[var(--color-border)] bg-[var(--color-card)] text-[var(--color-border)]',
               ].join(' ')}
             >
@@ -336,7 +352,7 @@ function StatusProgress({ status }: { status: OrderStatus }) {
             <span
               className={[
                 'text-center text-[10px] font-medium leading-tight',
-                isActive ? 'text-blue-700' : isDone ? 'text-[var(--color-text)]' : 'text-[var(--color-text-secondary)]',
+                isActive ? 'text-[var(--color-action)]' : isDone ? 'text-[var(--color-text)]' : 'text-[var(--color-text-secondary)]',
               ].join(' ')}
             >
               {t(`orderStatus.${step}`)}

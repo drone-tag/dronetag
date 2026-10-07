@@ -8,7 +8,8 @@
  * kind, issuer, dates and holder from ENAC / EU certificate documents.
  */
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import Link from 'next/link';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ChangeEvent, FormEvent } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -17,9 +18,10 @@ import {
   createCertificate,
   deleteCertificate,
   listCertificates,
-  updateCertificate,
   uploadCertificatePdf,
 } from '@/lib/firebase/certificates';
+import { errorMessage } from '@/lib/client/errorMessage';
+import { effectiveSlotCap } from '@/lib/config/features';
 import { extractCertificateFields } from '@/lib/certificate/extractCertificateFields';
 import type { ParsedCertificateFields } from '@/lib/certificate/parseCertificatePdf';
 import { certificateFormMatchesParser } from '@/lib/parser/autoVerify';
@@ -46,6 +48,7 @@ import { EntityListShell } from '@/components/account/EntityListShell';
 import { FormErrorBanner } from '@/components/account/FormErrorBanner';
 import { ReadOnlyField } from '@/components/account/ReadOnlyField';
 import { EntityPdfPreviewModal } from '@/components/account/EntityPdfPreviewModal';
+import { LoadError, PageLoading } from '@/components/ui/LoadError';
 
 interface CertFormState {
   kind: CertificateKind;
@@ -89,34 +92,39 @@ export default function AccountCertificatesPage() {
   const [previewing, setPreviewing] = useState<Certificate | null>(null);
   const [savingId, setSavingId] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
-  const reload = useMemo(() => async () => {
+  const reload = useCallback(async () => {
     if (!user) return;
-    const [list, s] = await Promise.all([
-      listCertificates(user.uid),
-      ensureSlots(user.uid),
-    ]);
-    setCertificates(list);
-    setSlots(s);
-  }, [user]);
+    try {
+      const [list, s] = await Promise.all([
+        listCertificates(user.uid),
+        ensureSlots(user.uid),
+      ]);
+      setCertificates(list);
+      setSlots(s);
+      setLoadError(null);
+    } catch (err) {
+      console.error('[certificates] load failed', err);
+      setLoadError(errorMessage(err, t, 'loadError.body'));
+    }
+  }, [user, t]);
 
   useEffect(() => {
     if (!user) return;
     let cancelled = false;
     (async () => {
-      try { await reload(); } finally { if (!cancelled) setLoading(false); }
+      try {
+        await reload();
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
     })();
     return () => { cancelled = true; };
   }, [user, reload]);
 
-  if (loading) {
-    return (
-      <div className="mt-8 flex items-center gap-3 text-sm text-[var(--color-text-secondary)]">
-        <div className="h-4 w-4 animate-spin rounded-full border-2 border-[var(--color-border)] border-t-gray-600" />
-        {t('common.loading')}
-      </div>
-    );
-  }
+  if (loading) return <PageLoading />;
 
   async function handleCreate(
     form: CertFormState,
@@ -126,8 +134,9 @@ export default function AccountCertificatesPage() {
     if (!user) return;
     setSavingId('new');
     setSaveError(null);
+    let certificateId: string | null = null;
     try {
-      const certificateId = await createCertificate({
+      certificateId = await createCertificate({
         userId: user.uid,
         kind: form.kind,
         label: '',
@@ -135,18 +144,15 @@ export default function AccountCertificatesPage() {
         issuedBy: form.issuedBy,
         issuedAt: form.issuedAt,
         expiresAt: form.expiresAt,
-        fileUrl: pendingPdf ? '' : form.fileUrl,
-        verificationStatus: parserTrusted ? 'verified' : 'pending',
+        fileUrl: '',
+        verificationStatus: 'pending',
         notes: '',
       });
 
+      // The server decides the verification status from the stored PDF.
       if (pendingPdf) {
-        await uploadCertificatePdf(certificateId, pendingPdf, parserTrusted);
-        if (parserTrusted) {
-          await updateCertificate(certificateId, { verificationStatus: 'verified' });
-        }
-      } else if (parserTrusted) {
-        await updateCertificate(certificateId, { verificationStatus: 'verified' });
+        setUploadProgress(0);
+        await uploadCertificatePdf(certificateId, pendingPdf, parserTrusted, setUploadProgress);
       }
 
       await reload();
@@ -154,12 +160,15 @@ export default function AccountCertificatesPage() {
       toast.success(t('toast.certificate.created'));
     } catch (err) {
       console.error('[certificates] create failed', err);
-      const msg = err instanceof Error ? err.message : '';
-      setSaveError(
-        msg === 'storage_billing_required' ? t('account.storageBillingRequired') : (msg || t('account.saveError')),
-      );
+      // Certificates lock on creation, so a record whose PDF never arrived
+      // could not be completed later: remove it and let the user retry.
+      if (certificateId && pendingPdf) {
+        await deleteCertificate(certificateId).catch(() => undefined);
+      }
+      setSaveError(errorMessage(err, t));
     } finally {
       setSavingId(null);
+      setUploadProgress(null);
     }
   }
 
@@ -186,7 +195,7 @@ export default function AccountCertificatesPage() {
     (c) => computeCertificateStatus(c) !== 'expired',
   );
   const archivedCount = certificates.length - activeCertificates.length;
-  const cap = slots?.certificate ?? 1;
+  const cap = effectiveSlotCap(slots?.certificate ?? 1);
   const atCap = activeCertificates.length >= cap;
 
   return (
@@ -199,16 +208,17 @@ export default function AccountCertificatesPage() {
       onNew={() => setCreating(true)}
       newDisabled={atCap}
     >
-      <FormErrorBanner show={Boolean(saveError)} message={saveError ?? undefined} />
       {archivedCount > 0 ? (
         <p className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm text-[var(--color-text-secondary)]">
           {t('permits.archiveNotice').replace('{count}', String(archivedCount))}{' '}
-          <a href="/account/archive" className="font-medium text-[var(--color-action)] underline-offset-2 hover:underline">
+          <Link href="/account/archive" className="font-medium text-[var(--color-action)] underline-offset-2 hover:underline">
             {t('account.tab.archive')}
-          </a>
+          </Link>
         </p>
       ) : null}
-      {activeCertificates.length === 0 ? (
+      {loadError ? (
+        <LoadError message={loadError} onRetry={reload} />
+      ) : activeCertificates.length === 0 ? (
         <EmptyState
           title={t('cert.list.empty')}
           description={t('cert.list.emptyDesc')}
@@ -279,8 +289,15 @@ export default function AccountCertificatesPage() {
         <CertFormModal
           isOpen
           saving={savingId === 'new'}
-          onClose={() => setCreating(false)}
+          error={saveError}
+          progress={uploadProgress}
+          onClose={() => {
+            if (savingId === 'new') return;
+            setCreating(false);
+            setSaveError(null);
+          }}
           onSubmit={(form, pendingPdf, parserTrusted) => {
+            setSaveError(null);
             setPendingCreate({ form, pendingPdf, parserTrusted });
             setConfirmingCreate(true);
           }}
@@ -350,11 +367,15 @@ export default function AccountCertificatesPage() {
 function CertFormModal({
   isOpen,
   saving,
+  error,
+  progress,
   onClose,
   onSubmit,
 }: {
   isOpen: boolean;
   saving: boolean;
+  error: string | null;
+  progress: number | null;
   onClose: () => void;
   onSubmit: (form: CertFormState, pendingPdf: File | null, parserTrusted: boolean) => void;
 }) {
@@ -462,7 +483,10 @@ function CertFormModal({
       title={t('cert.create.title')}
     >
       <form onSubmit={handleSubmit} noValidate className="space-y-4">
-        <FormErrorBanner show={Object.keys(errors).length > 0} />
+        <FormErrorBanner
+          show={Boolean(error) || Object.values(errors).some(Boolean)}
+          message={error ?? undefined}
+        />
 
         <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-hover)] p-4">
           <UploadField
@@ -470,18 +494,19 @@ function CertFormModal({
             accept=".pdf,application/pdf"
             currentUrl={pdfPreviewUrl || undefined}
             onUpload={handlePdfUpload}
-            onRemove={pdfPreviewUrl ? handlePdfRemove : undefined}
+            onRemove={pdfPreviewUrl && !saving ? handlePdfRemove : undefined}
             preview
+            progress={progress}
             className="mb-0"
           />
           {parsing ? (
             <p className="mt-2 flex items-center gap-2 text-xs text-[var(--color-text-secondary)]">
-              <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-[var(--color-border)] border-t-gray-600" />
+              <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-[var(--color-border)] border-t-[var(--color-text-secondary)]" />
               {t('cert.parse.parsing')}
             </p>
           ) : null}
           {parseMessage ? (
-            <p className="mt-2 text-xs text-blue-700">{parseMessage}</p>
+            <p className="mt-2 text-xs text-[var(--tone-info-fg)]">{parseMessage}</p>
           ) : null}
           <p className="mt-2 text-[11px] text-[var(--color-text-secondary)]">{t('cert.parse.hint')}</p>
           <p className="mt-1 text-[11px] text-[var(--color-text-secondary)]">{t('account.verification.uploadHint')}</p>
@@ -542,12 +567,23 @@ function CertFormModal({
             onChange={(e) => setField('issuedBy', e.target.value)}
             className="sm:col-span-2"
           />
+          <Input
+            label={t('field.issuedAt')} name="issuedAt" type="date"
+            value={form.issuedAt}
+            onChange={(e) => setField('issuedAt', e.target.value)}
+          />
+          <Input
+            label={t('field.expiresAt')} name="expiresAt" type="date"
+            value={form.expiresAt}
+            onChange={(e) => setField('expiresAt', e.target.value)}
+            error={errors.expiresAt}
+          />
         </div>
         <div className="flex flex-wrap items-center justify-end gap-2 pt-1">
           <Button variant="ghost" onClick={onClose} disabled={saving}>
             {t('common.cancel')}
           </Button>
-          <Button type="submit" loading={saving}>
+          <Button type="submit" loading={saving} disabled={parsing}>
             {t('common.confirm')}
           </Button>
         </div>
@@ -613,7 +649,7 @@ function CertViewModal({
             </Button>
           ) : null}
           <Button variant="ghost" onClick={onClose}>
-            {t('common.cancel')}
+            {t('common.close')}
           </Button>
         </div>
       </div>

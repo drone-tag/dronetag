@@ -33,7 +33,6 @@ export const EMPTY_ACCOUNT_BRANDING: AccountBranding = {
 };
 
 import type { ContactVerificationState } from '@/lib/types/contactVerification';
-import { EMPTY_CONTACT_VERIFICATION } from '@/lib/types/contactVerification';
 
 export interface UserAccount {
   uid: string;

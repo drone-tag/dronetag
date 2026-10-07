@@ -12,7 +12,7 @@ export function PricingVisualBadge({
   return (
     <div
       className={classNames(
-        'relative flex h-28 w-20 flex-col items-center justify-center overflow-hidden rounded-2xl border border-[var(--color-border)] bg-gradient-to-br from-[var(--color-navy)] via-[#0f274f] to-[#1e3a8a] shadow-[var(--shadow-card)]',
+        'relative flex h-28 w-20 flex-col items-center justify-center overflow-hidden rounded-2xl border border-[var(--color-border)] bg-gradient-to-br from-[var(--color-navy-surface)] via-[#0f274f] to-[#1e3a8a] shadow-[var(--shadow-card)]',
         className,
       )}
       aria-hidden

@@ -15,6 +15,19 @@ import { GoogleAuthButton } from '@/components/auth/GoogleAuthButton';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { PasswordInput } from '@/components/ui/PasswordInput';
+import { safeInternalPath } from '@/lib/utils/safePath';
+
+function resolveDestination(redirectParam: string | null, isAdminUser: boolean): string {
+  const target = safeInternalPath(redirectParam);
+  if (target) {
+    // Admin staff never lands in the user workspace.
+    if (isAdminUser && (target === '/account' || target.startsWith('/account/') || target.startsWith('/account?'))) {
+      return '/admin';
+    }
+    return target;
+  }
+  return isAdminUser ? '/admin' : '/account';
+}
 
 export default function LoginPage() {
   return (
@@ -36,29 +49,14 @@ function LoginInner() {
 
   const redirectParam = params.get('redirect');
 
-  function resolveDestination(isAdminUser: boolean): string {
-    if (
-      redirectParam &&
-      redirectParam.startsWith('/') &&
-      !redirectParam.startsWith('//')
-    ) {
-      // Admin staff never lands in the user workspace.
-      if (isAdminUser && (redirectParam === '/account' || redirectParam.startsWith('/account/'))) {
-        return '/admin';
-      }
-      return redirectParam;
-    }
-    return isAdminUser ? '/admin' : '/account';
-  }
-
   useLayoutEffect(() => {
     if (authLoading || !user) return;
-    router.replace(resolveDestination(isAdmin));
+    router.replace(resolveDestination(redirectParam, isAdmin));
   }, [user, authLoading, isAdmin, router, redirectParam]);
 
   useEffect(() => {
     if (authLoading || !user) return;
-    router.prefetch(resolveDestination(isAdmin));
+    router.prefetch(resolveDestination(redirectParam, isAdmin));
   }, [user, authLoading, isAdmin, router, redirectParam]);
 
   async function handleSubmit(e: FormEvent) {

@@ -5,6 +5,7 @@ import { ThemeProvider } from '@/contexts/ThemeContext';
 import { ToastProvider } from '@/contexts/ToastContext';
 import { AppShell } from '@/components/layout/AppShell';
 import { AuthRoutePrefetch } from '@/components/auth/AuthRoutePrefetch';
+import { LanguagePreferenceSync } from '@/components/auth/LanguagePreferenceSync';
 import { ServiceWorkerCleanup } from '@/components/system/ServiceWorkerCleanup';
 import { DEMO_MODE } from '@/lib/firebase/config';
 import './globals.css';
@@ -70,6 +71,7 @@ export default function RootLayout({
                   the page rather than a descendant of any scroll container. */}
               <ToastProvider>
                 <AuthRoutePrefetch />
+                <LanguagePreferenceSync />
                 <AppShell>{children}</AppShell>
               </ToastProvider>
             </LanguageProvider>

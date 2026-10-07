@@ -93,7 +93,7 @@ export default function PricingPage() {
       </LandingSection>
 
       <LandingSection bg="default" className="py-8 sm:py-10">
-        <div className="rounded-2xl bg-[var(--color-navy)] px-5 py-8 text-center sm:px-8 sm:py-10">
+        <div className="rounded-2xl bg-[var(--color-navy-surface)] px-5 py-8 text-center sm:px-8 sm:py-10">
           <h2 className="text-xl font-bold tracking-tight text-white sm:text-2xl">
             {t('pricing.ctaFinal.title')}
           </h2>

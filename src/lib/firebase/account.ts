@@ -8,6 +8,8 @@ import {
 
 import { awaitFirebaseAuthReady } from '@/lib/firebase/auth';
 import { adminFetch } from '@/lib/client/adminApi';
+import { readJsonOrThrow } from '@/lib/client/apiError';
+import { attachFile, prepareFile } from '@/lib/client/fileUpload';
 import { provisionAccount } from '@/lib/client/provisionAccount';
 import { DEMO_MODE, getFirebaseDb } from '@/lib/firebase/config';
 import * as demoStore from '@/lib/demo/accountStore';
@@ -62,6 +64,20 @@ function accountFromRaw(uid: string, raw: Record<string, unknown>): UserAccount 
   };
 }
 
+/**
+ * True when the server should (re)run provisioning: the document is a stub
+ * written before provisioning (no `createdAt`), or the seed would fill a
+ * field that is still blank. Provisioning only ever fills blanks.
+ */
+export function accountNeedsProvisioning(
+  account: UserAccount,
+  seed: Partial<UserAccount> = {},
+): boolean {
+  if (!account.createdAt) return true;
+  const fillable = ['firstName', 'lastName', 'phone'] as const;
+  return fillable.some((k) => Boolean(seed[k]?.trim()) && !account[k].trim());
+}
+
 export async function getAccount(uid: string): Promise<UserAccount | null> {
   if (DEMO_MODE) return demoStore.getAccountByUid(uid);
   await awaitFirebaseAuthReady();
@@ -90,7 +106,7 @@ export async function ensureAccount(
   if (DEMO_MODE) return demoStore.ensureAccount(uid, email, seed);
 
   const existing = await getAccount(uid);
-  if (existing) return existing;
+  if (existing && !accountNeedsProvisioning(existing, seed)) return existing;
 
   await provisionAccount({
     accountType: seed.accountType,
@@ -126,29 +142,44 @@ export async function updateAccount(uid: string, patch: Partial<UserAccount>): P
   await updateDoc(doc(db, USERS, uid), { ...payload, updatedAt: new Date().toISOString() });
 }
 
+/**
+ * Admin-only: change the address a user signs in with. Updates Firebase Auth
+ * and the profile together, so the two never disagree.
+ */
+export async function adminUpdateUserEmail(uid: string, email: string): Promise<void> {
+  if (DEMO_MODE) return demoStore.updateAccount(uid, { email });
+  const res = await adminFetch(`/api/admin/users/${encodeURIComponent(uid)}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ email }),
+  });
+  await readJsonOrThrow(res, 'update email');
+}
+
 export type AccountBrandingKind = 'photo' | 'logo' | 'banner';
 
-/** Upload account branding image via Admin SDK (avoids client Storage rules). */
+const BRANDING_PRESET = { photo: 'avatar', logo: 'logo', banner: 'banner' } as const;
+
+/** Upload the profile photo, logo or banner and store its URL on the account. */
 export async function uploadAccountBranding(
   kind: AccountBrandingKind,
   file: File,
+  onProgress?: (fraction: number) => void,
 ): Promise<string> {
   if (DEMO_MODE) {
     await new Promise((r) => setTimeout(r, 200));
     return compressImageForDemo(file);
   }
 
-  const form = new FormData();
-  form.append('kind', kind);
-  form.append('file', file);
-  const res = await adminFetch('/api/account/branding', {
-    method: 'POST',
-    body: form,
+  const prepared = await prepareFile(file, 'image', BRANDING_PRESET[kind]);
+  const body = await attachFile<{ url?: string }>({
+    route: `/api/account/branding?kind=${kind}`,
+    objectPath: `profiles/account/${kind}.${prepared.ext}`,
+    file: prepared.file,
+    contentType: prepared.contentType,
+    fileName: file.name,
+    fields: { kind },
+    onProgress,
   });
-  const body = (await res.json().catch(() => ({}))) as { url?: string; error?: string; message?: string };
-  if (!res.ok) {
-    throw new Error(body.error || body.message || `upload ${kind} failed (${res.status})`);
-  }
   if (!body.url) throw new Error(`upload ${kind} failed: missing url`);
   return body.url;
 }

@@ -10,7 +10,7 @@
  * only the way the token is obtained differs.
  */
 
-import { ID_TOKEN_COOKIE, SESSION_COOKIE } from '@/lib/auth/sessionCookieNames';
+import { freshestToken, ID_TOKEN_COOKIE, SESSION_COOKIE } from '@/lib/auth/sessionCookieNames';
 import { adminAuth, isFirebaseAdminConfigured } from '@/lib/server/firebaseAdmin';
 
 export { ID_TOKEN_COOKIE, SESSION_COOKIE };
@@ -38,7 +38,7 @@ export async function verifyAdminSession(cookies: CookieReader): Promise<Session
   if (!isFirebaseAdminConfigured()) return { status: 'unavailable' };
 
   const token =
-    cookies.get(SESSION_COOKIE)?.value ?? cookies.get(ID_TOKEN_COOKIE)?.value ?? '';
+    freshestToken(cookies.get(SESSION_COOKIE)?.value, cookies.get(ID_TOKEN_COOKIE)?.value) ?? '';
   if (!token) return { status: 'unauthenticated' };
 
   try {

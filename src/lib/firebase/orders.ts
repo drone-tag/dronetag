@@ -3,7 +3,6 @@ import {
   doc,
   getDoc,
   getDocs,
-  orderBy,
   query,
   where,
 } from 'firebase/firestore';
@@ -66,13 +65,13 @@ export async function getOrdersForUser(uid: string): Promise<Order[]> {
   if (DEMO_MODE) return demoStore.getOrdersByUser(uid);
   await awaitFirebaseAuthReady();
   const db = getFirebaseDb();
-  const q = query(
-    collection(db, ORDERS),
-    where('userId', '==', uid),
-    orderBy('createdAt', 'desc'),
-  );
+  // Sorted here: ordering in the query needs a composite index that is not
+  // deployed, and a user has few enough orders for it not to matter.
+  const q = query(collection(db, ORDERS), where('userId', '==', uid));
   const snap = await getDocs(q);
-  return snap.docs.map((d) => orderFromRaw(d.id, d.data() as Record<string, unknown>));
+  return snap.docs
+    .map((d) => orderFromRaw(d.id, d.data() as Record<string, unknown>))
+    .sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
 }
 
 export async function getOrderForUser(

@@ -5,7 +5,7 @@
  * Active (non-expired) items live here; expired ones appear in Archive.
  */
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
@@ -19,6 +19,8 @@ import {
   uploadAuthorizationFile,
 } from '@/lib/firebase/authorizations';
 import { ensureSlots } from '@/lib/firebase/slots';
+import { errorMessage } from '@/lib/client/errorMessage';
+import { effectiveSlotCap } from '@/lib/config/features';
 import {
   AUTHORIZATION_KINDS,
   type Authorization,
@@ -40,6 +42,7 @@ import { ConfirmDialog } from '@/components/account/ConfirmDialog';
 import { EntityListShell } from '@/components/account/EntityListShell';
 import { FormErrorBanner } from '@/components/account/FormErrorBanner';
 import { EntityPdfPreviewModal } from '@/components/account/EntityPdfPreviewModal';
+import { LoadError, PageLoading } from '@/components/ui/LoadError';
 
 interface AuthzFormState {
   kind: AuthorizationKind;
@@ -63,7 +66,7 @@ const EMPTY_FORM: AuthzFormState = {
   fileUrl: '',
 };
 
-const FILE_ACCEPT = '.pdf,application/pdf,image/png,image/jpeg,image/webp';
+const FILE_ACCEPT = '.pdf,application/pdf,image/png,image/jpeg,image/webp,image/heic,image/heif,.heic,.heif';
 
 function isActive(a: Authorization): boolean {
   return computeAuthorizationStatus(a) !== 'expired';
@@ -84,15 +87,24 @@ export default function AccountPermitsPage() {
   const [savingId, setSavingId] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
 
-  const reload = useMemo(() => async () => {
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+
+  const reload = useCallback(async () => {
     if (!user) return;
-    const [list, s] = await Promise.all([
-      listAuthorizations(user.uid),
-      ensureSlots(user.uid),
-    ]);
-    setItems(list);
-    setSlots(s);
-  }, [user]);
+    try {
+      const [list, s] = await Promise.all([
+        listAuthorizations(user.uid),
+        ensureSlots(user.uid),
+      ]);
+      setItems(list);
+      setSlots(s);
+      setLoadError(null);
+    } catch (err) {
+      console.error('[permits] load failed', err);
+      setLoadError(errorMessage(err, t, 'loadError.body'));
+    }
+  }, [user, t]);
 
   useEffect(() => {
     if (!user) return;
@@ -111,17 +123,10 @@ export default function AccountPermitsPage() {
 
   const active = items.filter(isActive);
   const expiredCount = items.length - active.length;
-  const cap = slots?.permit ?? 3;
+  const cap = effectiveSlotCap(slots?.permit ?? 3);
   const atCap = active.length >= cap;
 
-  if (loading) {
-    return (
-      <div className="mt-8 flex items-center gap-3 text-sm text-[var(--color-text-secondary)]">
-        <div className="h-4 w-4 animate-spin rounded-full border-2 border-[var(--color-border)] border-t-gray-600" />
-        {t('common.loading')}
-      </div>
-    );
-  }
+  if (loading) return <PageLoading />;
 
   async function handleSave(
     form: AuthzFormState,
@@ -131,6 +136,7 @@ export default function AccountPermitsPage() {
     if (!user) return;
     setSavingId(target?.id ?? 'new');
     setSaveError(null);
+    let createdId: string | null = null;
     try {
       const label =
         form.label.trim() ||
@@ -147,9 +153,11 @@ export default function AccountPermitsPage() {
           validFrom: form.validFrom,
           validTo: form.validTo,
           notes: form.notes,
+          removeFile: !pendingFile && !form.fileUrl && Boolean(target.fileUrl),
         });
         if (pendingFile) {
-          await uploadAuthorizationFile(target.id, pendingFile);
+          setUploadProgress(0);
+          await uploadAuthorizationFile(target.id, pendingFile, setUploadProgress);
         }
       } else {
         const id = await createAuthorization({
@@ -160,15 +168,17 @@ export default function AccountPermitsPage() {
           area: form.area.trim(),
           validFrom: form.validFrom,
           validTo: form.validTo,
-          fileUrl: pendingFile ? '' : form.fileUrl,
+          fileUrl: '',
           fileName: pendingFile?.name ?? '',
           fileSize: pendingFile?.size ?? 0,
           mimeType: pendingFile?.type ?? '',
           verificationStatus: 'pending',
           notes: form.notes,
         });
+        createdId = id;
         if (pendingFile) {
-          await uploadAuthorizationFile(id, pendingFile);
+          setUploadProgress(0);
+          await uploadAuthorizationFile(id, pendingFile, setUploadProgress);
         }
       }
 
@@ -178,15 +188,13 @@ export default function AccountPermitsPage() {
       toast.success(t(target ? 'toast.permit.updated' : 'toast.permit.created'));
     } catch (err) {
       console.error('[permits] save failed', err);
-      setSaveError(
-        err instanceof Error && err.message === 'storage_billing_required'
-          ? t('account.storageBillingRequired')
-          : err instanceof Error
-            ? err.message
-            : t('account.saveError'),
-      );
+      if (createdId && pendingFile) {
+        await deleteAuthorization(createdId).catch(() => undefined);
+      }
+      setSaveError(errorMessage(err, t));
     } finally {
       setSavingId(null);
+      setUploadProgress(null);
     }
   }
 
@@ -200,7 +208,7 @@ export default function AccountPermitsPage() {
       toast.success(t('toast.permit.deleted'));
     } catch (err) {
       console.error('[permits] delete failed', err);
-      toast.error(t('toast.permit.deleteFailed'));
+      toast.error(errorMessage(err, t, 'toast.permit.deleteFailed'));
     } finally {
       setSavingId(null);
     }
@@ -219,8 +227,6 @@ export default function AccountPermitsPage() {
       }}
       newDisabled={atCap}
     >
-      <FormErrorBanner show={Boolean(saveError)} message={saveError ?? undefined} />
-
       {expiredCount > 0 ? (
         <p className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm text-[var(--color-text-secondary)]">
           {t('permits.archiveNotice').replace('{count}', String(expiredCount))}{' '}
@@ -230,7 +236,9 @@ export default function AccountPermitsPage() {
         </p>
       ) : null}
 
-      {active.length === 0 ? (
+      {loadError ? (
+        <LoadError message={loadError} onRetry={reload} />
+      ) : active.length === 0 ? (
         <EmptyState
           title={t('permits.list.empty')}
           description={t('permits.list.emptyDesc')}
@@ -310,11 +318,18 @@ export default function AccountPermitsPage() {
           initial={editing ? authzToForm(editing) : EMPTY_FORM}
           title={editing ? t('permits.edit.title') : t('permits.create.title')}
           saving={savingId === (editing?.id ?? 'new')}
+          error={saveError}
+          progress={uploadProgress}
           onClose={() => {
+            if (savingId) return;
             setCreating(false);
             setEditing(null);
+            setSaveError(null);
           }}
-          onSubmit={(form, file) => void handleSave(form, editing, file)}
+          onSubmit={(form, file) => {
+            setSaveError(null);
+            void handleSave(form, editing, file);
+          }}
         />
       ) : null}
 
@@ -359,6 +374,8 @@ function PermitFormModal({
   initial,
   title,
   saving,
+  error,
+  progress,
   onClose,
   onSubmit,
 }: {
@@ -366,21 +383,40 @@ function PermitFormModal({
   initial: AuthzFormState;
   title: string;
   saving: boolean;
+  error: string | null;
+  progress: number | null;
   onClose: () => void;
   onSubmit: (form: AuthzFormState, file: File | null) => void;
 }) {
   const { t } = useLanguage();
   const [form, setForm] = useState(initial);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
+  const [pendingPreview, setPendingPreview] = useState<string | null>(null);
+  const [dateError, setDateError] = useState<string | null>(null);
+
+  useEffect(() => () => {
+    if (pendingPreview) URL.revokeObjectURL(pendingPreview);
+  }, [pendingPreview]);
+
+  function pickFile(file: File | null) {
+    setPendingFile(file);
+    setPendingPreview(file ? URL.createObjectURL(file) : null);
+  }
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault();
+    if (form.validFrom && form.validTo && form.validTo < form.validFrom) {
+      setDateError(t('form.errors.expiryBeforeIssue'));
+      return;
+    }
+    setDateError(null);
     onSubmit(form, pendingFile);
   }
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={title}>
-      <form onSubmit={handleSubmit} className="space-y-3">
+      <form onSubmit={handleSubmit} noValidate className="space-y-3">
+        <FormErrorBanner show={Boolean(error)} message={error ?? undefined} />
         <Select
           label={t('permits.field.kind')}
           name="kind"
@@ -423,6 +459,7 @@ function PermitFormModal({
             name="validTo"
             value={form.validTo}
             onChange={(e) => setForm((f) => ({ ...f, validTo: e.target.value }))}
+            error={dateError ?? undefined}
           />
         </div>
         <Textarea
@@ -435,20 +472,20 @@ function PermitFormModal({
         <UploadField
           label={t('permits.field.file')}
           accept={FILE_ACCEPT}
-          currentUrl={pendingFile ? undefined : form.fileUrl || undefined}
-          onUpload={(f) => setPendingFile(f)}
+          currentUrl={pendingPreview ?? (form.fileUrl || undefined)}
+          onUpload={(f) => pickFile(f)}
           onRemove={
-            pendingFile || form.fileUrl
+            (pendingFile || form.fileUrl) && !saving
               ? () => {
-                  setPendingFile(null);
+                  pickFile(null);
                   setForm((prev) => ({ ...prev, fileUrl: '' }));
                 }
               : undefined
           }
-          preview={Boolean(form.fileUrl) && !pendingFile}
+          progress={progress}
         />
         {pendingFile ? (
-          <p className="text-xs text-[var(--color-text-secondary)]">{pendingFile.name}</p>
+          <p className="truncate text-xs text-[var(--color-text-secondary)]">{pendingFile.name}</p>
         ) : null}
         <div className="flex justify-end gap-2 pt-2">
           <Button type="button" variant="secondary" onClick={onClose} disabled={saving}>

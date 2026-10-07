@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import type { ChangeEvent, FormEvent } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -15,9 +15,12 @@ import {
 import { listOperators } from '@/lib/firebase/operators';
 import { ensureSlots } from '@/lib/firebase/slots';
 import { trackEvent } from '@/lib/analytics';
+import { errorMessage } from '@/lib/client/errorMessage';
+import { effectiveSlotCap } from '@/lib/config/features';
 import {
   CUSTOM_DRONE_CATALOG_ID,
   findDroneCatalogEntry,
+  formatDroneClass,
   type DroneCatalogEntry,
 } from '@/lib/droneCatalog';
 import {
@@ -42,6 +45,7 @@ import { EntityListShell } from '@/components/account/EntityListShell';
 import { FormErrorBanner } from '@/components/account/FormErrorBanner';
 import { DroneCatalogPicker } from '@/components/account/DroneCatalogPicker';
 import { VerificationBadge } from '@/components/ui/StatusBadge';
+import { LoadError, PageLoading } from '@/components/ui/LoadError';
 
 interface CreateFormState {
   catalogId: string | null;
@@ -50,6 +54,7 @@ interface CreateFormState {
   classMarking: DroneClass;
   defaultOperatorId: string;
   droneSerialNumber: string;
+  controllerSerialNumber: string;
 }
 
 const EMPTY_FORM: CreateFormState = {
@@ -59,6 +64,7 @@ const EMPTY_FORM: CreateFormState = {
   classMarking: 'unknown',
   defaultOperatorId: '',
   droneSerialNumber: '',
+  controllerSerialNumber: '',
 };
 
 export default function AccountDronesPage() {
@@ -78,17 +84,25 @@ export default function AccountDronesPage() {
   const [savingId, setSavingId] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
 
-  const reload = useMemo(() => async () => {
+  const [loadError, setLoadError] = useState<string | null>(null);
+
+  const reload = useCallback(async () => {
     if (!user) return;
-    const [dList, oList, s] = await Promise.all([
-      listDronesByUser(user.uid),
-      listOperators(user.uid),
-      ensureSlots(user.uid),
-    ]);
-    setDrones(dList);
-    setOperators(oList);
-    setSlots(s);
-  }, [user]);
+    try {
+      const [dList, oList, s] = await Promise.all([
+        listDronesByUser(user.uid),
+        listOperators(user.uid),
+        ensureSlots(user.uid),
+      ]);
+      setDrones(dList);
+      setOperators(oList);
+      setSlots(s);
+      setLoadError(null);
+    } catch (err) {
+      console.error('[drones] load failed', err);
+      setLoadError(errorMessage(err, t, 'loadError.body'));
+    }
+  }, [user, t]);
 
   useEffect(() => {
     if (!user) return;
@@ -103,16 +117,9 @@ export default function AccountDronesPage() {
     return () => { cancelled = true; };
   }, [user, reload]);
 
-  if (loading) {
-    return (
-      <div className="mt-8 flex items-center gap-3 text-sm text-[var(--color-text-secondary)]">
-        <div className="h-4 w-4 animate-spin rounded-full border-2 border-[var(--color-border)] border-t-gray-600" />
-        {t('common.loading')}
-      </div>
-    );
-  }
+  if (loading) return <PageLoading />;
 
-  const cap = slots?.drone ?? 1;
+  const cap = effectiveSlotCap(slots?.drone ?? 1);
   const atCap = drones.length >= cap;
   const noOperators = operators.length === 0;
 
@@ -130,7 +137,7 @@ export default function AccountDronesPage() {
         model: form.model,
         classMarking: form.classMarking,
         droneSerialNumber: form.droneSerialNumber,
-        controllerSerialNumber: '',
+        controllerSerialNumber: form.controllerSerialNumber,
         linkedPilotId: user.uid,
         defaultOperatorId: form.defaultOperatorId,
         activeOperatorId: null,
@@ -141,7 +148,8 @@ export default function AccountDronesPage() {
         insuranceId: null,
         publishedAt: '',
         lastVerifiedAt: '',
-        dataLockedAt: '',
+        // The user confirmed the identity fields; the server stamps the lock.
+        dataLockedAt: new Date().toISOString(),
       });
       trackEvent('drone_created', { classMarking: form.classMarking });
       setCreating(false);
@@ -149,7 +157,7 @@ export default function AccountDronesPage() {
       router.push(`/account/drones/${id}`);
     } catch (err) {
       console.error('[drones] create failed', err);
-      setSaveError(err instanceof Error ? err.message : t('account.saveError'));
+      setSaveError(errorMessage(err, t));
     } finally {
       setSavingId(null);
     }
@@ -165,7 +173,7 @@ export default function AccountDronesPage() {
       toast.success(t('toast.drone.deleted'));
     } catch (err) {
       console.error('[drones] delete failed', err);
-      toast.error(t('toast.drone.deleteFailed'));
+      toast.error(errorMessage(err, t, 'toast.drone.deleteFailed'));
     } finally {
       setSavingId(null);
     }
@@ -180,8 +188,9 @@ export default function AccountDronesPage() {
       onNew={() => setCreating(true)}
       newDisabled={atCap || noOperators}
     >
-      <FormErrorBanner show={Boolean(saveError)} message={saveError ?? undefined} />
-      {noOperators && drones.length === 0 ? (
+      {loadError ? (
+        <LoadError message={loadError} onRetry={reload} />
+      ) : noOperators && drones.length === 0 ? (
         <EmptyState
           title={t('drone.list.empty')}
           description={t('drone.list.emptyDesc')}
@@ -227,9 +236,15 @@ export default function AccountDronesPage() {
         <CreateDroneModal
           isOpen
           saving={savingId === 'new'}
+          error={saveError}
           operators={operators}
-          onClose={() => setCreating(false)}
+          onClose={() => {
+            if (savingId === 'new') return;
+            setCreating(false);
+            setSaveError(null);
+          }}
           onSubmit={(form) => {
+            setSaveError(null);
             setPendingCreate(form);
             setConfirmingCreate(true);
           }}
@@ -313,7 +328,7 @@ function DroneRow({
           </Link>
           <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-[11px] sm:text-xs">
             <span className="rounded-full bg-[var(--color-hover)] px-2 py-0.5 font-mono uppercase text-[var(--color-text)]">
-              {drone.classMarking}
+              {formatDroneClass(drone.classMarking, t)}
             </span>
             <VerificationBadge status={drone.verificationStatus} />
             <span
@@ -345,12 +360,14 @@ function DroneRow({
 function CreateDroneModal({
   isOpen,
   saving,
+  error,
   operators,
   onClose,
   onSubmit,
 }: {
   isOpen: boolean;
   saving: boolean;
+  error: string | null;
   operators: Operator[];
   onClose: () => void;
   onSubmit: (form: CreateFormState) => void;
@@ -362,7 +379,6 @@ function CreateDroneModal({
   }));
   const [errors, setErrors] = useState<Record<string, string | undefined>>({});
   const isCustom = form.catalogId === CUSTOM_DRONE_CATALOG_ID;
-  const fromCatalog = Boolean(form.catalogId && !isCustom);
   const hasChoice = Boolean(form.catalogId);
 
   function setField<K extends keyof CreateFormState>(k: K, v: CreateFormState[K]) {
@@ -425,8 +441,8 @@ function CreateDroneModal({
     <Modal isOpen={isOpen} onClose={onClose} title={t('drone.create.title')}>
       <form onSubmit={handleSubmit} noValidate className="space-y-4">
         <FormErrorBanner
-          show={Object.keys(errors).length > 0}
-          message={bannerMessage}
+          show={Boolean(error) || Object.values(errors).some(Boolean)}
+          message={error ?? bannerMessage}
         />
 
         <DroneCatalogPicker
@@ -446,8 +462,9 @@ function CreateDroneModal({
               {selectedCatalog.manufacturer} {selectedCatalog.model}
             </p>
             <p className="mt-0.5 text-xs text-[var(--color-text-secondary)]">
-              {t('drone.catalog.selectedClass')}: {selectedCatalog.classMarking}
-              {selectedCatalog.note ? ` · ${selectedCatalog.note}` : ''}
+              {t('drone.catalog.selectedClass')}:{' '}
+              {formatDroneClass(selectedCatalog.classMarking, t)}
+              {selectedCatalog.noteKey ? ` · ${t(selectedCatalog.noteKey)}` : ''}
             </p>
           </div>
         ) : null}
@@ -485,6 +502,11 @@ function CreateDroneModal({
                 value={form.droneSerialNumber}
                 onChange={(e) => setField('droneSerialNumber', e.target.value)}
                 placeholder={t('drone.catalog.serialHint')}
+              />
+              <Input
+                label={t('drone.field.controllerSerial')} name="controllerSerialNumber"
+                value={form.controllerSerialNumber}
+                onChange={(e) => setField('controllerSerialNumber', e.target.value)}
               />
               <Select
                 label={t('drone.field.defaultOperator')} name="defaultOperatorId" required

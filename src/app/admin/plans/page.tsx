@@ -140,7 +140,7 @@ export default function AdminPlansPage() {
 
       {loading ? (
         <div className="mt-6 flex items-center gap-3 text-sm text-[var(--color-text-secondary)]">
-          <div className="h-4 w-4 animate-spin rounded-full border-2 border-[var(--color-border)] border-t-gray-600" />
+          <div className="h-4 w-4 animate-spin rounded-full border-2 border-[var(--color-border)] border-t-[var(--color-text-secondary)]" />
           {t('common.loading')}
         </div>
       ) : plans.length === 0 ? (
@@ -153,27 +153,27 @@ export default function AdminPlansPage() {
         <Card className="mt-6 overflow-x-auto" padding="none">
           <table className="w-full min-w-[820px] border-collapse text-left text-sm">
             <thead>
-              <tr className="border-b border-[var(--color-border)] bg-slate-50/80">
-                <th className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+              <tr className="border-b border-[var(--color-border)] bg-[var(--color-hover)]">
+                <th className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-[var(--color-text-secondary)]">
                   {t('admin.plans.col.label')}
                 </th>
-                <th className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                <th className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-[var(--color-text-secondary)]">
                   {t('admin.plans.col.kind')}
                 </th>
-                <th className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                <th className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-[var(--color-text-secondary)]">
                   {t('admin.plans.col.price')}
                 </th>
-                <th className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                <th className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-[var(--color-text-secondary)]">
                   {t('admin.plans.col.active')}
                 </th>
-                <th className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                <th className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-[var(--color-text-secondary)]">
                   {t('common.actions')}
                 </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[var(--color-border)]">
               {plans.map((p) => (
-                <tr key={p.id} className="transition hover:bg-slate-50/60">
+                <tr key={p.id} className="transition hover:bg-[var(--color-hover)]">
                   <td className="px-4 py-3.5">
                     <p className="font-medium text-[var(--color-text)]">{p.label || '—'}</p>
                     {p.description ? (

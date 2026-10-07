@@ -64,7 +64,7 @@ export function PricingPlanCard({ plan }: { plan: PricingPlan }) {
       )}
     >
       {plan.recommended ? (
-        <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-[var(--color-action)] px-3 py-0.5 text-[11px] font-semibold text-white">
+        <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-[var(--color-action-solid)] px-3 py-0.5 text-[11px] font-semibold text-white">
           {t('pricing.badge.recommended')}
         </span>
       ) : null}

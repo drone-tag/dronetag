@@ -18,8 +18,8 @@
  *     reports offline and is replaced with a "Back online" toast that
  *     auto-dismisses after 3s on reconnect.
  *
- * All UI elements respect the iPhone home-indicator safe area via
- * `.safe-pb` so they never sit under the gesture pill.
+ * All UI elements add the iPhone home-indicator safe area (`--safe-bottom`)
+ * to their padding so they never sit under the gesture pill.
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -238,26 +238,26 @@ export function PWAClient() {
       {/* ── Chrome / Edge install prompt ─────────────────────────── */}
       {showChromeInstall ? (
         <div
-          className="pointer-events-auto safe-bottom-4 fixed right-4 z-[60] max-w-xs rounded-xl border border-gray-200 bg-[var(--color-card)] p-3 shadow-lg sm:safe-bottom-6 sm:right-6"
+          className="pointer-events-auto safe-bottom-4 fixed right-4 z-[60] max-w-xs rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] p-3 shadow-lg sm:safe-bottom-6 sm:right-6"
           role="region"
           aria-label={t('pwa.appName')}
         >
-          <p className="text-sm font-medium text-gray-900">{t('pwa.appName')}</p>
-          <p className="mt-0.5 text-xs leading-relaxed text-gray-500">
+          <p className="text-sm font-medium text-[var(--color-text)]">{t('pwa.appName')}</p>
+          <p className="mt-0.5 text-xs leading-relaxed text-[var(--color-text-secondary)]">
             {t('pwa.appDescription')}
           </p>
           <div className="mt-3 flex items-center justify-end gap-2">
             <button
               type="button"
               onClick={handleDismissInstall}
-              className="tap-44 inline-flex items-center justify-center rounded-md px-2 py-1 text-xs font-medium text-gray-600 transition hover:bg-gray-100"
+              className="tap-44 inline-flex items-center justify-center rounded-md px-2 py-1 text-xs font-medium text-[var(--color-text-secondary)] transition hover:bg-[var(--color-hover)]"
             >
               {t('pwa.install.dismiss')}
             </button>
             <button
               type="button"
               onClick={handleInstall}
-              className="tap-44 inline-flex items-center justify-center rounded-md bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-slate-800"
+              className="tap-44 inline-flex items-center justify-center rounded-md bg-[var(--color-action-solid)] px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-[var(--color-action-solid-hover)]"
             >
               {t('pwa.install.cta')}
             </button>
@@ -268,7 +268,7 @@ export function PWAClient() {
       {/* ── iOS Safari Add-to-Home-Screen tip ────────────────────── */}
       {showIosHint ? (
         <div
-          className="pointer-events-auto safe-bottom-4 fixed left-4 right-4 z-[60] mx-auto max-w-md rounded-xl border border-gray-200 bg-[var(--color-card)] p-3 shadow-lg sm:safe-bottom-6"
+          className="pointer-events-auto safe-bottom-4 fixed left-4 right-4 z-[60] mx-auto max-w-md rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] p-3 shadow-lg sm:safe-bottom-6"
           role="region"
           aria-label={t('pwa.iosHint.title')}
         >
@@ -279,15 +279,15 @@ export function PWAClient() {
               </svg>
             </div>
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-medium text-gray-900">{t('pwa.iosHint.title')}</p>
-              <p className="mt-0.5 text-xs leading-relaxed text-gray-600">
+              <p className="text-sm font-medium text-[var(--color-text)]">{t('pwa.iosHint.title')}</p>
+              <p className="mt-0.5 text-xs leading-relaxed text-[var(--color-text-secondary)]">
                 {t('pwa.iosHint.body')}
               </p>
             </div>
             <button
               type="button"
               onClick={handleDismissIosHint}
-              className="tap-44 inline-flex items-center justify-center rounded-md px-2 text-xs font-medium text-gray-500 transition hover:bg-gray-100"
+              className="tap-44 inline-flex items-center justify-center rounded-md px-2 text-xs font-medium text-[var(--color-text-secondary)] transition hover:bg-[var(--color-hover)]"
               aria-label={t('pwa.install.dismiss')}
             >
               {t('pwa.install.dismiss')}
@@ -299,7 +299,7 @@ export function PWAClient() {
       {/* ── Offline banner (persistent until reconnect) ──────────── */}
       {!online ? (
         <div
-          className="safe-pb fixed bottom-0 left-0 right-0 z-[70] bg-amber-600 px-4 py-2 text-center text-xs font-semibold text-white shadow-[0_-2px_8px_rgba(0,0,0,0.08)]"
+          className="fixed bottom-0 left-0 right-0 z-[70] bg-amber-600 px-4 pt-2 pb-[calc(0.5rem+var(--safe-bottom))] text-center text-xs font-semibold text-white shadow-[0_-2px_8px_rgba(0,0,0,0.08)]"
           role="status"
           aria-live="polite"
         >
@@ -321,7 +321,7 @@ export function PWAClient() {
       {/* ── Install success toast (3s) ───────────────────────────── */}
       {showInstallToast ? (
         <div
-          className="pointer-events-none safe-bottom-4 fixed left-1/2 z-[70] -translate-x-1/2 rounded-full bg-slate-900 px-4 py-2 text-xs font-semibold text-white shadow-lg"
+          className="pointer-events-none safe-bottom-4 fixed left-1/2 z-[70] -translate-x-1/2 rounded-full bg-[var(--color-navy-surface)] px-4 py-2 text-xs font-semibold text-white shadow-lg"
           role="status"
           aria-live="polite"
         >

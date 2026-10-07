@@ -17,7 +17,7 @@ import { DemoPersonaSwitcher } from '@/components/demo/DemoPersonaSwitcher';
 import { useSyncHeaderOffset } from '@/lib/hooks/useSyncHeaderOffset';
 
 export function PublicHeader() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const { dashboardHref } = useLandingAuth();
   const { language, setLanguage, t } = useLanguage();
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -63,10 +63,10 @@ export function PublicHeader() {
           <Link href="/" className="flex shrink-0 items-center gap-2">
             <span className="inline-flex overflow-hidden rounded-lg">
               <Image
-                src="/logo.png?v=3"
+                src="/logo-mark.webp"
                 alt="DroneTag"
-                width={512}
-                height={512}
+                width={192}
+                height={192}
                 className="h-7 w-7 sm:h-8 sm:w-8"
                 priority
                 unoptimized
@@ -111,7 +111,7 @@ export function PublicHeader() {
                   {t('home.nav.openDashboard')}
                 </Button>
               </>
-            ) : (
+            ) : authLoading ? null : (
               <>
                 <Link
                   href="/login"
@@ -180,7 +180,7 @@ export function PublicHeader() {
               id="landing-language-mobile"
               value={language}
               onChange={(e) => setLanguage(e.target.value as Language)}
-              className="tap-44 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] px-3 py-2.5 text-sm text-[var(--color-text)]"
+              className="tap-44 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] px-3 py-2.5 text-base text-[var(--color-text)]"
             >
               {LANGUAGES.map((lang) => (
                 <option key={lang.value} value={lang.value}>

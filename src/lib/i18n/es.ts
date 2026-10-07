@@ -58,9 +58,9 @@ export const translations: TranslationMap = {
   'nav.shop': 'Tienda',
   'nav.account': 'Mi cuenta',
   'nav.signup': 'Registrarse',
-  'nav.inboxBell': 'Found reports',
-  'nav.inboxBell.unread': 'Found reports ({count} unread)',
-  'nav.inboxBell.admin': 'Drones & found reports',
+  'nav.inboxBell': 'Avisos de hallazgo',
+  'nav.inboxBell.unread': 'Avisos de hallazgo ({count} sin leer)',
+  'nav.inboxBell.admin': 'Drones y avisos de hallazgo',
 
   // ── Consumer auth ──
   'auth.consumerEyebrow': 'IDENTIDAD DIGITAL PARA OPERADORES UAS',
@@ -74,8 +74,7 @@ export const translations: TranslationMap = {
   'login.submit': 'Iniciar sesi\u00f3n',
   'login.noAccount': '¿No tienes cuenta?',
   'login.signupCta': 'Crear una',
-  'login.adminProvisioned':
-    'Accounts are created by an administrator. Contact us if you need credentials.',
+  'login.adminProvisioned': 'Las cuentas las crea un administrador. Si necesitas credenciales, contáctanos.',
 
   // ── Sign-up form ──
   'signup.title': 'Reg\u00edstrate en DroneTag',
@@ -89,7 +88,7 @@ export const translations: TranslationMap = {
   'signup.errorGeneric': 'No se pudo crear la cuenta. Inténtalo de nuevo.',
 
   'signup.otp.title': 'Verifica tu contacto',
-  'signup.otp.subtitle': 'Introduce los códigos OTP para confirmar email y/o teléfono. Al menos un canal debe verificarse.',
+  'signup.otp.subtitle': 'Te hemos enviado un código de confirmación. Puedes verificar ahora o más tarde.',
   'signup.otp.gateSubtitle': 'Debes verificar al menos tu email o teléfono antes de acceder a tu cuenta.',
   'signup.otp.chooseChannels': '¿Cómo quieres verificarte?',
   'signup.otp.verifyEmailOption': 'Verificar email (código OTP)',
@@ -116,95 +115,85 @@ export const translations: TranslationMap = {
   'account.eyebrow': 'Cuenta',
   'account.title': 'Bienvenido, {name}',
   'account.subtitle': 'Consulta tu perfil y el estado de tus pedidos.',
-  'account.nav.home': 'Home',
-  'account.nav.more': 'More',
-  'account.nav.mobile': 'Account navigation',
-  'account.nav.sidebar': 'Account menu',
-  'account.nav.section.workspace': 'Workspace',
-  'account.nav.section.library': 'Library',
-  'account.nav.section.account': 'Account',
-  'account.tab.settings': 'Settings',
-  'settings.title': 'Settings',
-  'settings.subtitle': 'Manage appearance, language and account preferences.',
-  'settings.appearance': 'Appearance',
-  'settings.theme': 'Theme',
-  'settings.theme.hint': 'Choose light, dark, or follow your device.',
-  'settings.theme.light': 'Light',
-  'settings.theme.dark': 'Dark',
-  'settings.theme.system': 'System',
-  'settings.language': 'Language',
-  'settings.language.hint': 'Interface language is saved on this device.',
-  'settings.account': 'Account',
-  'settings.profile': 'Profile & branding',
-  'settings.profile.hint': 'Public photo, logo and banner',
-  'settings.billing': 'Billing',
-  'settings.billing.hint': 'Plan and payment details',
-  'settings.demo.persona': 'Demo personas',
-  'settings.demo.persona.hint': 'Switch identity to explore admin and user scenarios.',
-  'demo.banner': 'Demo mode — sample data, Firebase not connected',
-  'demo.resetData': 'Reset demo data to defaults',
-  'demo.scenarios.title': 'Client demo scenarios',
-  'demo.scenarios.subtitle':
-    'Open the public QR page, then change data as Admin — refresh the public tab to see badges update.',
-  'demo.scenarios.openPublic': 'Open public profile',
-  'demo.scenarios.verifyPath': 'Approve here:',
-  'demo.scenario.green.title': 'All green — Michele',
-  'demo.scenario.green.badges': 'Verified user · Certificates OK · Insurance active',
-  'demo.scenario.green.steps':
-    'Persona “OK · Michele”. Show /u/sj58afq8 as the real public card (photo, logo, banner).',
-  'demo.scenario.review.title': 'Under review — Anna (SkyMap)',
-  'demo.scenario.review.badges': 'Certificates pending · Insurance expiring',
-  'demo.scenario.review.steps':
-    'Open /u/citymapper-anna (orange user + certificates; insurance expiring). Admin → Verify → Queue: Certificates + Insurances (open demo PDF) → mark verified (demo renews insurance +1 year). Documents and Drones can stay queued if you want to show those tabs too. Reload /u/citymapper-anna → green user/certificates + active policy.',
-  'demo.scenario.critical.title': 'Critical — Carlos',
-  'demo.scenario.critical.badges': 'Certificates OK · Insurance expired',
-  'demo.scenario.critical.steps':
-    'Show /u/vistaone-carlos (red insurance). Inbox has unread found-drone reports.',
-  'demo.scenario.fleet.title': 'Fleet / override — Alpine',
-  'demo.scenario.fleet.badges': 'Company operator · multi-drone policy',
-  'demo.scenario.fleet.steps':
-    'Persona Alpine. Public /u/alpine-mavic. Admin → Droni shows temporary operator overrides.',
+  'account.nav.home': 'Inicio',
+  'account.nav.more': 'Más',
+  'account.nav.mobile': 'Navegación de la cuenta',
+  'account.nav.sidebar': 'Menú de la cuenta',
+  'account.nav.section.workspace': 'Área de trabajo',
+  'account.nav.section.library': 'Biblioteca',
+  'account.nav.section.account': 'Cuenta',
+  'account.tab.settings': 'Ajustes',
+  'settings.title': 'Ajustes',
+  'settings.subtitle': 'Gestiona la apariencia, el idioma y las preferencias de la cuenta.',
+  'settings.appearance': 'Apariencia',
+  'settings.theme': 'Tema',
+  'settings.theme.hint': 'Elige claro, oscuro o el tema de tu dispositivo.',
+  'settings.theme.light': 'Claro',
+  'settings.theme.dark': 'Oscuro',
+  'settings.theme.system': 'Sistema',
+  'settings.language': 'Idioma',
+  'settings.language.hint': 'El idioma de la interfaz se guarda en este dispositivo.',
+  'settings.account': 'Cuenta',
+  'settings.profile': 'Perfil e imagen de marca',
+  'settings.profile.hint': 'Foto, logotipo y banner públicos',
+  'settings.billing': 'Facturación',
+  'settings.billing.hint': 'Plan y datos de pago',
+  'settings.demo.persona': 'Perfiles demo',
+  'settings.demo.persona.hint': 'Cambia de identidad para explorar escenarios de administrador y de usuario.',
+  'demo.banner': 'Modo demo — datos de ejemplo, Firebase no conectado',
+  'demo.resetData': 'Restablecer datos demo iniciales',
+  'demo.scenarios.title': 'Escenarios demo para el cliente',
+  'demo.scenarios.subtitle': 'Abre la página pública QR y luego cambia los datos como Admin — recarga la pestaña pública para ver las insignias actualizadas.',
+  'demo.scenarios.openPublic': 'Abrir perfil público',
+  'demo.scenarios.verifyPath': 'Aprueba aquí:',
+  'demo.scenario.green.title': 'Todo en verde — Michele',
+  'demo.scenario.green.badges': 'Usuario verificado · Certificados OK · Seguro activo',
+  'demo.scenario.green.steps': 'Perfil «OK · Michele». Muestra /u/sj58afq8 como ficha pública real (foto, logotipo, banner).',
+  'demo.scenario.review.title': 'En revisión — Anna (SkyMap)',
+  'demo.scenario.review.badges': 'Certificados pendientes · Seguro por vencer',
+  'demo.scenario.review.steps': 'Abre /u/citymapper-anna (usuario y certificados en naranja; seguro por vencer). Admin → Verificación → Cola: Certificados + Seguros (abre el PDF demo) → Marcar como verificado (en la demo, el seguro se renueva +1 año). Documentos y Drones pueden quedarse en cola si quieres mostrar también esas pestañas. Recarga /u/citymapper-anna → usuario/certificados en verde + póliza activa.',
+  'demo.scenario.critical.title': 'Crítico — Carlos',
+  'demo.scenario.critical.badges': 'Certificados OK · Seguro vencido',
+  'demo.scenario.critical.steps': 'Muestra /u/vistaone-carlos (seguro en rojo). La bandeja de entrada tiene avisos de hallazgo sin leer.',
+  'demo.scenario.fleet.title': 'Flota / cambio temporal — Alpine',
+  'demo.scenario.fleet.badges': 'Operador de empresa · póliza multidron',
+  'demo.scenario.fleet.steps': 'Perfil Alpine. Página pública /u/alpine-mavic. En Admin → Drones se ven los cambios temporales de operador.',
   'admin.verify.demoHint':
     'Certificates badge on the public page = certificate verification here. Insurance colour = expiry date (marking verified in demo also renews the policy +1 year so the badge goes green). Demo changes are saved in the browser — refresh the public page after verifying.',
 
-  'account.dashboard.greeting': 'Hello, {name}',
-  'account.dashboard.subtitle': 'Your UAS credentials at a glance.',
-  'account.dashboard.credentialsStatus': 'Credential status',
-  'account.dashboard.completeness': 'Profile {pct}% complete',
-  'account.dashboard.quickActions': 'Quick actions',
-  'account.dashboard.actionPublic': 'Public profile',
-  'account.dashboard.actionPublicDesc': 'View or share your QR page',
-  'account.dashboard.actionDocument': 'Add document',
-  'account.dashboard.actionDocumentDesc': 'Upload a PDF or file',
-  'account.dashboard.actionBadge': 'Order badge',
-  'account.dashboard.actionBadgeDesc': 'NFC badge or physical kit',
-  'account.dashboard.actionDrone': 'Register drone',
-  'account.dashboard.actionDroneDesc': 'Add a new aircraft',
-  'account.dashboard.seeAll': 'See all',
-  'account.dashboard.expiryAlerts': 'Expiring within 30 days',
-  'account.dashboard.expiryInDays': '{days}d left',
-  'account.dashboard.expiryExpired': 'Expired',
-  'account.dashboard.verifyAlerts': 'Waiting for admin review',
-  'account.dashboard.verifyWaiting': 'Under review',
-  'account.dashboard.verifyRejected': 'Rejected — contact support',
-  'account.dashboard.verifyHint':
-    'These items need admin review (fields changed vs the parser, or no auto-verify). We’ll message you in Support when the status changes.',
-  'account.verification.uploadHint':
-    'If you accept the parser data unchanged, the document is already verified and goes to the admin archive. If you edit the fields, it goes to the queue for an admin to compare with the PDF.',
-  'account.verification.documentUploadHint':
-    'Documents have no auto-verify: after upload they stay in the queue until an admin approves or rejects them.',
-  'account.verification.notifyVerified':
-    'We verified {kind}: {label}. Your public profile is updated.',
-  'account.verification.notifyRejected':
-    'We could not verify {kind}: {label}. Open Support or upload a corrected document.',
-  'account.verification.kind.certificate': 'certificate',
-  'account.verification.kind.insurance': 'insurance',
-  'account.verification.kind.document': 'document',
-  'account.verification.kind.drone': 'drone',
-  'account.verification.kind.authorization': 'authorization',
-  'account.verification.threadSubject': 'Document verification updates',
-  'nav.menuOpen': 'Open menu',
-  'nav.menuClose': 'Close menu',
+  'account.dashboard.greeting': 'Hola, {name}',
+  'account.dashboard.subtitle': 'Tus credenciales UAS de un vistazo.',
+  'account.dashboard.credentialsStatus': 'Estado de las credenciales',
+  'account.dashboard.completeness': 'Perfil completado al {pct}%',
+  'account.dashboard.quickActions': 'Acciones rápidas',
+  'account.dashboard.actionPublic': 'Perfil público',
+  'account.dashboard.actionPublicDesc': 'Consulta o comparte tu página QR',
+  'account.dashboard.actionDocument': 'Añadir documento',
+  'account.dashboard.actionDocumentDesc': 'Sube un PDF o un archivo',
+  'account.dashboard.actionBadge': 'Pedir insignia',
+  'account.dashboard.actionBadgeDesc': 'Insignia NFC o kit físico',
+  'account.dashboard.actionDrone': 'Registrar dron',
+  'account.dashboard.actionDroneDesc': 'Añade una nueva aeronave',
+  'account.dashboard.seeAll': 'Ver todo',
+  'account.dashboard.expiryAlerts': 'Vencen en los próximos 30 días',
+  'account.dashboard.expiryInDays': 'Quedan {days} d',
+  'account.dashboard.expiryExpired': 'Vencido',
+  'account.dashboard.verifyAlerts': 'Pendiente de revisión del admin',
+  'account.dashboard.verifyWaiting': 'En revisión',
+  'account.dashboard.verifyRejected': 'Rechazado — contacta con soporte',
+  'account.dashboard.verifyHint': 'Estos elementos están pendientes de revisión por un administrador. Te avisaremos en Soporte cuando cambie su estado.',
+  'account.verification.uploadHint': 'Si confirmas los datos leídos del documento sin modificarlos, la verificación es inmediata. Si los corriges, un administrador los compara con el documento y te avisa del resultado.',
+  'account.verification.documentUploadHint': 'Tras la subida, un administrador revisa el documento y te avisa del resultado.',
+  'account.verification.notifyVerified': 'Hemos verificado {kind}: {label}. Tu perfil público está actualizado.',
+  'account.verification.notifyRejected': 'No hemos podido verificar {kind}: {label}. Abre Soporte o sube un documento corregido.',
+  'account.verification.kind.certificate': 'el certificado',
+  'account.verification.kind.insurance': 'el seguro',
+  'account.verification.kind.document': 'el documento',
+  'account.verification.kind.drone': 'el dron',
+  'account.verification.kind.authorization': 'la autorización',
+  'account.verification.threadSubject': 'Novedades sobre la verificación de documentos',
+  'nav.menuOpen': 'Abrir menú',
+  'nav.menuClose': 'Cerrar menú',
   'account.tabProfile': 'Perfil',
   'account.tabOrders': 'Pedidos',
   'account.personalInfo': 'Información personal',
@@ -213,9 +202,8 @@ export const translations: TranslationMap = {
   'account.noAddress': 'Aún no hay dirección guardada.',
   'account.editNotice': 'La edición del perfil estará disponible próximamente. Para cambios, contacta con soporte.',
   'account.memberSince': 'Miembro desde {date}',
-  'account.notProvisioned.title': 'Account not activated',
-  'account.notProvisioned.body':
-    'You can sign in, but your profile has not been created by an administrator yet. Contact DroneTag to get access.',
+  'account.notProvisioned.title': 'No hemos podido preparar tu cuenta',
+  'account.notProvisioned.body': 'Se ha producido un problema al activar tu perfil. Comprueba tu conexión y vuelve a intentarlo; si continúa, contacta con el soporte de DroneTag.',
 
   // ── Orders ──
   'orders.emptyTitle': 'Sin pedidos',
@@ -269,7 +257,7 @@ export const translations: TranslationMap = {
   'field.language': 'Preferencia de idioma',
   'field.firstName': 'Nombre',
   'field.lastName': 'Apellidos',
-  'field.operatorCode': 'UAS operator registration number',
+  'field.operatorCode': 'Número de registro de operador UAS',
   'field.email': 'Correo electr\u00f3nico',
   'field.phone': 'Tel\u00e9fono',
   'field.emergencyContact': 'Contacto de emergencia',
@@ -277,7 +265,7 @@ export const translations: TranslationMap = {
   'field.visibility': 'Visibilidad',
   'field.birthDate': 'Fecha de nacimiento',
   'field.nationality': 'Nacionalidad',
-  'field.operatorLicense': 'UAS operator licence',
+  'field.operatorLicense': 'Licencia de operador UAS',
   'field.companyName': 'Raz\u00f3n social',
   'field.companyDetails': 'Datos de la empresa',
   'field.companyAddress': 'Direcci\u00f3n de la empresa',
@@ -470,7 +458,7 @@ export const translations: TranslationMap = {
   'links.publicUrlDesc': 'Esta es la URL p\u00fablica permanente para este perfil de operador. Comp\u00e1rtala directamente o cod\u00edfiquela en el c\u00f3digo QR.',
   'links.publicUrlNotReady': 'Defina un slug y publique el perfil para generar una URL p\u00fablica.',
   'links.qrDesc': 'Cargue o genere una imagen de c\u00f3digo QR que enlace a la p\u00e1gina de verificaci\u00f3n p\u00fablica de este operador.',
-  'links.nfcDesc': 'The NFC badge contains the public DroneTag link for this profile. Tapping it with a smartphone opens the page below — no app required.',  // TODO: translate
+  'links.nfcDesc': 'La insignia NFC contiene el enlace público de DroneTag de este perfil. Al acercar un móvil, se abre la página de abajo, sin necesidad de ninguna app.',  // TODO: translate
 
   // ── Empty states ──
   'empty.noProfilesIcon': 'No hay operadores registrados',
@@ -521,7 +509,7 @@ export const translations: TranslationMap = {
   'home.hero.trustExpiry': 'Control de vencimientos',
 
   'home.preview.operatorName': 'Marco Bianchi',
-  'home.preview.operatorRole': 'Remote pilot \u00b7 AeroFly Srl',
+  'home.preview.operatorRole': 'Piloto a distancia · AeroFly Srl',
   'home.preview.insurance': 'Seguro RC',
   'home.preview.insuranceDetail': 'P\u00f3liza v\u00e1lida hasta dic. 2026',
   'home.preview.certificate': 'Certificado A2',
@@ -673,998 +661,1067 @@ export const translations: TranslationMap = {
   'public.qrVerification': 'C\u00f3digo QR de Verificaci\u00f3n',
   'public.verificationRecord': 'Registro de Verificaci\u00f3n',
   'public.profileReference': 'Referencia del Perfil',
-  'public.poweredBy': 'Powered by DroneTag',
+  'public.poweredBy': 'Con la tecnología de DroneTag',
 
   // ═══════════════════════════════════════════════════════════════════════════
   // M2 — User dashboard (English-source strings; pending ES polish).
   // ═══════════════════════════════════════════════════════════════════════════
 
-  'account.tab.operators': 'Operators',
+  'account.tab.operators': 'Operadores',
   'account.tab.drones': 'Drones',
-  'account.tab.insurances': 'Insurances',
-  'account.tab.certificates': 'Certificates',
-  'account.tab.documents': 'Documents',
-  'account.tab.permits': 'Permits',
-  'account.tab.archive': 'Archive',
+  'account.tab.insurances': 'Seguros',
+  'account.tab.certificates': 'Certificados',
+  'account.tab.documents': 'Documentos',
+  'account.tab.permits': 'Permisos',
+  'account.tab.archive': 'Archivo',
 
-  'account.section.accountType': 'Account type',
-  'account.accountType.private': 'Private individual',
-  'account.accountType.company': 'Company',
-  'account.section.privateInfo': 'Personal information',
-  'account.section.companyInfo': 'Company information',
-  'account.section.address': 'Address',
-  'account.section.media': 'Public profile images',
-  'account.mediaHint': 'Photo, logo and banner appear on your public drone page (/u/…). Contact and address details stay private.',
-  'account.lockedIdentityHint': 'Photo, logo and banner are free to update. To change personal data, phone, email or address, contact an admin.',
-  'account.saved': 'Changes saved',
-  'account.saveError': 'Could not save changes. Please try again.',
-  'account.storageBillingRequired':
-    'Cloud Storage requires the Firebase Blaze plan. Open Firebase console → Project settings → Usage and billing, link a billing account, upgrade to Blaze, then retry.',
-  'entity.noPdfAttached': 'No PDF attached — open Edit and upload the file.',
+  'account.section.accountType': 'Tipo de cuenta',
+  'account.accountType.private': 'Particular',
+  'account.accountType.company': 'Empresa',
+  'account.section.privateInfo': 'Información personal',
+  'account.section.companyInfo': 'Información de la empresa',
+  'account.section.address': 'Dirección',
+  'account.section.media': 'Imágenes del perfil público',
+  'account.mediaHint': 'La foto, el logotipo y el banner aparecen en la página pública de tu dron (/u/…). Los datos de contacto y la dirección se mantienen privados.',
+  'account.lockedIdentityHint': 'Puedes cambiar libremente la foto, el logotipo y el banner. Para modificar datos personales, teléfono, email o dirección, contacta con un administrador.',
+  'account.saved': 'Cambios guardados',
+  'account.saveError': 'No se han podido guardar los cambios. Vuelve a intentarlo.',
+  'account.storageBillingRequired': 'Cloud Storage requiere el plan Firebase Blaze. Abre la consola de Firebase → Configuración del proyecto → Uso y facturación, vincula una cuenta de facturación, cambia a Blaze y vuelve a intentarlo.',
+  'entity.noPdfAttached': 'No hay ningún PDF adjunto — abre Editar y sube el archivo.',
   'account.editHint': 'Edit your account details and pilot identity. None of these fields are shown publicly.',
 
-  'field.addressLine1': 'Address line 1',
-  'field.addressLine2': 'Address line 2 (optional)',
-  'field.city': 'City',
-  'field.postalCode': 'Postal code',
-  'field.country': 'Country',
-  'field.companyContactPerson': 'Contact person',
-  'field.companyVat': 'VAT / tax number',
-  'field.companyUniqueNumber': 'Company registry number (optional)',
+  'field.addressLine1': 'Dirección, línea 1',
+  'field.addressLine2': 'Dirección, línea 2 (opcional)',
+  'field.city': 'Ciudad',
+  'field.postalCode': 'Código postal',
+  'field.country': 'País',
+  'field.companyContactPerson': 'Persona de contacto',
+  'field.companyVat': 'NIF / número de IVA',
+  'field.companyUniqueNumber': 'Número de registro mercantil (opcional)',
 
-  'operator.list.title': 'Operators',
-  'operator.list.subtitle': 'Up to {max} operators per account.',
-  'operator.list.empty': 'No operators yet',
-  'operator.list.emptyDesc': 'Add an operator to associate with your drones.',
-  'operator.list.new': 'New operator',
-  'operator.list.atCap': 'You have reached the operator limit.',
-  'operator.kind.private': 'Private individual',
-  'operator.kind.company': 'Company',
-  'operator.field.kind': 'Operator type',
-  'operator.field.label': 'Display label',
-  'operator.field.isDefault': 'Default operator',
-  'operator.field.isDefaultHint': 'Used when no temporary override is active.',
-  'operator.current.badge': 'Current operator',
-  'operator.current.hint': 'Select your current operator here. It is pre-filled when you create a new drone and used when no temporary override is active on a flight.',
-  'operator.current.set': 'Set {name} as current operator',
-  'operator.current.setShort': 'Set as current',
-  'operator.create.title': 'New operator',
-  'operator.edit.title': 'Edit operator',
-  'operator.delete.title': 'Delete operator?',
-  'operator.delete.warningPublic': 'This operator is currently the default for {count} public drone(s). Deleting it will leave those drones without a default operator.',
+  'operator.list.title': 'Operadores',
+  'operator.list.subtitle': 'Hasta {max} operadores por cuenta.',
+  'operator.list.empty': 'Aún no hay operadores',
+  'operator.list.emptyDesc': 'Añade un operador para asociarlo a tus drones.',
+  'operator.list.new': 'Nuevo operador',
+  'operator.list.atCap': 'Has alcanzado el límite de operadores.',
+  'operator.kind.private': 'Persona física',
+  'operator.kind.company': 'Empresa',
+  'operator.field.kind': 'Tipo de operador',
+  'operator.field.label': 'Etiqueta',
+  'operator.field.isDefault': 'Operador predeterminado',
+  'operator.field.isDefaultHint': 'Se usa cuando no hay ningún cambio temporal activo.',
+  'operator.current.badge': 'Operador actual',
+  'operator.current.hint': 'Selecciona aquí tu operador actual. Se rellena automáticamente al crear un dron nuevo y se usa cuando no hay ningún cambio temporal activo en un vuelo.',
+  'operator.current.set': 'Establecer {name} como operador actual',
+  'operator.current.setShort': 'Marcar como actual',
+  'operator.create.title': 'Nuevo operador',
+  'operator.edit.title': 'Editar operador',
+  'operator.delete.title': '¿Eliminar operador?',
+  'operator.delete.warningPublic': 'Este operador es el predeterminado de {count} drones públicos. Si lo eliminas, esos drones quedarán sin operador predeterminado.',
 
   'drone.list.title': 'Drones',
-  'drone.list.empty': 'No drones yet',
-  'drone.list.emptyDesc': 'Add your first drone to publish a public profile.',
-  'drone.list.new': 'New drone',
-  'drone.list.atCap': 'You have used all your drone slots.',
-  'drone.field.manufacturer': 'Manufacturer',
-  'drone.field.model': 'Model / name',
-  'drone.field.classMarking': 'Class marking',
-  'drone.field.serialNumber': 'Drone serial number',
-  'drone.field.controllerSerial': 'Controller serial number',
-  'drone.field.defaultOperator': 'Default operator',
-  'drone.field.linkedPilot': 'Linked pilot',
-  'drone.field.insurance': 'Insurance policy',
-  'drone.field.insuranceNone': 'No insurance linked',
-  'drone.field.status': 'Status',
-  'drone.field.visibility': 'Visibility',
-  'drone.field.slug': 'Public URL slug',
-  'drone.publicUrl': 'Public URL',
-  'drone.copySlug': 'Copy public URL',
-  'drone.slugCopied': 'Public URL copied',
-  'drone.create.title': 'New drone',
-  'drone.edit.title': 'Drone details',
-  'drone.delete.title': 'Delete drone?',
-  'drone.delete.warning': 'This drone is currently public at {url}. The QR/NFC card will stop working immediately.',
-  'drone.class.c0': 'C0 (under 250 g)',
-  'drone.class.c1': 'C1 (under 900 g)',
-  'drone.class.c2': 'C2 (under 4 kg)',
-  'drone.class.c3': 'C3 (under 25 kg)',
-  'drone.class.c4': 'C4 (under 25 kg, no automation)',
-  'drone.class.unknown': 'Unknown / not classified',
-  'drone.catalog.title': 'Model catalog',
-  'drone.catalog.search': 'Find your drone',
-  'drone.catalog.searchPlaceholder': 'Search DJI Mini, Air 3S, Autel…',
-  'drone.catalog.hint': 'Pick a common model to autofill brand, name and EU class. You only add the serial and operator.',
-  'drone.catalog.empty': 'No models match. Try another search or choose custom.',
-  'drone.catalog.custom': 'Other model — enter details manually',
-  'drone.catalog.selectedClass': 'EU class',
-  'drone.catalog.required': 'Select a model from the catalog or choose custom.',
-  'drone.catalog.serialHint': 'Serial number on the aircraft',
-  'drone.detail.basics': 'Basic information',
-  'drone.detail.identity': 'Identity & serials',
-  'drone.detail.publish': 'Publishing',
-  'drone.detail.linked': 'Linked entities',
-  'drone.backToList': 'Back to drones',
-  'drone.confirmCreate.title': 'Confirm drone data',
-  'drone.confirmCreate.message':
-    'Are you sure the information is correct? Once saved, it cannot be changed. To register another drone you must delete this one and purchase a new slot.',
-  'drone.confirmLock.title': 'Lock drone data',
-  'drone.confirmLock.message':
-    'Are you sure the information is correct? After saving, these fields cannot be modified. To use another drone you must delete this one and purchase a new slot.',
-  'drone.locked.hint':
-    'Drone data cannot be modified. Delete this drone to free the slot and add another one.',
+  'drone.list.empty': 'Aún no hay drones',
+  'drone.list.emptyDesc': 'Añade tu primer dron para publicar un perfil público.',
+  'drone.list.new': 'Nuevo dron',
+  'drone.list.atCap': 'Has agotado tus espacios para drones.',
+  'drone.field.manufacturer': 'Fabricante',
+  'drone.field.model': 'Modelo / nombre',
+  'drone.field.classMarking': 'Marcado de clase',
+  'drone.field.serialNumber': 'Número de serie del dron',
+  'drone.field.controllerSerial': 'Número de serie del mando',
+  'drone.field.defaultOperator': 'Operador predeterminado',
+  'drone.field.linkedPilot': 'Piloto vinculado',
+  'drone.field.insurance': 'Póliza de seguro',
+  'drone.field.insuranceNone': 'Sin seguro vinculado',
+  'drone.field.status': 'Estado',
+  'drone.field.visibility': 'Visibilidad',
+  'drone.field.slug': 'Slug de la URL pública',
+  'drone.publicUrl': 'URL pública',
+  'drone.copySlug': 'Copiar URL pública',
+  'drone.slugCopied': 'URL pública copiada',
+  'drone.create.title': 'Nuevo dron',
+  'drone.edit.title': 'Detalles del dron',
+  'drone.delete.title': '¿Eliminar dron?',
+  'drone.delete.warning': 'Este dron está publicado en {url}. La tarjeta QR/NFC dejará de funcionar de inmediato.',
+  'drone.class.c0': 'C0 (menos de 250 g)',
+  'drone.class.c1': 'C1 (menos de 900 g)',
+  'drone.class.c2': 'C2 (menos de 4 kg)',
+  'drone.class.c3': 'C3 (menos de 25 kg)',
+  'drone.class.c4': 'C4 (menos de 25 kg, sin automatización)',
+  'drone.class.unknown': 'Desconocida / sin clasificar',
+  'drone.catalog.title': 'Catálogo de modelos',
+  'drone.catalog.search': 'Busca tu dron',
+  'drone.catalog.searchPlaceholder': 'Busca DJI Mini, Air 3S, Autel…',
+  'drone.catalog.hint': 'Elige un modelo común para rellenar automáticamente marca, nombre y clase UE. Tú solo añades el número de serie y el operador.',
+  'drone.catalog.empty': 'Ningún modelo coincide. Prueba otra búsqueda o elige uno personalizado.',
+  'drone.catalog.custom': 'Otro modelo — introduce los datos a mano',
+  'drone.catalog.selectedClass': 'Clase UE',
+  'drone.catalog.required': 'Selecciona un modelo del catálogo o elige uno personalizado.',
+  'drone.catalog.serialHint': 'Número de serie que figura en la aeronave',
+  'drone.detail.basics': 'Información básica',
+  'drone.detail.identity': 'Identidad y números de serie',
+  'drone.detail.publish': 'Publicación',
+  'drone.detail.linked': 'Elementos vinculados',
+  'drone.backToList': 'Volver a drones',
+  'drone.confirmCreate.title': 'Confirmar datos del dron',
+  'drone.confirmCreate.message': 'Comprueba los datos: una vez guardados, el fabricante, el modelo, la clase y el número de serie ya no podrán modificarse. Para corregirlos tendrás que eliminar el dron y registrarlo de nuevo.',
+  'drone.confirmLock.title': 'Bloquear datos del dron',
+  'drone.confirmLock.message': 'Comprueba los datos: una vez guardados, estos campos ya no podrán modificarse. Para corregirlos tendrás que eliminar el dron y registrarlo de nuevo.',
+  'drone.locked.hint': 'Los datos del dron están bloqueados. Para corregirlos, elimina el dron y regístralo de nuevo, o contacta con soporte.',
 
-  'insurance.list.title': 'Insurance policies',
-  'insurance.list.subtitle': 'One policy can cover several drones. Link the holder, then select every covered aircraft.',
-  'insurance.list.empty': 'No insurance policies',
-  'insurance.list.emptyDesc': 'Upload a policy PDF — one schedule can cover your whole fleet.',
-  'insurance.list.new': 'New policy',
-  'insurance.field.link': 'Linked to',
-  'insurance.link.drone': 'Drone',
-  'insurance.link.operator': 'Operator',
-  'insurance.field.drone': 'Linked drone',
-  'insurance.field.coveredDrones': 'Covered drones',
-  'insurance.field.coveredDronesHint': 'Select all drones this policy covers. A single insurance can protect multiple aircraft.',
-  'insurance.field.noDrones': 'No drones in your fleet yet — add a drone first, or save the policy and attach later.',
+  'insurance.list.title': 'Pólizas de seguro',
+  'insurance.list.subtitle': 'Una póliza puede cubrir varios drones. Vincula al tomador y luego selecciona todas las aeronaves cubiertas.',
+  'insurance.list.empty': 'No hay pólizas de seguro',
+  'insurance.list.emptyDesc': 'Sube el PDF de una póliza — un único documento puede cubrir toda tu flota.',
+  'insurance.list.new': 'Nueva póliza',
+  'insurance.field.link': 'Vinculada a',
+  'insurance.link.drone': 'Dron',
+  'insurance.link.operator': 'Operador',
+  'insurance.field.drone': 'Dron vinculado',
+  'insurance.field.coveredDrones': 'Drones cubiertos',
+  'insurance.field.coveredDronesHint': 'Selecciona todos los drones que cubre esta póliza. Un solo seguro puede proteger varias aeronaves.',
+  'insurance.field.noDrones': 'Aún no hay drones en tu flota — añade primero un dron, o guarda la póliza y vincúlala más tarde.',
   'insurance.coveredCount': '{count} drones',
-  'insurance.field.operator': 'Linked operator',
-  'insurance.create.title': 'New insurance policy',
-  'insurance.edit.title': 'Edit insurance policy',
-  'insurance.delete.title': 'Delete insurance?',
-  'insurance.confirmCreate.title': 'Confirm insurance data',
-  'insurance.confirmCreate.message':
-    'Are you sure the information is correct? Once saved, it cannot be changed. To add another policy you must delete this one.',
-  'insurance.locked.hint':
-    'Insurance data cannot be modified. Delete this policy to add a different one.',
-  'insurance.view.title': 'Insurance details',
-  'insurance.delete.warningPublic': 'This policy is currently linked to a public drone. Deleting it will remove the insurance status from that public profile.',
-  'insurance.field.validity': 'Valid from – to',
-  'insurance.parse.hint': 'We read holder, policy number, dates and every UAS on the schedule. Multi-drone policies are supported.',
-  'insurance.parse.parsing': 'Reading policy data from PDF…',
-  'insurance.parse.success': 'Policy data extracted — check the fields below.',
-  'insurance.parse.partial': 'Some fields were extracted — please complete the rest manually.',
-  'insurance.parse.failed': 'Could not read this PDF automatically. Enter the details manually.',
-  'insurance.parse.droneDetected': 'Drone from PDF',
-  'insurance.parse.dronesDetected': '{count} aircraft found on the policy',
-  'insurance.parse.dronesMatched': '{count} matched to your fleet',
-  'insurance.parse.droneMatched': 'linked to your fleet',
-  'insurance.parse.droneNotMatched': 'select the drone manually',
-  'insurance.coverdrone.cta': 'Get a Coverdrone quote',
-  'insurance.coverdrone.hint': 'Policy expiring or expired? Renew or buy EU drone liability cover with Coverdrone.',
+  'insurance.field.operator': 'Operador vinculado',
+  'insurance.create.title': 'Nueva póliza de seguro',
+  'insurance.edit.title': 'Editar póliza de seguro',
+  'insurance.delete.title': '¿Eliminar póliza?',
+  'insurance.confirmCreate.title': 'Confirmar datos de la póliza',
+  'insurance.confirmCreate.message': '¿Confirmas los datos? Si coinciden con los leídos del documento, la póliza queda verificada al instante; si los has modificado, la revisará un administrador. Una vez guardados, los campos ya no se pueden modificar: para corregirlos, elimina la póliza y súbela de nuevo.',
+  'insurance.locked.hint': 'Los datos de la póliza están bloqueados. Para corregirlos, elimina la póliza y súbela de nuevo, o contacta con soporte.',
+  'insurance.view.title': 'Detalles de la póliza',
+  'insurance.delete.warningPublic': 'Esta póliza está vinculada a un dron público. Si la eliminas, el estado del seguro desaparecerá de ese perfil público.',
+  'insurance.field.validity': 'Válida desde – hasta',
+  'insurance.parse.hint': 'Del PDF leemos el titular, el número de póliza, las fechas y los drones cubiertos: solo tienes que revisar y confirmar.',
+  'insurance.parse.parsing': 'Leyendo los datos de la póliza del PDF…',
+  'insurance.parse.success': 'Datos leídos del documento: revísalos y confirma. Si no los modificas, la verificación es inmediata.',
+  'insurance.parse.partial': 'Se han extraído algunos campos — completa el resto manualmente.',
+  'insurance.parse.failed': 'No se ha podido leer este PDF automáticamente. Introduce los datos manualmente.',
+  'insurance.parse.droneDetected': 'Dron del PDF',
+  'insurance.parse.dronesDetected': '{count} aeronaves encontradas en la póliza',
+  'insurance.parse.dronesMatched': '{count} coinciden con tu flota',
+  'insurance.parse.droneMatched': 'vinculado a tu flota',
+  'insurance.parse.droneNotMatched': 'selecciona el dron manualmente',
+  'insurance.coverdrone.cta': 'Pedir presupuesto a Coverdrone',
+  'insurance.coverdrone.hint': '¿Póliza a punto de vencer o vencida? Renueva o contrata la cobertura de RC para drones en la UE con Coverdrone.',
 
-  'cert.list.title': 'Certificates',
-  'cert.list.subtitle': 'A1/A3, A2, STS-theoretical, STS-01, STS-02 or custom.',
-  'cert.list.empty': 'No certificates',
-  'cert.list.emptyDesc': 'Add your A1/A3, A2 or STS certificates.',
-  'cert.list.new': 'New certificate',
-  'cert.list.atCap': 'You have used all your certificate slots.',
-  'cert.field.kind': 'Certificate type',
-  'cert.field.label': 'Display label',
-  'cert.field.registrationNumber': 'Registration number',
-  'cert.field.registrationNumberHint': 'Read from the PDF automatically, or enter manually',
-  'cert.field.issuedBy': 'Issued by',
-  'cert.field.fileUrl': 'Certificate URL',
-  'cert.field.filePdf': 'Certificate document (PDF)',
-  'cert.field.number': 'Certificate number',
-  'cert.field.notes': 'Notes',
+  'cert.list.title': 'Certificados',
+  'cert.list.subtitle': 'A1/A3, A2, STS teórico, STS-01, STS-02 o personalizado.',
+  'cert.list.empty': 'No hay certificados',
+  'cert.list.emptyDesc': 'Añade tus certificados A1/A3, A2 o STS.',
+  'cert.list.new': 'Nuevo certificado',
+  'cert.list.atCap': 'Has agotado tus espacios para certificados.',
+  'cert.field.kind': 'Tipo de certificado',
+  'cert.field.label': 'Etiqueta',
+  'cert.field.registrationNumber': 'Número de registro',
+  'cert.field.registrationNumberHint': 'Se lee automáticamente del PDF, o introdúcelo a mano',
+  'cert.field.issuedBy': 'Expedido por',
+  'cert.field.fileUrl': 'URL del certificado',
+  'cert.field.filePdf': 'Documento del certificado (PDF)',
+  'cert.field.number': 'Número de certificado',
+  'cert.field.notes': 'Notas',
   'cert.kind.a1a3': 'A1 / A3',
   'cert.kind.a2': 'A2',
-  'cert.kind.stsTheoretical': 'STS theoretical',
+  'cert.kind.stsTheoretical': 'STS teórico',
   'cert.kind.sts01': 'STS-01',
   'cert.kind.sts02': 'STS-02',
-  'cert.kind.custom': 'Custom certificate',
-  'cert.create.title': 'New certificate',
-  'cert.edit.title': 'Edit certificate',
-  'cert.delete.title': 'Delete certificate?',
-  'cert.confirmCreate.title': 'Confirm certificate data',
-  'cert.confirmCreate.message':
-    'Are you sure the information is correct? Once saved, it cannot be changed. To add another certificate you must delete this one and purchase a new slot.',
-  'cert.locked.hint':
-    'Certificate data cannot be modified. Delete this certificate to free the slot and add another one.',
-  'cert.view.title': 'Certificate details',
-  'cert.parse.hint': 'We read certificate type, issuer, dates and holder name from the PDF. You can edit the fields below.',
-  'cert.parse.parsing': 'Reading certificate data from PDF…',
-  'cert.parse.success': 'Certificate data extracted — check the fields below.',
-  'cert.parse.partial': 'Some fields were extracted — please complete the rest manually.',
-  'cert.parse.failed': 'Could not read this PDF automatically. Enter the details manually.',
+  'cert.kind.custom': 'Certificado personalizado',
+  'cert.create.title': 'Nuevo certificado',
+  'cert.edit.title': 'Editar certificado',
+  'cert.delete.title': '¿Eliminar certificado?',
+  'cert.confirmCreate.title': 'Confirmar datos del certificado',
+  'cert.confirmCreate.message': '¿Confirmas los datos? Si coinciden con los leídos del documento, el certificado queda verificado al instante; si los has modificado, lo revisará un administrador. Una vez guardados, los campos ya no se pueden modificar: para corregirlos, elimina el certificado y súbelo de nuevo.',
+  'cert.locked.hint': 'Los datos del certificado están bloqueados. Para corregirlos, elimina el certificado y súbelo de nuevo, o contacta con soporte.',
+  'cert.view.title': 'Detalles del certificado',
+  'cert.parse.hint': 'En los certificados italianos leemos automáticamente el código ITA-…, las fechas y el tipo: solo tienes que revisar y confirmar.',
+  'cert.parse.parsing': 'Leyendo los datos del certificado del PDF…',
+  'cert.parse.success': 'Datos leídos del documento: revísalos y confirma. Si no los modificas, la verificación es inmediata.',
+  'cert.parse.partial': 'Se han extraído algunos campos — completa el resto manualmente.',
+  'cert.parse.failed': 'No se ha podido leer este PDF automáticamente. Introduce los datos manualmente.',
 
-  'doc.list.title': 'Uploaded documents',
-  'doc.list.subtitle': '{used} of {max} document slots used.',
-  'doc.list.empty': 'No documents',
-  'doc.list.emptyDesc': 'Upload PDFs (insurance policy, registration, training certificate, etc).',
-  'doc.list.new': 'New document',
-  'doc.list.atCap': 'You have used all your document slots.',
-  'doc.field.kind': 'Document type',
-  'doc.field.label': 'Name',
-  'doc.field.labelHint': 'Optional — defaults to the file name',
-  'doc.field.file': 'File',
-  'doc.field.fileUrl': 'File URL',
-  'doc.field.fileName': 'File name',
-  'doc.field.notes': 'Notes',
-  'doc.kind.insurance_policy': 'Insurance policy',
-  'doc.kind.operator_license': 'Operator license',
-  'doc.kind.drone_registration': 'Drone registration',
-  'doc.kind.training_certificate': 'Training certificate',
-  'doc.kind.identity': 'Identity document',
-  'doc.kind.other': 'Other',
-  'doc.create.title': 'New document',
-  'doc.edit.title': 'Edit document',
-  'doc.delete.title': 'Delete document?',
-  'doc.urlHint': 'Paste a public URL to the file (Firebase Storage URL, signed link, etc).',
+  'doc.list.title': 'Documentos subidos',
+  'doc.list.subtitle': '{used} de {max} espacios de documentos usados.',
+  'doc.list.empty': 'No hay documentos',
+  'doc.list.emptyDesc': 'Sube PDF (póliza de seguro, registro, certificado de formación, etc.).',
+  'doc.list.new': 'Nuevo documento',
+  'doc.list.atCap': 'Has agotado tus espacios para documentos.',
+  'doc.field.kind': 'Tipo de documento',
+  'doc.field.label': 'Nombre',
+  'doc.field.labelHint': 'Opcional — si lo dejas vacío, se usa el nombre del archivo',
+  'doc.field.file': 'Archivo',
+  'doc.field.fileUrl': 'URL del archivo',
+  'doc.field.fileName': 'Nombre del archivo',
+  'doc.field.notes': 'Notas',
+  'doc.kind.insurance_policy': 'Póliza de seguro',
+  'doc.kind.operator_license': 'Licencia de operador',
+  'doc.kind.drone_registration': 'Registro del dron',
+  'doc.kind.training_certificate': 'Certificado de formación',
+  'doc.kind.identity': 'Documento de identidad',
+  'doc.kind.other': 'Otro',
+  'doc.create.title': 'Nuevo documento',
+  'doc.edit.title': 'Editar documento',
+  'doc.delete.title': '¿Eliminar documento?',
+  'doc.urlHint': 'Pega una URL pública del archivo (URL de Firebase Storage, enlace firmado, etc.).',
 
-  'permits.list.title': 'Permits and authorizations',
-  'permits.list.subtitle': 'Daily authorizations, nullaosta and operational permits. Expired items move to Archive.',
-  'permits.list.new': 'New permit',
-  'permits.list.empty': 'No active permits',
-  'permits.list.emptyDesc': 'Upload daily authorizations, nullaosta, hourly clearances and similar operational docs.',
-  'permits.list.atCap': 'You have used all active permit slots.',
-  'permits.hint.parser': 'Area, conditions, dates and linked drone (parser coming soon)',
-  'permits.hint.storage': 'Included: 3 active permits (extra slots purchasable)',
-  'permits.hint.admin': 'Admins can always verify manually',
-  'permits.archiveNotice': '{count} expired item(s) moved to Archive.',
-  'permits.create.title': 'New authorization',
-  'permits.edit.title': 'Edit authorization',
-  'permits.delete.title': 'Delete authorization?',
-  'permits.delete.message': 'This authorization will be removed permanently.',
-  'permits.kind.daily': 'Daily authorization',
+  'permits.list.title': 'Permisos y autorizaciones',
+  'permits.list.subtitle': 'Autorizaciones diarias, nullaosta y permisos operativos. Los elementos vencidos pasan a Archivo.',
+  'permits.list.new': 'Nuevo permiso',
+  'permits.list.empty': 'No hay permisos activos',
+  'permits.list.emptyDesc': 'Sube autorizaciones diarias, nullaosta, nullaosta por horas y documentos operativos similares.',
+  'permits.list.atCap': 'Has agotado los espacios para permisos activos.',
+  'permits.hint.parser': 'Indica la zona, las condiciones, las fechas y el dron afectado.',
+  'permits.hint.storage': 'Adjunta el PDF o una foto de la autorización.',
+  'permits.hint.admin': 'Un administrador de DroneTag lo revisará.',
+  'permits.archiveNotice': '{count} elemento(s) vencido(s) movido(s) a Archivo.',
+  'permits.create.title': 'Nueva autorización',
+  'permits.edit.title': 'Editar autorización',
+  'permits.delete.title': '¿Eliminar autorización?',
+  'permits.delete.message': 'Esta autorización se eliminará definitivamente.',
+  'permits.kind.daily': 'Autorización diaria',
   'permits.kind.nullaosta': 'Nullaosta',
-  'permits.kind.hourly_nullaosta': 'Hourly nullaosta',
-  'permits.kind.temporary': 'Temporary permit',
-  'permits.kind.other': 'Other',
-  'permits.field.kind': 'Type',
-  'permits.field.label': 'Title',
-  'permits.field.issuedBy': 'Issued by',
-  'permits.field.area': 'Area / zone',
-  'permits.field.validFrom': 'Valid from',
-  'permits.field.validTo': 'Valid until',
-  'permits.field.notes': 'Notes',
-  'permits.field.file': 'Document (PDF or image)',
+  'permits.kind.hourly_nullaosta': 'Nullaosta por horas',
+  'permits.kind.temporary': 'Permiso temporal',
+  'permits.kind.other': 'Otro',
+  'permits.field.kind': 'Tipo',
+  'permits.field.label': 'Título',
+  'permits.field.issuedBy': 'Expedido por',
+  'permits.field.area': 'Área / zona',
+  'permits.field.validFrom': 'Válido desde',
+  'permits.field.validTo': 'Válido hasta',
+  'permits.field.notes': 'Notas',
+  'permits.field.file': 'Documento (PDF o imagen)',
 
-  'archive.list.title': 'Archive',
-  'archive.list.subtitle': 'Expired certificates, policies and authorizations. Expand storage from billing.',
-  'archive.list.new': 'Upload to archive',
-  'archive.list.empty': 'Archive is empty',
-  'archive.list.emptyDesc': 'When certificates, insurance policies or permits expire, they appear here automatically.',
-  'archive.hint.storage': 'Included archive space: 30 MB',
-  'archive.hint.autoMove': 'Expired versions move here automatically',
-  'archive.hint.upgrade': 'Buy more archive space',
-  'archive.cta.buySpace': 'Buy space',
-  'archive.storage.title': 'Archive storage',
-  'archive.storage.used': '{used} MB of {max} MB used',
-  'archive.expiredOn': 'Expired on',
-  'archive.openSource': 'Open section',
-  'archive.delete.title': 'Delete from archive?',
-  'archive.delete.message': 'This permanently removes the expired document and frees storage.',
+  'archive.list.title': 'Archivo',
+  'archive.list.subtitle': 'Certificados, pólizas y autorizaciones vencidos. Amplía el espacio desde Facturación.',
+  'archive.list.new': 'Subir al archivo',
+  'archive.list.empty': 'El archivo está vacío',
+  'archive.list.emptyDesc': 'Cuando venzan certificados, pólizas de seguro o permisos, aparecerán aquí automáticamente.',
+  'archive.hint.storage': 'Espacio de archivo incluido: 30 MB',
+  'archive.hint.autoMove': 'Las versiones vencidas se mueven aquí automáticamente',
+  'archive.hint.upgrade': 'Compra más espacio de archivo',
+  'archive.cta.buySpace': 'Comprar espacio',
+  'archive.storage.title': 'Almacenamiento del archivo',
+  'archive.storage.used': '{used} MB de {max} MB usados',
+  'archive.expiredOn': 'Venció el',
+  'archive.openSource': 'Abrir sección',
+  'archive.delete.title': '¿Eliminar del archivo?',
+  'archive.delete.message': 'El documento vencido se eliminará definitivamente y se liberará espacio.',
 
-  'slot.usage': '{used} of {max} used',
-  'slot.atCap': 'Limit reached',
-  'slot.contactToUpgrade': 'Contact admin to add more slots.',
+  'slot.usage': '{used} de {max} usados',
+  'slot.atCap': 'Límite alcanzado',
+  'slot.contactToUpgrade': 'Contacta con el administrador para añadir más espacios.',
 
-  'confirm.continue': 'Continue',
-  'confirm.dangerWarning': 'This action cannot be undone.',
+  'confirm.continue': 'Continuar',
+  'confirm.dangerWarning': 'Esta acción no se puede deshacer.',
 
-  'form.errors.title': 'Please fix the highlighted fields.',
-  'form.errors.invalidEmail': 'Enter a valid email address.',
-  'form.errors.invalidUrl': 'Enter a valid URL.',
-  'form.errors.urlNotAllowed': 'URL must be hosted on Firebase Storage or a trusted host configured by the admin.',
-  'form.errors.expiryBeforeIssue': 'Expiry date must be after the issue date.',
+  'form.errors.title': 'Corrige los campos resaltados.',
+  'form.errors.invalidEmail': 'Introduce una dirección de correo válida.',
+  'form.errors.invalidUrl': 'Introduce una URL válida.',
+  'form.errors.urlNotAllowed': 'La URL debe estar alojada en Firebase Storage o en un host de confianza configurado por el administrador.',
+  'form.errors.expiryBeforeIssue': 'La fecha de vencimiento debe ser posterior a la de emisión.',
 
   // ═══════════════════════════════════════════════════════════════════════════
   // M3 — Public drone page + Report found drone (English source; pending ES).
   // ═══════════════════════════════════════════════════════════════════════════
 
-  'publicDrone.eyebrow': 'Drone identification',
-  'publicDrone.holderPilot': 'Remote pilot',
-  'publicDrone.holderOperatorPrivate': 'UAS operator',
-  'publicDrone.holderOperatorCompany': 'UAS operator (company)',
+  'publicDrone.eyebrow': 'Identificación del dron',
+  'publicDrone.holderPilot': 'Piloto a distancia',
+  'publicDrone.holderOperatorPrivate': 'Operador UAS',
+  'publicDrone.holderOperatorCompany': 'Operador UAS (empresa)',
   'publicDrone.holderName': 'Nombre',
-  'publicDrone.classification': 'Drone class',
-  'publicDrone.identifier': 'Serial number',
-  'publicDrone.policyNumberMasked': 'Policy reference',
-  'publicDrone.validUntil': 'Valid until',
-  'publicDrone.userVerified': 'Verified user',
-  'publicDrone.userPending': 'User under review',
-  'publicDrone.userUnverified': 'User not verified',
-  'publicDrone.userRejected': 'User not approved',
-  'publicDrone.insuranceUnknown': 'No insurance information on file',
-  'publicDrone.insuranceActive': 'Insurance active',
-  'publicDrone.insuranceExpiring': 'Insurance expiring soon',
-  'publicDrone.insuranceExpired': 'Insurance expired',
-  'publicDrone.certificatesVerified': 'Certificates verified',
-  'publicDrone.certificatesPending': 'Certificates under review',
-  'publicDrone.certificatesUnverified': 'Certificates not verified',
-  'publicDrone.certificatesRejected': 'Certificates rejected',
-  'publicDrone.viewPolicyPdf': 'View policy document',
-  'publicDrone.openApp': 'Open app / sign in',
-  'publicDrone.reportFound': 'I found this drone',
-  'publicDrone.reportFoundShort': 'Report found drone',
-  'publicDrone.lastVerified': 'Last verified',
-  'publicDrone.publishedOn': 'Published on',
-  'publicDrone.disclaimer': 'DroneTag is a private digital identification platform. It does not replace official operator registration, pilot certification, insurance obligations or authority-issued documentation.',
+  'publicDrone.classification': 'Clase del dron',
+  'publicDrone.identifier': 'Número de serie',
+  'publicDrone.policyNumberMasked': 'Referencia de la póliza',
+  'publicDrone.validUntil': 'Válida hasta',
+  'publicDrone.userVerified': 'Usuario verificado',
+  'publicDrone.userPending': 'Usuario en revisión',
+  'publicDrone.userUnverified': 'Usuario no verificado',
+  'publicDrone.userRejected': 'Usuario no aprobado',
+  'publicDrone.insuranceUnknown': 'No hay información del seguro registrada',
+  'publicDrone.insuranceActive': 'Seguro activo',
+  'publicDrone.insuranceExpiring': 'Seguro a punto de vencer',
+  'publicDrone.insuranceExpired': 'Seguro vencido',
+  'publicDrone.certificatesVerified': 'Certificados verificados',
+  'publicDrone.certificatesPending': 'Certificados en revisión',
+  'publicDrone.certificatesUnverified': 'Certificados no verificados',
+  'publicDrone.certificatesRejected': 'Certificados rechazados',
+  'publicDrone.viewPolicyPdf': 'Ver documento de la póliza',
+  'publicDrone.openApp': 'Abrir la app / iniciar sesión',
+  'publicDrone.reportFound': 'He encontrado este dron',
+  'publicDrone.reportFoundShort': 'Avisar de dron encontrado',
+  'publicDrone.lastVerified': 'Última verificación',
+  'publicDrone.publishedOn': 'Publicado el',
+  'publicDrone.disclaimer': 'DroneTag es una plataforma privada de identificación digital. No sustituye el registro oficial del operador, la certificación del piloto, las obligaciones de seguro ni la documentación expedida por las autoridades.',
 
-  'reportFound.title': 'Report a found drone',
-  'reportFound.subtitle': 'Help return this drone to its owner. Sharing your contact details is optional.',
-  'reportFound.field.finderName': 'Your name (optional)',
-  'reportFound.field.finderEmail': 'Your email (optional)',
-  'reportFound.field.message': 'Message to the owner (optional)',
-  'reportFound.field.locationText': 'Approximate location (optional)',
-  'reportFound.field.locationTextHint': 'Free-form: address, landmark, neighbourhood, etc.',
-  'reportFound.geolocation.add': 'Share my GPS location',
-  'reportFound.geolocation.added': 'GPS location captured',
-  'reportFound.geolocation.remove': 'Remove GPS location',
-  'reportFound.geolocation.error': 'Could not access location. You can still describe it in the field above.',
-  'reportFound.privacy': 'Your details are sent only to the drone owner. The owner cannot see your phone number or address.',
-  'reportFound.submit': 'Send report',
-  'reportFound.submitting': 'Sending\u2026',
-  'reportFound.successTitle': 'Thank you for the report',
-  'reportFound.successBody': 'The drone owner has been notified. They may reach out using the contact details you provided, if any.',
-  'reportFound.errorBody': 'We could not send your report. Please try again in a moment.',
-  'reportFound.cooldown': 'Please wait a few seconds before sending another report.',
+  'reportFound.title': 'Avisar de un dron encontrado',
+  'reportFound.subtitle': 'Ayuda a devolver este dron a su propietario. Compartir tus datos de contacto es opcional.',
+  'reportFound.field.finderName': 'Tu nombre (opcional)',
+  'reportFound.field.finderEmail': 'Tu email (opcional)',
+  'reportFound.field.message': 'Mensaje para el propietario (opcional)',
+  'reportFound.field.locationText': 'Ubicación aproximada (opcional)',
+  'reportFound.field.locationTextHint': 'Texto libre: dirección, punto de referencia, barrio, etc.',
+  'reportFound.geolocation.add': 'Compartir mi ubicación GPS',
+  'reportFound.geolocation.added': 'Ubicación GPS obtenida',
+  'reportFound.geolocation.remove': 'Quitar la ubicación GPS',
+  'reportFound.geolocation.error': 'No se ha podido acceder a la ubicación. Puedes describirla igualmente en el campo de arriba.',
+  'reportFound.privacy': 'Tu mensaje solo llega al propietario del dron y al equipo de DroneTag: nunca se muestra en la página pública.',
+  'reportFound.submit': 'Enviar aviso',
+  'reportFound.submitting': 'Enviando…',
+  'reportFound.successTitle': 'Gracias por el aviso',
+  'reportFound.successBody': 'Hemos avisado al propietario del dron. Si has facilitado tus datos de contacto, puede que se ponga en contacto contigo.',
+  'reportFound.errorBody': 'No hemos podido enviar tu aviso. Vuelve a intentarlo en un momento.',
+  'reportFound.cooldown': 'Espera unos segundos antes de enviar otro aviso.',
 
-  'inbox.title': 'Found reports',
-  'inbox.subtitle': 'Messages from people who found one of your drones.',
-  'inbox.tab': 'Found reports',
-  'inbox.empty': 'No found reports yet',
-  'inbox.emptyDesc': 'When someone scans one of your public drone cards and uses the “Report found drone” button, you will see their message here.',
-  'inbox.unread': 'Unread',
-  'inbox.read': 'Read',
-  'inbox.markRead': 'Mark as read',
-  'inbox.viewLocation': 'Open in map',
+  'inbox.title': 'Avisos de hallazgo',
+  'inbox.subtitle': 'Mensajes de personas que han encontrado uno de tus drones.',
+  'inbox.tab': 'Avisos de hallazgo',
+  'inbox.empty': 'Aún no hay avisos de hallazgo',
+  'inbox.emptyDesc': 'Cuando alguien escanee una de las fichas públicas de tus drones y use el botón «Avisar de dron encontrado», verás aquí su mensaje.',
+  'inbox.unread': 'Sin leer',
+  'inbox.read': 'Leído',
+  'inbox.markRead': 'Marcar como leído',
+  'inbox.viewLocation': 'Abrir en el mapa',
   'inbox.locationCoords': '{lat}, {lng} (±{accuracy} m)',
-  'inbox.fromAnonymous': 'Anonymous finder',
-  'inbox.contact': 'Contact',
-  'inbox.location': 'Reported location',
-  'inbox.message': 'Message',
-  'inbox.about': 'About this drone',
-  'inbox.openDrone': 'Open drone',
-  'inbox.receivedAt': 'Received {date}',
+  'inbox.fromAnonymous': 'Remitente anónimo',
+  'inbox.contact': 'Contacto',
+  'inbox.location': 'Ubicación indicada',
+  'inbox.message': 'Mensaje',
+  'inbox.about': 'Dron en cuestión',
+  'inbox.openDrone': 'Abrir dron',
+  'inbox.receivedAt': 'Recibido el {date}',
 
 
-  'support.title': 'Support',
-  'support.subtitle': 'Message the DroneTag team for identity changes and anything only an admin can update.',
-  'support.nav': 'Support',
-  'support.empty': 'No messages yet',
-  'support.emptyDesc': 'Write below to open a conversation. Use this for name corrections, phone/email changes, and other locked fields.',
-  'support.composer.placeholder': 'Write your message…',
-  'support.composer.subjectPlaceholder': 'Subject (optional)',
-  'support.send': 'Send',
-  'support.sending': 'Sending…',
-  'support.closed': 'This conversation is closed. Send a message to reopen it.',
-  'support.you': 'You',
-  'support.admin': 'Support',
-  'support.hint.nameChange': 'Need to change your name or other locked data? Send a message here — an admin will update your account.',
-  'support.status.open': 'Open',
-  'support.status.closed': 'Closed',
+  'support.title': 'Soporte',
+  'support.subtitle': 'Escribe al equipo de DroneTag para cambios de identidad y todo lo que solo puede modificar un administrador.',
+  'support.nav': 'Soporte',
+  'support.empty': 'Aún no hay mensajes',
+  'support.emptyDesc': 'Escribe abajo para abrir una conversación. Úsalo para corregir el nombre, cambiar el teléfono/email y otros campos bloqueados.',
+  'support.composer.placeholder': 'Escribe tu mensaje…',
+  'support.composer.subjectPlaceholder': 'Asunto (opcional)',
+  'support.send': 'Enviar',
+  'support.sending': 'Enviando…',
+  'support.closed': 'Esta conversación está cerrada. Envía un mensaje para reabrirla.',
+  'support.you': 'Tú',
+  'support.admin': 'Soporte',
+  'support.hint.nameChange': '¿Necesitas cambiar tu nombre u otros datos bloqueados? Escríbenos aquí — un administrador actualizará tu cuenta.',
+  'support.status.open': 'Abierta',
+  'support.status.closed': 'Cerrada',
 
-  'admin.nav.support': 'Support',
-  'admin.support.title': 'Support inbox',
-  'admin.support.subtitle': 'Conversations with users about locked fields and account help.',
-  'admin.support.empty': 'No conversations',
-  'admin.support.emptyDesc': 'When a user messages support, the thread appears here.',
-  'admin.support.openUser': 'Open user profile',
-  'admin.support.close': 'Close thread',
-  'admin.support.reopen': 'Reopen thread',
-  'admin.support.unread': '{count} unread',
-  'admin.support.select': 'Select a conversation',
-  'admin.support.composer.placeholder': 'Reply as admin…',
-  'admin.users.openSupport': 'Open support chat',
+  'admin.nav.support': 'Soporte',
+  'admin.support.title': 'Bandeja de soporte',
+  'admin.support.subtitle': 'Conversaciones con usuarios sobre campos bloqueados y ayuda con la cuenta.',
+  'admin.support.empty': 'No hay conversaciones',
+  'admin.support.emptyDesc': 'Cuando un usuario escriba a soporte, la conversación aparecerá aquí.',
+  'admin.support.openUser': 'Abrir ficha del usuario',
+  'admin.support.close': 'Cerrar conversación',
+  'admin.support.reopen': 'Reabrir conversación',
+  'admin.support.unread': '{count} sin leer',
+  'admin.support.select': 'Selecciona una conversación',
+  'admin.support.composer.placeholder': 'Responder como admin…',
+  'admin.users.openSupport': 'Abrir chat de soporte',
 
-  'publicDrone.errorTitle': 'Could not load this drone',
-  'publicDrone.errorBody': 'There was a problem retrieving the drone profile. Please check your connection and try again.',
+  'publicDrone.errorTitle': 'No se ha podido cargar este dron',
+  'publicDrone.errorBody': 'Se ha producido un problema al obtener el perfil del dron. Comprueba tu conexión y vuelve a intentarlo.',
 
   // ═══════════════════════════════════════════════════════════════════════════
   // M4 — Temporary operator switching (English source; pending ES polish).
   // ═══════════════════════════════════════════════════════════════════════════
 
-  'activeOp.section.title': 'Active operator',
-  'activeOp.section.subtitle': 'Temporarily reassign this drone to another operator. The override automatically expires after 24 hours.',
-  'activeOp.label.effective': 'Effective right now',
-  'activeOp.label.default': 'Default operator',
-  'activeOp.label.activeOverride': 'Temporary override',
-  'activeOp.label.expiresAt': 'Reverts to default at',
-  'activeOp.label.setAt': 'Activated at',
-  'activeOp.label.reason': 'Reason',
-  'activeOp.countdown.hours': '{hours}h {minutes}m left',
-  'activeOp.countdown.minutes': '{minutes}m left',
-  'activeOp.countdown.expired': 'Expired — falling back to the default operator',
-  'activeOp.cta.switch': 'Switch active operator',
-  'activeOp.cta.clearNow': 'Clear temporary operator now',
-  'activeOp.cta.confirmAndApply': 'Confirm and activate',
-  'activeOp.modal.title': 'Activate temporary operator',
-  'activeOp.modal.subtitle': 'Choose the operator that should be in charge of this drone for the next 24 hours.',
-  'activeOp.modal.field.operator': 'Operator',
-  'activeOp.modal.field.reason': 'Reason (optional)',
-  'activeOp.modal.field.reasonHint': 'Helps you and any admin understand why the override was activated.',
-  'activeOp.modal.responsibility': 'I confirm that I have verified all operator data, insurance coverage, drone association and legal responsibility before activating this operator.',
-  'activeOp.modal.responsibilityRequired': 'You must confirm responsibility before activating the temporary operator.',
-  'activeOp.modal.duration': 'The override stays active for 24 hours and then automatically reverts to the default operator.',
-  'activeOp.modal.sameAsDefault': 'The selected operator is already the default. Choose a different operator to activate a temporary override.',
-  'activeOp.empty.noAlternativeTitle': 'No alternative operator available',
-  'activeOp.empty.noAlternativeDesc': 'Add a second operator on the Operators page to enable temporary switching.',
-  'activeOp.clear.title': 'Clear temporary operator?',
-  'activeOp.clear.message': 'The drone will immediately revert to its default operator and the override audit trail will be removed.',
-  'activeOp.banner.activeNow': 'A temporary operator override is currently active.',
-  'activeOp.errorBody': 'Could not update the active operator. Please try again.',
+  'activeOp.section.title': 'Operador activo',
+  'activeOp.section.subtitle': 'Reasigna temporalmente este dron a otro operador. El cambio caduca automáticamente a las 24 horas.',
+  'activeOp.label.effective': 'Vigente ahora',
+  'activeOp.label.default': 'Operador predeterminado',
+  'activeOp.label.activeOverride': 'Cambio temporal',
+  'activeOp.label.expiresAt': 'Vuelve al predeterminado el',
+  'activeOp.label.setAt': 'Activado el',
+  'activeOp.label.reason': 'Motivo',
+  'activeOp.countdown.hours': 'Quedan {hours}h {minutes}m',
+  'activeOp.countdown.minutes': 'Quedan {minutes}m',
+  'activeOp.countdown.expired': 'Caducado — se vuelve al operador predeterminado',
+  'activeOp.cta.switch': 'Cambiar operador activo',
+  'activeOp.cta.clearNow': 'Anular ahora el operador temporal',
+  'activeOp.cta.confirmAndApply': 'Confirmar y activar',
+  'activeOp.modal.title': 'Activar operador temporal',
+  'activeOp.modal.subtitle': 'Elige el operador que se hará cargo de este dron durante las próximas 24 horas.',
+  'activeOp.modal.field.operator': 'Operador',
+  'activeOp.modal.field.reason': 'Motivo (opcional)',
+  'activeOp.modal.field.reasonHint': 'Te ayuda a ti y a cualquier administrador a entender por qué se activó el cambio temporal.',
+  'activeOp.modal.responsibility': 'Confirmo que he verificado todos los datos del operador, la cobertura del seguro, la asociación del dron y la responsabilidad legal antes de activar este operador.',
+  'activeOp.modal.responsibilityRequired': 'Debes confirmar la responsabilidad antes de activar el operador temporal.',
+  'activeOp.modal.duration': 'El cambio temporal permanece activo 24 horas y después vuelve automáticamente al operador predeterminado.',
+  'activeOp.modal.sameAsDefault': 'El operador seleccionado ya es el predeterminado. Elige otro operador para activar un cambio temporal.',
+  'activeOp.empty.noAlternativeTitle': 'No hay ningún operador alternativo disponible',
+  'activeOp.empty.noAlternativeDesc': 'Añade un segundo operador en la página Operadores para habilitar el cambio temporal.',
+  'activeOp.clear.title': '¿Anular el operador temporal?',
+  'activeOp.clear.message': 'El dron volverá de inmediato a su operador predeterminado y se eliminará el registro de auditoría del cambio temporal.',
+  'activeOp.banner.activeNow': 'Hay un cambio temporal de operador activo.',
+  'activeOp.errorBody': 'No se ha podido actualizar el operador activo. Vuelve a intentarlo.',
 
   // ═══════════════════════════════════════════════════════════════════════════
   // M5 — Admin / plans / PWA / disclaimers (English source; pending ES polish).
   // ═══════════════════════════════════════════════════════════════════════════
 
   'legal.platformDisclaimer': 'DroneTag is a private digital identification and document management platform. It does not replace official drone operator registration, pilot certification, insurance obligations, or authority-issued documentation.',
-  'legal.notOfficial': 'Not an official government or aviation authority registry.',
+  'legal.notOfficial': 'No es un registro oficial del gobierno ni de una autoridad aeronáutica.',
 
-  'admin.title': 'Admin',
-  'admin.subtitle': 'Operate the platform: users, drones, reports, plans and verification queue.',
-  'admin.overview.subtitle': 'Work queue for today: verification, found reports, support and live operator overrides.',
-  'admin.overview.attentionTitle': 'Items need your attention',
-  'admin.overview.attentionBody': '{count} open items across verification, reports and support.',
-  'admin.overview.allClearTitle': 'Nothing urgent',
-  'admin.overview.allClearBody': 'No pending verification, unread found reports or support replies waiting.',
-  'admin.overview.stat.queue': 'Verification queue',
-  'admin.overview.stat.unreadReports': 'Unread found reports',
-  'admin.overview.stat.support': 'Support replies due',
-  'admin.overview.stat.overrides': 'Active overrides',
-  'admin.overview.verify.title': 'Verification breakdown',
-  'admin.overview.verify.subtitle': 'Pending / unverified items waiting for an admin decision.',
-  'admin.overview.openQueue': 'Open queue',
-  'admin.overview.reports.title': 'Unread found-drone reports',
-  'admin.overview.reports.subtitle': 'Messages from people who scanned a public profile.',
-  'admin.overview.openReports': 'Open inbox',
-  'admin.overview.reports.empty': 'No unread reports',
-  'admin.overview.reports.emptyDesc': 'New finder messages will appear here.',
-  'admin.overview.reports.anonymous': 'Anonymous finder',
-  'admin.overview.support.title': 'Support waiting for reply',
-  'admin.overview.support.subtitle': 'Open threads with unread messages for admin.',
-  'admin.overview.openSupport': 'Open support',
-  'admin.overview.support.empty': 'No pending replies',
-  'admin.overview.support.emptyDesc': 'User messages that need an admin answer will show here.',
-  'admin.overview.overrides.title': 'Active operator overrides',
-  'admin.overview.overrides.subtitle': 'Temporary 24h operator switches currently in force.',
-  'admin.overview.openDrones': 'Open drones',
-  'admin.overview.overrides.empty': 'No active overrides',
-  'admin.overview.overrides.emptyDesc': 'Temporary operator assignments will list here while valid.',
-  'admin.overview.overrides.until': 'Until {when}',
-  'admin.overview.foot.users': 'Accounts',
-  'admin.overview.foot.public': 'Public drones',
-  'admin.nav.overview': 'Overview',
-  'admin.nav.users': 'Users',
+  'admin.title': 'Administración',
+  'admin.subtitle': 'Gestiona la plataforma: usuarios, drones, avisos, planes y cola de verificación.',
+  'admin.overview.subtitle': 'Cola de trabajo de hoy: verificación, avisos de hallazgo, soporte y cambios de operador activos.',
+  'admin.overview.attentionTitle': 'Elementos que requieren tu atención',
+  'admin.overview.attentionBody': '{count} elementos abiertos entre verificación, avisos y soporte.',
+  'admin.overview.allClearTitle': 'Nada urgente',
+  'admin.overview.allClearBody': 'No hay verificaciones pendientes, avisos de hallazgo sin leer ni respuestas de soporte en espera.',
+  'admin.overview.stat.queue': 'Cola de verificación',
+  'admin.overview.stat.unreadReports': 'Avisos sin leer',
+  'admin.overview.stat.support': 'Soporte por responder',
+  'admin.overview.stat.overrides': 'Cambios temporales activos',
+  'admin.overview.verify.title': 'Desglose de verificación',
+  'admin.overview.verify.subtitle': 'Elementos pendientes de tu decisión.',
+  'admin.overview.openQueue': 'Abrir cola',
+  'admin.overview.reports.title': 'Avisos de hallazgo sin leer',
+  'admin.overview.reports.subtitle': 'Mensajes de personas que han escaneado un perfil público.',
+  'admin.overview.openReports': 'Abrir bandeja',
+  'admin.overview.reports.empty': 'No hay avisos sin leer',
+  'admin.overview.reports.emptyDesc': 'Aquí aparecerán los nuevos avisos de hallazgo.',
+  'admin.overview.reports.anonymous': 'Remitente anónimo',
+  'admin.overview.support.title': 'Soporte pendiente de respuesta',
+  'admin.overview.support.subtitle': 'Conversaciones abiertas con mensajes sin leer para el administrador.',
+  'admin.overview.openSupport': 'Abrir soporte',
+  'admin.overview.support.empty': 'No hay respuestas pendientes',
+  'admin.overview.support.emptyDesc': 'Aquí aparecerán los mensajes de usuarios que necesiten respuesta de un administrador.',
+  'admin.overview.overrides.title': 'Cambios temporales de operador activos',
+  'admin.overview.overrides.subtitle': 'Cambios temporales de operador (24h) actualmente en vigor.',
+  'admin.overview.openDrones': 'Abrir drones',
+  'admin.overview.overrides.empty': 'No hay cambios temporales activos',
+  'admin.overview.overrides.emptyDesc': 'Las asignaciones temporales de operador aparecerán aquí mientras sigan vigentes.',
+  'admin.overview.overrides.until': 'Hasta {when}',
+  'admin.overview.foot.users': 'Cuentas',
+  'admin.overview.foot.public': 'Drones públicos',
+  'admin.nav.overview': 'Resumen',
+  'admin.nav.users': 'Usuarios',
   'admin.nav.drones': 'Drones',
-  'admin.nav.reports': 'Found drones',
-  'admin.nav.verify': 'Verification',
-  'admin.nav.plans': 'Plans',
-  'admin.nav.legacy': 'Legacy profiles',
-  'admin.stats.users': 'Users',
+  'admin.nav.reports': 'Drones encontrados',
+  'admin.nav.verify': 'Verificación',
+  'admin.nav.plans': 'Planes',
+  'admin.nav.legacy': 'Perfiles heredados',
+  'admin.stats.users': 'Usuarios',
   'admin.stats.drones': 'Drones',
-  'admin.stats.publicDrones': 'Public drones',
-  'admin.stats.reports': 'Found drones',
-  'admin.stats.unreadReports': 'Unread found drones',
-  'admin.stats.plans': 'Active plans',
-  'admin.stats.activeOverrides': 'Active overrides',
-  'admin.stats.legacyProfiles': 'Legacy profiles',
+  'admin.stats.publicDrones': 'Drones públicos',
+  'admin.stats.reports': 'Drones encontrados',
+  'admin.stats.unreadReports': 'Avisos sin leer',
+  'admin.stats.plans': 'Planes activos',
+  'admin.stats.activeOverrides': 'Cambios temporales activos',
+  'admin.stats.legacyProfiles': 'Perfiles heredados',
 
-  'admin.users.title': 'Users',
-  'admin.users.subtitle': 'View, search and edit any account on the platform.',
-  'admin.users.searchPlaceholder': 'Name, email, company, VAT…',
-  'admin.users.empty': 'No users yet',
-  'admin.users.loadError':
-    'Could not load users. Check you are online, have admin permissions (sign out and back in after grant-admin), and that Firestore rules are deployed.',
-  'admin.users.create.title': 'New user',
-  'admin.users.create.subtitle':
-    'Create login credentials and Firestore profile. The user can sign in and manage their documents only.',
-  'admin.users.create.tempPassword': 'Temporary password',
-  'admin.users.create.submit': 'Create user',
-  'admin.users.create.errorEmailInUse': 'An account with this email already exists.',
-  'admin.users.create.errorGeneric': 'Could not create the user. Please try again.',
+  'admin.users.title': 'Usuarios',
+  'admin.users.subtitle': 'Consulta, busca y edita cualquier cuenta de la plataforma.',
+  'admin.users.searchPlaceholder': 'Nombre, correo, empresa, NIF…',
+  'admin.users.empty': 'Aún no hay usuarios',
+  'admin.users.loadError': 'No se pudieron cargar los usuarios. Comprueba la conexión y vuelve a intentarlo; si sigue ocurriendo, cierra sesión y vuelve a entrar.',
+  'admin.users.create.title': 'Nuevo usuario',
+  'admin.users.create.subtitle': 'Crea el acceso y el perfil del usuario. Solo podrá iniciar sesión y gestionar sus propios datos y documentos.',
+  'admin.users.create.tempPassword': 'Contraseña temporal',
+  'admin.users.create.submit': 'Crear usuario',
+  'admin.users.create.errorEmailInUse': 'Ya existe una cuenta con este correo.',
+  'admin.users.create.errorGeneric': 'No se ha podido crear el usuario. Vuelve a intentarlo.',
   'admin.users.create.errorAdminSdk':
     'Firebase Admin is not configured locally. Set FIREBASE_SERVICE_ACCOUNT_PATH in .env.local to your service-account JSON file path, then restart npm run dev.',
-  'admin.users.create.errorNameRequired': 'First name and last name are required.',
-  'admin.users.create.errorInvalidEmail': 'Enter a valid email address.',
-  'admin.users.create.errorAuth': 'Admin session expired. Sign out, sign in again, and retry.',
-  'admin.users.create.errorNetwork':
-    'Network error while creating the user. Check your connection and try again.',
-  'admin.users.create.errors.summary':
-    '{count} fields need attention before the account can be created.',
-  'admin.users.create.errors.email_required': 'Email is required so the user can sign in.',
-  'admin.users.create.errors.email_invalid': 'Enter a valid email address (e.g. name@company.it).',
-  'admin.users.create.errors.password_required':
-    'Temporary password is required (share it with the user securely).',
-  'admin.users.create.errors.password_too_short': 'Password must be at least 6 characters.',
-  'admin.users.create.errors.firstName_required': 'First name is required.',
-  'admin.users.create.errors.lastName_required': 'Last name is required.',
-  'admin.users.create.errors.companyName_required':
-    'Company name is required for company accounts.',
-  'admin.users.create.errors.companyContactPerson_required':
-    'Contact person is required for company accounts.',
-  'admin.users.col.name': 'Name',
-  'admin.users.col.type': 'Type',
-  'admin.users.col.email': 'Email',
-  'admin.users.col.created': 'Created',
-  'admin.users.openProfile': 'Manage account',
-  'admin.users.editData': 'Edit details',
-  'common.showPassword': 'Show password',
-  'common.hidePassword': 'Hide password',
-  'admin.users.loginHint.title': 'User sign-in',
-  'admin.users.loginHint.body':
-    'The user signs in at /login with this email and the temporary password set at creation.',
-  'admin.users.publicHint.title': 'Public page (QR / NFC)',
-  'admin.users.publicHint.body':
-    'The public page is tied to a public drone with a slug. Manage it in the Drones section below.',
+  'admin.users.create.errorNameRequired': 'El nombre y los apellidos son obligatorios.',
+  'admin.users.create.errorInvalidEmail': 'Introduce una dirección de correo válida.',
+  'admin.users.create.errorAuth': 'La sesión de administrador ha caducado. Cierra sesión, vuelve a iniciarla e inténtalo de nuevo.',
+  'admin.users.create.errorNetwork': 'Error de red al crear el usuario. Comprueba tu conexión y vuelve a intentarlo.',
+  'admin.users.create.errors.summary': '{count} campos requieren tu atención antes de poder crear la cuenta.',
+  'admin.users.create.errors.email_required': 'El correo es obligatorio para que el usuario pueda iniciar sesión.',
+  'admin.users.create.errors.email_invalid': 'Introduce una dirección de correo válida (p. ej., nombre@empresa.es).',
+  'admin.users.create.errors.password_required': 'La contraseña temporal es obligatoria (compártela con el usuario de forma segura).',
+  'admin.users.create.errors.password_too_short': 'La contraseña debe tener al menos 6 caracteres.',
+  'admin.users.create.errors.firstName_required': 'El nombre es obligatorio.',
+  'admin.users.create.errors.lastName_required': 'Los apellidos son obligatorios.',
+  'admin.users.create.errors.companyName_required': 'La razón social es obligatoria para las cuentas de empresa.',
+  'admin.users.create.errors.companyContactPerson_required': 'La persona de contacto es obligatoria para las cuentas de empresa.',
+  'admin.users.col.name': 'Nombre',
+  'admin.users.col.type': 'Tipo',
+  'admin.users.col.email': 'Correo',
+  'admin.users.col.created': 'Creado',
+  'admin.users.openProfile': 'Gestionar cuenta',
+  'admin.users.editData': 'Editar datos',
+  'common.showPassword': 'Mostrar contraseña',
+  'common.hidePassword': 'Ocultar contraseña',
+  'admin.users.loginHint.title': 'Acceso del usuario',
+  'admin.users.loginHint.body': 'El usuario inicia sesión en /login con este correo. Si creaste tú la cuenta, usa la contraseña temporal que definiste; tras el primer acceso completa sus datos en Mi cuenta.',
+  'admin.users.publicHint.title': 'Página pública (QR / NFC)',
+  'admin.users.publicHint.body': 'Cada dron publicado tiene su propia página pública, la que abre el QR o la insignia NFC. El usuario la activa en Mi cuenta → Drones; también puedes gestionarla desde la sección Drones de abajo.',
   'admin.users.publicHint.none':
     'No public drone yet: create a drone and set visibility to Public.',
   'admin.users.publicProfileUnavailable':
     'No public page yet: add a public drone with a slug.',
-  'admin.users.detail.account': 'Account fields',
-  'admin.users.detail.pilot': 'Remote pilot identity',
-  'admin.users.detail.slots': 'Slots',
-  'admin.users.detail.operators': 'Operators',
+  'admin.users.detail.account': 'Datos de la cuenta',
+  'admin.users.detail.pilot': 'Identidad del piloto a distancia',
+  'admin.users.detail.slots': 'Espacios',
+  'admin.users.detail.operators': 'Operadores',
   'admin.users.detail.drones': 'Drones',
-  'admin.users.detail.insurances': 'Insurances',
-  'admin.users.detail.certificates': 'Certificates',
-  'admin.users.detail.authorizations': 'Authorizations',
-  'admin.users.detail.documents': 'Documents',
-  'admin.users.backToList': 'Back to users',
+  'admin.users.detail.insurances': 'Seguros',
+  'admin.users.detail.certificates': 'Certificados',
+  'admin.users.detail.authorizations': 'Autorizaciones',
+  'admin.users.detail.documents': 'Documentos',
+  'admin.users.backToList': 'Volver a usuarios',
 
-  'admin.slots.title': 'Slots & quotas',
-  'admin.slots.subtitle': 'Set how many of each slot kind this user is entitled to.',
-  'admin.slots.kind.certificate': 'Certificates',
+  'admin.slots.title': 'Espacios y límites',
+  'admin.slots.subtitle': 'Define cuántos espacios de cada tipo puede usar este usuario.',
+  'admin.slots.kind.certificate': 'Certificados',
   'admin.slots.kind.drone': 'Drones',
-  'admin.slots.kind.operator': 'Operators (max 3)',
-  'admin.slots.kind.pdf': 'Document PDFs',
-  'admin.slots.kind.permit': 'Authorizations / permits',
-  'admin.slots.kind.archive': 'Archive packs (+30 MB)',
-  'admin.slots.kind.nfc_badge': 'Physical NFC badges',
-  'admin.slots.kind.personalization': 'Personalization (logo / banner)',
-  'admin.slots.usage': 'Used: {used}',
-  'admin.slots.save': 'Save slot counts',
+  'admin.slots.kind.operator': 'Operadores',
+  'admin.slots.kind.pdf': 'Documentos PDF',
+  'admin.slots.kind.permit': 'Autorizaciones / permisos',
+  'admin.slots.kind.archive': 'Paquetes de archivo (+30 MB)',
+  'admin.slots.kind.nfc_badge': 'Insignias NFC físicas',
+  'admin.slots.kind.personalization': 'Personalización (logotipo / banner)',
+  'admin.slots.usage': 'Usados: {used}',
+  'admin.slots.save': 'Guardar espacios',
 
-  'admin.verify.title': 'Verification queue',
-  'admin.verify.subtitle': 'Approve or reject pending documents, certificates and policies.',
-  'admin.verify.view.queue': 'Queue',
-  'admin.verify.view.archive': 'Archive',
-  'admin.verify.archive.subtitle': 'Already approved or rejected items. You can send them back to the queue.',
-  'admin.verify.archive.empty': 'Archive is empty',
-  'admin.verify.archive.emptyDesc': 'Verified or rejected items appear here.',
-  'admin.verify.tab.documents': 'Documents',
-  'admin.verify.tab.certificates': 'Certificates',
-  'admin.verify.tab.insurances': 'Insurances',
-  'admin.verify.tab.authorizations': 'Authorizations',
+  'admin.verify.title': 'Cola de verificación',
+  'admin.verify.subtitle': 'Cola: por revisar (datos corregidos por el usuario o sin verificación automática). Archivo: ya verificados, también automáticamente, o rechazados; puedes suspenderlos o devolverlos a la cola.',
+  'admin.verify.view.queue': 'Cola',
+  'admin.verify.view.archive': 'Archivo',
+  'admin.verify.archive.subtitle': 'Verificados (también automáticamente, cuando el usuario confirmó los datos leídos del documento) o rechazados. Siempre puedes suspenderlos, rechazarlos o devolverlos a la cola.',
+  'admin.verify.archive.empty': 'El archivo está vacío',
+  'admin.verify.archive.emptyDesc': 'Aquí aparecen los elementos verificados o rechazados.',
+  'admin.verify.tab.documents': 'Documentos',
+  'admin.verify.tab.certificates': 'Certificados',
+  'admin.verify.tab.insurances': 'Seguros',
+  'admin.verify.tab.authorizations': 'Autorizaciones',
   'admin.verify.tab.drones': 'Drones',
-  'admin.verify.markVerified': 'Mark verified',
-  'admin.verify.markRejected': 'Mark rejected',
-  'admin.verify.markPending': 'Mark pending',
-  'admin.verify.empty': 'Nothing to review',
-  'admin.verify.emptyDesc': 'New submissions appear here automatically.',
+  'admin.verify.markVerified': 'Marcar verificado',
+  'admin.verify.markRejected': 'Marcar rechazado',
+  'admin.verify.markPending': 'Marcar pendiente',
+  'admin.verify.empty': 'Nada que revisar',
+  'admin.verify.emptyDesc': 'Aquí solo aparecen los elementos que requieren revisión manual. Los verificados automáticamente van directamente al archivo.',
 
-  'admin.drones.title': 'All drones',
-  'admin.drones.subtitle': 'Search across every drone, including public, private and archived states.',
-  'admin.drones.searchPlaceholder': 'Slug, manufacturer, model, serial, owner email…',
-  'admin.drones.col.drone': 'Drone',
-  'admin.drones.col.owner': 'Owner',
-  'admin.drones.col.status': 'Status',
-  'admin.drones.col.override': 'Active override',
-  'admin.drones.openInAdmin': 'Open',
-  'admin.drones.adminEdit.title': 'Edit drone',
-  'admin.drones.adminEdit.subtitle': 'Admin override: any field you change here is written directly to Firestore.',
-  'admin.drones.clearOverride': 'Clear override',
+  'admin.drones.title': 'Todos los drones',
+  'admin.drones.subtitle': 'Busca entre todos los drones, incluidos los públicos, los privados y los archivados.',
+  'admin.drones.searchPlaceholder': 'Slug, fabricante, modelo, n.º de serie, correo del propietario…',
+  'admin.drones.col.drone': 'Dron',
+  'admin.drones.col.owner': 'Propietario',
+  'admin.drones.col.status': 'Estado',
+  'admin.drones.col.override': 'Asignación temporal',
+  'admin.drones.openInAdmin': 'Abrir',
+  'admin.drones.adminEdit.title': 'Editar dron',
+  'admin.drones.adminEdit.subtitle': 'Edición de admin: los cambios se guardan al instante y anulan los bloqueos del usuario.',
+  'admin.drones.clearOverride': 'Anular asignación',
 
-  'admin.reports.title': 'Found drones (all users)',
-  'admin.reports.subtitle': 'Messages sent by people who scanned a public drone profile.',
-  'admin.reports.searchPlaceholder': 'Slug, finder name, email, message…',
-  'admin.reports.col.received': 'Received',
-  'admin.reports.col.drone': 'Drone',
-  'admin.reports.col.finder': 'Finder',
-  'admin.reports.col.message': 'Message',
-  'admin.reports.col.location': 'Location',
-  'admin.reports.col.read': 'Read',
+  'admin.reports.title': 'Drones encontrados (todos los usuarios)',
+  'admin.reports.subtitle': 'Mensajes enviados por personas que escanearon el perfil público de un dron.',
+  'admin.reports.searchPlaceholder': 'Slug, nombre del remitente, correo, mensaje…',
+  'admin.reports.col.received': 'Recibido',
+  'admin.reports.col.drone': 'Dron',
+  'admin.reports.col.finder': 'Remitente',
+  'admin.reports.col.message': 'Mensaje',
+  'admin.reports.col.location': 'Ubicación',
+  'admin.reports.col.read': 'Leído',
 
-  'admin.plans.title': 'Plans & pricing',
-  'admin.plans.subtitle': 'Configure prices for each slot kind. Pricing is read by the marketing page and the user dashboard.',
-  'admin.plans.col.label': 'Label',
-  'admin.plans.col.kind': 'Slot kind',
-  'admin.plans.col.price': 'Price',
-  'admin.plans.col.currency': 'Currency',
-  'admin.plans.col.active': 'Active',
-  'admin.plans.new': 'New plan',
-  'admin.plans.create.title': 'Create plan',
-  'admin.plans.edit.title': 'Edit plan',
-  'admin.plans.delete.title': 'Delete plan?',
-  'admin.plans.field.label': 'Display label',
-  'admin.plans.field.description': 'Description',
-  'admin.plans.field.kind': 'Slot kind',
-  'admin.plans.field.priceCents': 'Price (in minor units, e.g. cents)',
-  'admin.plans.field.currency': 'Currency',
-  'admin.plans.field.active': 'Active',
-  'admin.plans.empty': 'No plans configured yet',
-  'admin.plans.emptyDesc': 'Create a plan for each slot type your users can purchase.',
+  'admin.plans.title': 'Planes y precios',
+  'admin.plans.subtitle': 'Configura el precio de cada tipo de espacio. La página de marketing y el panel del usuario leen estos precios.',
+  'admin.plans.col.label': 'Etiqueta',
+  'admin.plans.col.kind': 'Tipo de espacio',
+  'admin.plans.col.price': 'Precio',
+  'admin.plans.col.currency': 'Moneda',
+  'admin.plans.col.active': 'Activo',
+  'admin.plans.new': 'Nuevo plan',
+  'admin.plans.create.title': 'Crear plan',
+  'admin.plans.edit.title': 'Editar plan',
+  'admin.plans.delete.title': '¿Eliminar el plan?',
+  'admin.plans.field.label': 'Etiqueta visible',
+  'admin.plans.field.description': 'Descripción',
+  'admin.plans.field.kind': 'Tipo de espacio',
+  'admin.plans.field.priceCents': 'Precio (en unidades menores, p. ej., céntimos)',
+  'admin.plans.field.currency': 'Moneda',
+  'admin.plans.field.active': 'Activo',
+  'admin.plans.empty': 'Aún no hay planes configurados',
+  'admin.plans.emptyDesc': 'Crea un plan para cada tipo de espacio que tus usuarios puedan comprar.',
 
-  'account.plan.title': 'Plan & slots',
-  'account.plan.subtitle': 'Quota included in your account. Contact admin to increase limits.',
-  'account.plan.empty': 'Your account uses the base plan.',
-  'account.plan.contactAdmin': 'Contact admin',
+  'account.plan.title': 'Tu plan',
+  'account.plan.subtitle': 'Límites incluidos en tu cuenta. Contacta con el administrador para ampliarlos.',
+  'account.plan.empty': 'Tu cuenta usa el plan básico.',
+  'account.plan.contactAdmin': 'Contactar con el admin',
 
   'pwa.appName': 'DroneTag',
   'pwa.appShortName': 'DroneTag',
-  'pwa.appDescription': 'Digital identification and document management for drone operators.',
-  'pwa.install.cta': 'Install app',
-  'pwa.install.dismiss': 'Not now',
-  'pwa.install.installed': 'DroneTag is installed',
+  'pwa.appDescription': 'Identificación digital y gestión documental para operadores de drones.',
+  'pwa.install.cta': 'Instalar app',
+  'pwa.install.dismiss': 'Ahora no',
+  'pwa.install.installed': 'DroneTag está instalada',
 
-  'billing.title': 'Billing & subscription',
-  'billing.subtitle': 'Manage your DroneTag plan and slot entitlements.',
-  'billing.comingSoon': 'Coming soon',
-  'billing.comingSoonBody': 'Self-service checkout is being prepared. Until then, contact your admin to upgrade slots and plans. Your current quotas are shown below.',
-  'billing.subscribe': 'Subscribe',
-  'billing.manageProfile': 'Back to profile',
-  'account.tab.billing': 'Billing',
+  'billing.title': 'Facturación y suscripción',
+  'billing.subtitle': 'Tu plan de DroneTag y el resumen de lo que has registrado.',
+  'billing.comingSoon': 'Próximamente',
+  'billing.comingSoonBody': 'El pago en línea llegará pronto. Mientras tanto puedes usar DroneTag sin límites; para dudas sobre planes y facturación, contacta con soporte.',
+  'billing.subscribe': 'Suscribirse',
+  'billing.manageProfile': 'Volver al perfil',
+  'account.tab.billing': 'Facturación',
 
-  'empty.hints.operator.1': 'Pick personal or company holder type.',
-  'empty.hints.operator.2': 'Add contact details for legal reporting.',
-  'empty.hints.operator.3': 'Mark one operator as default for new drones.',
-  'empty.hints.drone.1': 'Add manufacturer, model and class marking.',
-  'empty.hints.drone.2': 'Pick a default operator and link a pilot.',
-  'empty.hints.drone.3': 'Set status to active + visibility public to share the QR.',
-  'empty.hints.insurance.1': 'Upload the policy PDF — name, number, dates and covered drones are read automatically.',
-  'empty.hints.insurance.2': 'Select every drone the policy covers — one insurance can protect the whole fleet.',
-  'empty.hints.certificate.1': 'Upload the certificate PDF — type, issuer and dates are read automatically.',
-  'empty.hints.certificate.2': 'Review the data and save to see the valid/expired badge.',
-  'empty.hints.document.1': 'Upload any supporting PDF (manuals, declarations, \u2026).',
-  'empty.hints.document.2': 'Documents are private until you publish them.',
-  'empty.hints.inbox.1': 'Reports appear here when a finder scans your QR.',
-  'empty.hints.inbox.2': 'Reply directly to the finder by email when you receive one.',
+  'empty.hints.operator.1': 'Elige si el titular es un particular o una empresa.',
+  'empty.hints.operator.2': 'Añade los datos de contacto para avisos y comunicaciones.',
+  'empty.hints.operator.3': 'Marca un operador como predeterminado para los nuevos drones.',
+  'empty.hints.drone.1': 'Indica fabricante, modelo y clase.',
+  'empty.hints.drone.2': 'Elige un operador predeterminado y vincula un piloto.',
+  'empty.hints.drone.3': 'Estado activo + visibilidad pública para compartir el QR.',
+  'empty.hints.insurance.1': 'Sube el PDF de la póliza: el nombre, el número, las fechas y los drones cubiertos se leen automáticamente.',
+  'empty.hints.insurance.2': 'Selecciona todos los drones que cubre la póliza: un solo seguro puede proteger toda la flota.',
+  'empty.hints.certificate.1': 'Sube el PDF del certificado: el tipo, el emisor y las fechas se leen automáticamente.',
+  'empty.hints.certificate.2': 'Revisa los datos y guarda para ver la insignia de válido/caducado.',
+  'empty.hints.document.1': 'Sube cualquier PDF de apoyo (manuales, declaraciones, …).',
+  'empty.hints.document.2': 'Los documentos son privados hasta que los publiques.',
+  'empty.hints.inbox.1': 'Los avisos aparecen aquí cuando alguien escanea tu QR.',
+  'empty.hints.inbox.2': 'Cuando recibas uno, responde por correo directamente a quien encontró el dron.',
 
-  'pwa.install.success': 'DroneTag installed. Look for the home-screen icon.',
-  'pwa.offline.banner': 'You\u2019re offline \u2014 changes will sync when you reconnect.',
-  'pwa.online.toast': 'Back online.',
-  'pwa.iosHint.title': 'Add DroneTag to your iPhone home screen',
-  'pwa.iosHint.body': 'Tap the Share icon in Safari, then choose \u201CAdd to Home Screen\u201D for a one-tap launcher.',
+  'pwa.install.success': 'DroneTag instalada. Busca el icono en la pantalla de inicio.',
+  'pwa.offline.banner': 'Estás sin conexión: los cambios se sincronizarán cuando vuelvas a conectarte.',
+  'pwa.online.toast': 'Conexión restablecida.',
+  'pwa.iosHint.title': 'Añade DroneTag a la pantalla de inicio de tu iPhone',
+  'pwa.iosHint.body': 'Toca el icono Compartir en Safari y elige «Añadir a pantalla de inicio» para abrirla con un solo toque.',
 
-  'error.boundary.title': 'Something went wrong on this screen.',
-  'error.boundary.body': 'The DroneTag platform is still up \u2014 only this page failed to load. Try again or go back to your dashboard.',
-  'error.boundary.publicBody': 'Try refreshing the page. If the QR keeps failing, the drone may have been temporarily unpublished by its owner.',
-  'error.boundary.adminBody': 'Server-side log included below. Copy the digest before retrying so you can correlate against Firebase logs.',
-  'error.boundary.retry': 'Try again',
-  'error.boundary.goHome': 'Go to dashboard',
-  'error.boundary.goPublic': 'Go to home page',
-  'error.boundary.diagnostics': 'Diagnostics',
-  'error.boundary.digest': 'Error digest',
+  'error.boundary.title': 'Algo ha fallado en esta pantalla.',
+  'error.boundary.body': 'La plataforma DroneTag sigue funcionando: solo ha fallado la carga de esta página. Vuelve a intentarlo o regresa a tu panel.',
+  'error.boundary.publicBody': 'Prueba a recargar la página. Si el QR sigue fallando, puede que el propietario haya retirado temporalmente la publicación del dron.',
+  'error.boundary.adminBody': 'Abajo se incluye el registro del servidor. Copia el digest antes de reintentar para poder cotejarlo con los registros de Firebase.',
+  'error.boundary.retry': 'Reintentar',
+  'error.boundary.goHome': 'Ir al panel',
+  'error.boundary.goPublic': 'Ir a la página de inicio',
+  'error.boundary.diagnostics': 'Diagnóstico',
+  'error.boundary.digest': 'Digest del error',
 
-  'admin.nav.nfc': 'NFC tools',
-  'admin.nfc.title': 'NFC / QR tooling',
-  'admin.nfc.subtitle': 'Generate the URL payloads encoded onto each badge and export the full batch as CSV for an external NFC writer.',
+  'admin.nav.nfc': 'Herramientas NFC',
+  'admin.nfc.title': 'Herramientas NFC / QR',
+  'admin.nfc.subtitle': 'Genera las URL que se codifican en cada insignia y exporta el lote completo en CSV para un grabador NFC externo.',
   'admin.nfc.col.slug': 'Slug',
-  'admin.nfc.col.url': 'Public URL',
-  'admin.nfc.col.owner': 'Owner',
-  'admin.nfc.exportCsv': 'Export CSV',
-  'admin.nfc.copyUrl': 'Copy URL',
-  'admin.nfc.empty': 'No public-active drones to encode.',
+  'admin.nfc.col.url': 'URL pública',
+  'admin.nfc.col.owner': 'Propietario',
+  'admin.nfc.exportCsv': 'Exportar CSV',
+  'admin.nfc.copyUrl': 'Copiar URL',
+  'admin.nfc.empty': 'No hay drones públicos activos que codificar.',
 
   // ── Commercial pricing ──
-  'nav.pricing': 'Pricing',
-  'pricing.hero.eyebrow': 'Plans & NFC kit',
-  'pricing.hero.title': 'Digital identity for every drone flight',
-  'pricing.hero.subtitle': 'Choose an individual or business plan. The NFC kit links certificates and insurance to a scannable public profile.',
-  'pricing.hero.kitNotice': 'Important: the NFC kit is mandatory to activate physical badges (except when included in the plan).',
-  'pricing.toggle.label': 'Audience',
-  'pricing.toggle.individual': 'Individuals',
-  'pricing.toggle.business': 'Business',
-  'pricing.section.individualTitle': 'Individual plans',
-  'pricing.section.individualSubtitle': 'Annual subscription plus the NFC kit required for physical badges.',
-  'pricing.section.businessTitle': 'Business plans',
-  'pricing.section.businessSubtitle': 'Monthly subscription for teams and fleets. NFC kit priced per operator.',
-  'pricing.badge.recommended': 'Recommended',
-  'pricing.price.perYear': 'per year',
-  'pricing.price.perMonth': 'per month',
-  'pricing.price.onRequest': 'Custom quote',
-  'pricing.price.custom': 'Tailored to your fleet',
-  'pricing.kit.mandatoryLabel': 'NFC kit',
-  'pricing.kit.mandatoryPrice': '{amount} — mandatory',
-  'pricing.kit.perOperator': '{amount} per operator — mandatory',
-  'pricing.kit.included': 'Included in the plan',
-  'pricing.kit.onRequest': 'On request',
-  'pricing.kit.sectionTitle': 'Mandatory NFC kit',
-  'pricing.kit.sectionSubtitle': 'Physical badges are required so certificates and insurance can be verified on site via NFC or QR.',
-  'pricing.kit.mandatoryBanner': 'The NFC kit is mandatory',
-  'pricing.kit.mandatoryBody': 'Without the kit you can manage documents digitally, but you cannot attach physical badges to aircraft or equipment. Each kit includes two badges.',
-  'pricing.kit.item.badge': '1 NFC badge linked to your public DroneTag profile', // TODO: translate
-  'pricing.kit.note': 'On Pilot Pro the kit is included in the annual price. On business plans the kit is charged once per operator.',
+  'nav.pricing': 'Precios',
+  'pricing.hero.eyebrow': 'Planes y kit NFC',
+  'pricing.hero.title': 'Identidad digital para cada vuelo de dron',
+  'pricing.hero.subtitle': 'Elige un plan para particulares o para empresas. El kit NFC vincula certificados y seguro a un perfil público escaneable.',
+  'pricing.hero.kitNotice': 'Importante: el kit NFC es obligatorio para activar las insignias físicas (salvo si está incluido en el plan).',
+  'pricing.toggle.label': 'Tipo de cliente',
+  'pricing.toggle.individual': 'Particulares',
+  'pricing.toggle.business': 'Empresas',
+  'pricing.section.individualTitle': 'Planes individuales',
+  'pricing.section.individualSubtitle': 'Suscripción anual más el kit NFC necesario para las insignias físicas.',
+  'pricing.section.businessTitle': 'Planes para empresas',
+  'pricing.section.businessSubtitle': 'Suscripción mensual para equipos y flotas. Kit NFC con precio por operador.',
+  'pricing.badge.recommended': 'Recomendado',
+  'pricing.price.perYear': 'al año',
+  'pricing.price.perMonth': 'al mes',
+  'pricing.price.onRequest': 'Presupuesto a medida',
+  'pricing.price.custom': 'A medida para tu flota',
+  'pricing.kit.mandatoryLabel': 'Kit NFC',
+  'pricing.kit.mandatoryPrice': '{amount} — obligatorio',
+  'pricing.kit.perOperator': '{amount} por operador — obligatorio',
+  'pricing.kit.included': 'Incluido en el plan',
+  'pricing.kit.onRequest': 'Bajo presupuesto',
+  'pricing.kit.sectionTitle': 'Kit NFC obligatorio',
+  'pricing.kit.sectionSubtitle': 'Las insignias físicas son necesarias para verificar certificados y seguro sobre el terreno mediante NFC o QR.',
+  'pricing.kit.mandatoryBanner': 'El kit NFC es obligatorio',
+  'pricing.kit.mandatoryBody': 'Sin el kit puedes gestionar los documentos en digital, pero no puedes colocar insignias físicas en aeronaves ni equipos. Cada kit incluye dos insignias.',
+  'pricing.kit.item.badge': '1 insignia NFC vinculada a tu perfil público de DroneTag', // TODO: translate
+  'pricing.kit.note': 'En Pilot Pro el kit está incluido en el precio anual. En los planes para empresas, el kit se cobra una vez por operador.',
   'pricing.kit.visual.cert': 'CERT',
-  'pricing.kit.visual.ins': 'INS',
+  'pricing.kit.visual.ins': 'SEG',
   'pricing.plan.free.name': 'Free',
-  'pricing.plan.free.audience': 'Get started',
-  'pricing.plan.free.cta': 'Activate for free',
-  'pricing.plan.free.f1': 'Digital profile and document upload',
-  'pricing.plan.free.f2': 'Public QR / NFC page when the kit is activated',
-  'pricing.plan.free.f3': 'Admin verification workflow',
+  'pricing.plan.free.audience': 'Para empezar',
+  'pricing.plan.free.cta': 'Activar gratis',
+  'pricing.plan.free.f1': 'Perfil digital y subida de documentos',
+  'pricing.plan.free.f2': 'Página pública QR / NFC con el kit activado',
+  'pricing.plan.free.f3': 'Flujo de verificación por un administrador',
   'pricing.plan.pilot.name': 'Pilot',
-  'pricing.plan.pilot.audience': 'For individual pilots',
-  'pricing.plan.pilot.cta': 'Choose Pilot',
-  'pricing.plan.pilot.f1': 'Full credential workspace',
-  'pricing.plan.pilot.f2': 'Certificates & insurance management',
-  'pricing.plan.pilot.f3': 'Public verified profile',
-  'pricing.plan.pilot.f4': 'NFC kit at preferential price',
+  'pricing.plan.pilot.audience': 'Para pilotos individuales',
+  'pricing.plan.pilot.cta': 'Elegir Pilot',
+  'pricing.plan.pilot.f1': 'Gestión completa de credenciales',
+  'pricing.plan.pilot.f2': 'Gestión de certificados y seguros',
+  'pricing.plan.pilot.f3': 'Perfil público verificado',
+  'pricing.plan.pilot.f4': 'Kit NFC a precio preferente',
   'pricing.plan.pilotPro.name': 'Pilot Pro',
-  'pricing.plan.pilotPro.audience': 'Best value for active pilots',
-  'pricing.plan.pilotPro.cta': 'Choose Pilot Pro',
-  'pricing.plan.pilotPro.f1': 'Everything in Pilot',
-  'pricing.plan.pilotPro.f2': 'NFC kit included',
-  'pricing.plan.pilotPro.f3': 'Priority support path',
-  'pricing.plan.pilotPro.f4': 'One annual payment, kit shipped with activation',
+  'pricing.plan.pilotPro.audience': 'La mejor opción para pilotos activos',
+  'pricing.plan.pilotPro.cta': 'Elegir Pilot Pro',
+  'pricing.plan.pilotPro.f1': 'Todo lo de Pilot',
+  'pricing.plan.pilotPro.f2': 'Kit NFC incluido',
+  'pricing.plan.pilotPro.f3': 'Soporte prioritario',
+  'pricing.plan.pilotPro.f4': 'Un único pago anual; kit enviado con la activación',
   'pricing.plan.team.name': 'Team',
-  'pricing.plan.team.audience': 'For small teams',
-  'pricing.plan.team.cta': 'Choose Team',
-  'pricing.plan.team.f1': 'Multi-operator workspace',
-  'pricing.plan.team.f2': 'Shared fleet documents',
-  'pricing.plan.team.f3': 'NFC kit per operator',
-  'pricing.plan.team.f4': 'Monthly billing',
+  'pricing.plan.team.audience': 'Para equipos pequeños',
+  'pricing.plan.team.cta': 'Elegir Team',
+  'pricing.plan.team.f1': 'Entorno multioperador',
+  'pricing.plan.team.f2': 'Documentos de flota compartidos',
+  'pricing.plan.team.f3': 'Kit NFC por operador',
+  'pricing.plan.team.f4': 'Facturación mensual',
   'pricing.plan.business.name': 'Business',
-  'pricing.plan.business.audience': 'For companies and fleets',
-  'pricing.plan.business.cta': 'Choose Business',
-  'pricing.plan.business.f1': 'Fleet-scale operators',
-  'pricing.plan.business.f2': 'Advanced verification ops',
-  'pricing.plan.business.f3': 'Preferential NFC kit price per operator',
-  'pricing.plan.business.f4': 'Monthly billing',
+  'pricing.plan.business.audience': 'Para empresas y flotas',
+  'pricing.plan.business.cta': 'Elegir Business',
+  'pricing.plan.business.f1': 'Operadores a escala de flota',
+  'pricing.plan.business.f2': 'Operaciones de verificación avanzadas',
+  'pricing.plan.business.f3': 'Kit NFC a precio preferente por operador',
+  'pricing.plan.business.f4': 'Facturación mensual',
   'pricing.plan.enterprise.name': 'Enterprise',
-  'pricing.plan.enterprise.audience': 'Custom deployments',
-  'pricing.plan.enterprise.cta': 'Contact us',
-  'pricing.plan.enterprise.f1': 'Custom limits and onboarding',
-  'pricing.plan.enterprise.f2': 'Dedicated support',
-  'pricing.plan.enterprise.f3': 'NFC kit on quotation',
-  'pricing.card.seeCheckout': 'Continue to checkout',
-  'pricing.summary.title': 'What you pay',
-  'pricing.summary.subtitle': 'Clear split between subscription and the one-time NFC kit.',
-  'pricing.summary.sub.title': 'Subscription',
-  'pricing.summary.sub.body': 'Annual for individuals, monthly for business plans. Covers the digital platform.',
-  'pricing.summary.kit.title': 'NFC kit',
-  'pricing.summary.kit.body': 'Mandatory physical badges (certificates + insurance). Included only on Pilot Pro.',
-  'pricing.summary.renew.title': 'Renewal',
-  'pricing.summary.renew.body': 'After the first period you renew the subscription only — the kit is a one-time purchase unless you add operators.',
-  'pricing.faq.title': 'FAQ',
-  'pricing.faq.subtitle': 'Short answers before you activate a plan.',
-  'pricing.faq.kit.q': 'Is the NFC kit mandatory?',
-  'pricing.faq.kit.a': 'Yes. Every plan requires the kit to ship physical badges, except Pilot Pro where the kit is included in the annual price. Business plans charge the kit once per operator.',
-  'pricing.faq.pilotPro.q': 'Why is Pilot Pro recommended?',
-  'pricing.faq.pilotPro.a': 'Pilot Pro bundles the annual subscription and the NFC kit in a single payment (139 €), so the initial total equals the subscription.',
-  'pricing.faq.team.q': 'How many operators can I add on Team / Business?',
-  'pricing.faq.team.a': 'Soft ceilings are configured centrally for checkout safety. Marketing copy keeps “small teams” / “companies and fleets” until commercial limits are finalized.',
-  'pricing.faq.payment.q': 'Is online payment live?',
-  'pricing.faq.payment.a': 'Card payment is not active yet. Checkout records a request with server-side price calculation and shows “Payment not yet active”.',
-  'pricing.faq.change.q': 'Can I change plan later?',
-  'pricing.faq.change.a': 'Yes — contact support after activation. Plan changes will be handled by the billing provider once Stripe (or equivalent) is connected.',
-  'pricing.ctaFinal.title': 'Ready to activate DroneTag?',
-  'pricing.ctaFinal.subtitle': 'Start with Pilot Pro (kit included) or contact us for Enterprise.',
-  'pricing.ctaFinal.primary': 'Choose Pilot Pro',
-  'pricing.ctaFinal.secondary': 'Contact sales',
-  'pricing.ctaFinal.backHome': 'Back to home',
-  'pricing.checkout.eyebrow': 'Checkout',
-  'pricing.checkout.title': 'Confirm your plan',
-  'pricing.checkout.subtitle': 'Amounts are calculated on the server from the official price list. No card data is collected yet.',
-  'pricing.checkout.paymentInactive': 'Payment not yet active',
-  'pricing.checkout.plan': 'Selected plan',
-  'pricing.checkout.changePlan': 'Change plan',
-  'pricing.checkout.customerType': 'Customer type',
-  'pricing.checkout.private': 'Individual',
-  'pricing.checkout.company': 'Company',
-  'pricing.checkout.operators': 'Operators',
-  'pricing.checkout.kits': 'NFC badges',  // TODO: translate
-  'pricing.checkout.kitsHint': 'One NFC badge per remote pilot. Applied to a drone, the badge opens that drone’s public DroneTag page.',
-  'pricing.checkout.billing': 'Billing details',
-  'pricing.checkout.fullName': 'Full name',
-  'pricing.checkout.email': 'Email',
-  'pricing.checkout.companyName': 'Company name',
-  'pricing.checkout.vat': 'VAT / tax ID',
-  'pricing.checkout.address': 'Address',
-  'pricing.checkout.city': 'City',
-  'pricing.checkout.postalCode': 'Postal code',
-  'pricing.checkout.country': 'Country',
-  'pricing.checkout.terms': 'I accept the terms of service and privacy policy for this commercial request.',
-  'pricing.checkout.summary': 'Cost summary',
-  'pricing.checkout.line.subscription': 'Subscription',
-  'pricing.checkout.line.kit': 'NFC kit',
-  'pricing.checkout.line.operators': 'Operators',
-  'pricing.checkout.line.initial': 'Initial total',
-  'pricing.checkout.line.recurring': 'Next renewal',
-  'pricing.checkout.summaryNote': 'Initial total = first subscription period + NFC kit (if not included). Renewal is subscription only.',
-  'pricing.checkout.quoteOnly': 'Enterprise is quote-based. Submit the form and our team will contact you.',
-  'pricing.checkout.submit': 'Submit request',
-  'pricing.checkout.submitQuote': 'Request a quote',
-  'pricing.checkout.backPricing': 'Back to pricing',
-  'pricing.checkout.requestId': 'Request ID',
-  'pricing.checkout.success.title': 'Request received',
-  'pricing.checkout.success.body': 'We saved your commercial request. Online payment will be enabled in a later release.',
-  'pricing.checkout.error.generic': 'Something went wrong. Please try again.',
-  'pricing.checkout.error.terms_required': 'Please accept the terms.',
-  'pricing.checkout.error.billing_incomplete': 'Please complete billing details.',
-  'pricing.checkout.error.company_required': 'Company name is required.',
-  'pricing.checkout.error.unknown_plan': 'Unknown plan.',
-  'pricing.checkout.error.customer_type_mismatch': 'Customer type does not match this plan.',
-  'pricing.checkout.error.invalid_operatorCount': 'Invalid operator count.',
-  'pricing.checkout.error.invalid_kitQuantity': 'Invalid kit quantity.',
-  'login.forgotPassword': 'Forgot your password?', // TODO: translate
-  'forgot.title': 'Reset your password', // TODO: translate
-  'forgot.subtitle': 'Enter the email address linked to your DroneTag account and we will send you a reset link.', // TODO: translate
-  'forgot.email': 'Email address', // TODO: translate
-  'forgot.submit': 'Send reset link', // TODO: translate
-  'forgot.sending': 'Sending…', // TODO: translate
-  'forgot.backToLogin': 'Back to sign in', // TODO: translate
-  'forgot.sent.title': 'Check your inbox', // TODO: translate
-  'forgot.sent.body': 'If an account exists for that address, a password reset link is on its way. The link expires after a short time.', // TODO: translate
-  'forgot.sent.resend': 'Send again', // TODO: translate
-  'forgot.error.generic': 'We could not process the request right now. Please try again shortly.', // TODO: translate
-  'forgot.error.invalidEmail': 'Enter a valid email address.', // TODO: translate
-  'links.nfcEncodeLabel': 'Write this URL to the badge', // TODO: translate
-  'links.nfcInstructions': 'Use any NFC writer app (for example NFC Tools on Android or iOS) and write the URL above as an NDEF URI record. Tapping the badge with a smartphone will then open this public profile.', // TODO: translate
-  'links.nfcNotReady': 'Publish this profile and assign it a slug to generate the URL the badge should contain.', // TODO: translate
-  'common.dismiss': 'Dismiss', // TODO: translate
-  'admin.verify.notifyWarning': 'The decision was saved, but the user could not be emailed ({reason}). They can still see the update in their support thread.', // TODO: translate
-  'support.newTicket': 'New request', // TODO: translate
-  'support.subject': 'Subject', // TODO: translate
-  'support.subjectPlaceholder': 'What do you need help with?', // TODO: translate
-  'support.message': 'Message', // TODO: translate
-  'support.messagePlaceholder': 'Describe your request…', // TODO: translate
-  'support.reply': 'Reply', // TODO: translate
-  'support.emptyHint': 'Open a request and the DroneTag team will get back to you here.', // TODO: translate
-  'support.status.pending': 'Reply received', // TODO: translate
-  'support.close': 'Close request', // TODO: translate
-  'support.reopen': 'Reopen', // TODO: translate
-  'support.team': 'DroneTag Support', // TODO: translate
-  'support.error.send': 'Could not send your message. Please try again.', // TODO: translate
-  'support.error.load': 'Could not load your support conversation.', // TODO: translate
-  'onboarding.title': 'Complete your DroneTag profile', // TODO: translate
-  'onboarding.subtitle': 'A few steps to get your drone identifiable and your badge ready.', // TODO: translate
+  'pricing.plan.enterprise.audience': 'Implantaciones a medida',
+  'pricing.plan.enterprise.cta': 'Contáctanos',
+  'pricing.plan.enterprise.f1': 'Límites y puesta en marcha a medida',
+  'pricing.plan.enterprise.f2': 'Soporte dedicado',
+  'pricing.plan.enterprise.f3': 'Kit NFC bajo presupuesto',
+  'pricing.card.seeCheckout': 'Continuar al pago',
+  'pricing.summary.title': 'Lo que pagas',
+  'pricing.summary.subtitle': 'Separación clara entre la suscripción y el kit NFC de pago único.',
+  'pricing.summary.sub.title': 'Suscripción',
+  'pricing.summary.sub.body': 'Anual para particulares, mensual para planes de empresa. Cubre la plataforma digital.',
+  'pricing.summary.kit.title': 'Kit NFC',
+  'pricing.summary.kit.body': 'Insignias físicas obligatorias (certificados + seguro). Incluido solo en Pilot Pro.',
+  'pricing.summary.renew.title': 'Renovación',
+  'pricing.summary.renew.body': 'Tras el primer periodo solo renuevas la suscripción: el kit es una compra única, salvo que añadas operadores.',
+  'pricing.faq.title': 'Preguntas frecuentes',
+  'pricing.faq.subtitle': 'Respuestas breves antes de activar un plan.',
+  'pricing.faq.kit.q': '¿Es obligatorio el kit NFC?',
+  'pricing.faq.kit.a': 'Sí. Todos los planes requieren el kit para enviar insignias físicas, salvo Pilot Pro, donde el kit está incluido en el precio anual. Los planes para empresas cobran el kit una vez por operador.',
+  'pricing.faq.pilotPro.q': '¿Por qué se recomienda Pilot Pro?',
+  'pricing.faq.pilotPro.a': 'Pilot Pro reúne la suscripción anual y el kit NFC en un único pago (139 €), de modo que el total inicial coincide con la suscripción.',
+  'pricing.faq.team.q': '¿Cuántos operadores puedo añadir en Team / Business?',
+  'pricing.faq.team.a': 'Team está pensado para pequeños grupos de operadores y Business para empresas y flotas. Para necesidades específicas, contáctanos y prepararemos una oferta a medida.',
+  'pricing.faq.payment.q': '¿Cómo se paga?',
+  'pricing.faq.payment.a': 'El pago en línea estará disponible muy pronto. Mientras tanto, envía tu solicitud desde el checkout y te contactaremos para completar la activación.',
+  'pricing.faq.change.q': '¿Puedo cambiar de plan más adelante?',
+  'pricing.faq.change.a': 'Sí: escríbenos desde soporte y actualizaremos tu plan.',
+  'pricing.ctaFinal.title': '¿Listo para activar DroneTag?',
+  'pricing.ctaFinal.subtitle': 'Empieza con Pilot Pro (kit incluido) o contáctanos para Enterprise.',
+  'pricing.ctaFinal.primary': 'Elegir Pilot Pro',
+  'pricing.ctaFinal.secondary': 'Contactar con ventas',
+  'pricing.ctaFinal.backHome': 'Volver al inicio',
+  'pricing.checkout.eyebrow': 'Pago',
+  'pricing.checkout.title': 'Confirma tu plan',
+  'pricing.checkout.subtitle': 'Los importes se calculan en el servidor a partir de la lista de precios oficial. Por ahora no se recogen datos de tarjeta.',
+  'pricing.checkout.paymentInactive': 'Pago aún no activo',
+  'pricing.checkout.plan': 'Plan seleccionado',
+  'pricing.checkout.changePlan': 'Cambiar plan',
+  'pricing.checkout.customerType': 'Tipo de cliente',
+  'pricing.checkout.private': 'Particular',
+  'pricing.checkout.company': 'Empresa',
+  'pricing.checkout.operators': 'Operadores',
+  'pricing.checkout.kits': 'Insignias NFC',  // TODO: translate
+  'pricing.checkout.kitsHint': 'Una insignia NFC por piloto a distancia. Colocada en un dron, la insignia abre la página pública de DroneTag de ese dron.',
+  'pricing.checkout.billing': 'Datos de facturación',
+  'pricing.checkout.fullName': 'Nombre completo',
+  'pricing.checkout.email': 'Correo electrónico',
+  'pricing.checkout.companyName': 'Razón social',
+  'pricing.checkout.vat': 'NIF / IVA',
+  'pricing.checkout.address': 'Dirección',
+  'pricing.checkout.city': 'Ciudad',
+  'pricing.checkout.postalCode': 'Código postal',
+  'pricing.checkout.country': 'País',
+  'pricing.checkout.terms': 'Acepto los términos del servicio y la política de privacidad para esta solicitud comercial.',
+  'pricing.checkout.summary': 'Resumen de costes',
+  'pricing.checkout.line.subscription': 'Suscripción',
+  'pricing.checkout.line.kit': 'Kit NFC',
+  'pricing.checkout.line.operators': 'Operadores',
+  'pricing.checkout.line.initial': 'Total inicial',
+  'pricing.checkout.line.recurring': 'Próxima renovación',
+  'pricing.checkout.summaryNote': 'Total inicial = primer periodo de suscripción + kit NFC (si no está incluido). La renovación incluye solo la suscripción.',
+  'pricing.checkout.quoteOnly': 'Enterprise funciona bajo presupuesto. Envía el formulario y nuestro equipo se pondrá en contacto contigo.',
+  'pricing.checkout.submit': 'Enviar solicitud',
+  'pricing.checkout.submitQuote': 'Solicitar presupuesto',
+  'pricing.checkout.backPricing': 'Volver a precios',
+  'pricing.checkout.requestId': 'ID de solicitud',
+  'pricing.checkout.success.title': 'Solicitud recibida',
+  'pricing.checkout.success.body': 'Hemos guardado tu solicitud comercial. El pago en línea se habilitará en una versión posterior.',
+  'pricing.checkout.error.generic': 'Algo ha salido mal. Vuelve a intentarlo.',
+  'pricing.checkout.error.terms_required': 'Debes aceptar los términos.',
+  'pricing.checkout.error.billing_incomplete': 'Completa los datos de facturación.',
+  'pricing.checkout.error.company_required': 'La razón social es obligatoria.',
+  'pricing.checkout.error.unknown_plan': 'Plan desconocido.',
+  'pricing.checkout.error.customer_type_mismatch': 'El tipo de cliente no corresponde a este plan.',
+  'pricing.checkout.error.invalid_operatorCount': 'Número de operadores no válido.',
+  'pricing.checkout.error.invalid_kitQuantity': 'Cantidad de kits no válida.',
+  'login.forgotPassword': '¿Has olvidado tu contraseña?', // TODO: translate
+  'forgot.title': 'Restablece tu contraseña', // TODO: translate
+  'forgot.subtitle': 'Introduce la dirección de correo electrónico vinculada a tu cuenta de DroneTag y te enviaremos un enlace para restablecerla.', // TODO: translate
+  'forgot.email': 'Correo electrónico', // TODO: translate
+  'forgot.submit': 'Enviar enlace', // TODO: translate
+  'forgot.sending': 'Enviando…', // TODO: translate
+  'forgot.backToLogin': 'Volver al inicio de sesión', // TODO: translate
+  'forgot.sent.title': 'Revisa tu correo', // TODO: translate
+  'forgot.sent.body': 'Si existe una cuenta con esa dirección, te llegará un enlace para restablecer la contraseña. El enlace caduca al poco tiempo.', // TODO: translate
+  'forgot.sent.resend': 'Enviar de nuevo', // TODO: translate
+  'forgot.error.generic': 'No hemos podido procesar la solicitud en este momento. Vuelve a intentarlo dentro de un rato.', // TODO: translate
+  'forgot.error.invalidEmail': 'Introduce una dirección de correo válida.', // TODO: translate
+  'links.nfcEncodeLabel': 'Graba esta URL en la insignia', // TODO: translate
+  'links.nfcInstructions': 'Usa cualquier app de grabación NFC (por ejemplo, NFC Tools en Android o iOS) y graba la URL de arriba como registro NDEF de tipo URI. Después, al acercar un móvil a la insignia, se abrirá este perfil público.', // TODO: translate
+  'links.nfcNotReady': 'Publica este perfil y asígnale un slug para generar la URL que debe contener la insignia.', // TODO: translate
+  'common.dismiss': 'Cerrar', // TODO: translate
+  'admin.verify.notifyWarning': 'La decisión se ha guardado, pero no se ha podido enviar el correo al usuario ({reason}). Aun así, podrá ver la actualización en su conversación de soporte.', // TODO: translate
+  'support.newTicket': 'Nueva solicitud', // TODO: translate
+  'support.subject': 'Asunto', // TODO: translate
+  'support.subjectPlaceholder': '¿En qué necesitas ayuda?', // TODO: translate
+  'support.message': 'Mensaje', // TODO: translate
+  'support.messagePlaceholder': 'Describe tu solicitud…', // TODO: translate
+  'support.reply': 'Responder', // TODO: translate
+  'support.emptyHint': 'Abre una solicitud y el equipo de DroneTag te responderá aquí.', // TODO: translate
+  'support.status.pending': 'Respuesta recibida', // TODO: translate
+  'support.close': 'Cerrar solicitud', // TODO: translate
+  'support.reopen': 'Reabrir', // TODO: translate
+  'support.team': 'Soporte de DroneTag', // TODO: translate
+  'support.error.send': 'No se ha podido enviar tu mensaje. Vuelve a intentarlo.', // TODO: translate
+  'support.error.load': 'No se ha podido cargar tu conversación de soporte.', // TODO: translate
+  'onboarding.title': 'Completa tu perfil de DroneTag', // TODO: translate
+  'onboarding.subtitle': 'Unos pocos pasos para que tu dron sea identificable y tu insignia esté lista.', // TODO: translate
   'onboarding.progress': '{done} of {total}', // TODO: translate
-  'onboarding.step.profile': 'Your profile', // TODO: translate
-  'onboarding.step.profile.hint': 'Add your name so your public profile can identify you.', // TODO: translate
-  'onboarding.step.operator': 'UAS operator', // TODO: translate
-  'onboarding.step.operator.hint': 'Register the person or organisation responsible for the operation.', // TODO: translate
-  'onboarding.step.drone': 'Your drone', // TODO: translate
-  'onboarding.step.drone.hint': 'Add the aircraft you want to identify.', // TODO: translate
-  'onboarding.step.certificate': 'Pilot certificate', // TODO: translate
-  'onboarding.step.certificate.hint': 'Upload your remote pilot certificate for verification.', // TODO: translate
-  'onboarding.step.insurance': 'Insurance', // TODO: translate
-  'onboarding.step.insurance.hint': 'Upload your policy so its validity can be shown publicly.', // TODO: translate
-  'onboarding.step.public': 'Public profile', // TODO: translate
-  'onboarding.step.public.hint': 'Publish a drone to get its public DroneTag page.', // TODO: translate
-  'onboarding.step.badge': 'NFC badge', // TODO: translate
-  'onboarding.step.badge.hint': 'Get the public link to write onto your badge.', // TODO: translate
-  'legal.draft.badge': 'Draft', // TODO: translate
-  'legal.draft.bannerTitle': 'Draft text — not reviewed by a lawyer', // TODO: translate
-  'legal.draft.bannerBody': 'This page is a working draft written by the DroneTag team so that the structure of the document can be reviewed. It is not in force, it is not legal advice, and it creates no rights or obligations for you or for us. A qualified lawyer must review and replace this text before DroneTag opens to real users.', // TODO: translate
-  'legal.draft.lastUpdated': 'Draft last edited on {date}. No version of this document is in force yet.', // TODO: translate
-  'legal.contact.title': 'Who to contact', // TODO: translate
-  'legal.contact.body': 'Questions about this draft, or about the data DroneTag holds about you, can be sent to info@drone-tag.com. The final document will name the company that operates the service, its registered address, and a specific contact for data requests. None of that is settled yet, so it is left out rather than invented.', // TODO: translate
-  'legal.related.title': 'Other draft documents', // TODO: translate
+  'onboarding.step.profile': 'Tu perfil', // TODO: translate
+  'onboarding.step.profile.hint': 'Añade tu nombre para que tu perfil público te identifique.', // TODO: translate
+  'onboarding.step.operator': 'Operador UAS', // TODO: translate
+  'onboarding.step.operator.hint': 'Registra a la persona u organización responsable de la operación.', // TODO: translate
+  'onboarding.step.drone': 'Tu dron', // TODO: translate
+  'onboarding.step.drone.hint': 'Añade la aeronave que quieres identificar.', // TODO: translate
+  'onboarding.step.certificate': 'Certificado de piloto', // TODO: translate
+  'onboarding.step.certificate.hint': 'Sube tu certificado de piloto a distancia para que lo verifiquemos.', // TODO: translate
+  'onboarding.step.insurance': 'Seguro', // TODO: translate
+  'onboarding.step.insurance.hint': 'Sube tu póliza para que su validez pueda mostrarse públicamente.', // TODO: translate
+  'onboarding.step.public': 'Perfil público', // TODO: translate
+  'onboarding.step.public.hint': 'Publica un dron para obtener su página pública de DroneTag.', // TODO: translate
+  'onboarding.step.badge': 'Enlace para tu insignia NFC', // TODO: translate
+  'onboarding.step.badge.hint': 'Obtén el enlace público para grabarlo en tu insignia.', // TODO: translate
+  'legal.draft.badge': 'Borrador', // TODO: translate
+  'legal.draft.bannerTitle': 'Texto en borrador — no revisado por un abogado', // TODO: translate
+  'legal.draft.bannerBody': 'Esta página es un borrador de trabajo redactado por el equipo de DroneTag para que pueda revisarse la estructura del documento. No está en vigor, no constituye asesoramiento jurídico y no crea derechos ni obligaciones para ti ni para nosotros. Un abogado cualificado deberá revisar y sustituir este texto antes de que DroneTag se abra a usuarios reales.', // TODO: translate
+  'legal.draft.lastUpdated': 'Borrador editado por última vez el {date}. Todavía no hay ninguna versión de este documento en vigor.', // TODO: translate
+  'legal.contact.title': 'A quién contactar', // TODO: translate
+  'legal.contact.body': 'Puedes enviar tus preguntas sobre este borrador, o sobre los datos que DroneTag conserva sobre ti, a info@drone-tag.com. El documento definitivo indicará la empresa que gestiona el servicio, su domicilio social y un contacto específico para las solicitudes relativas a datos. Nada de eso está decidido todavía, así que se ha omitido en lugar de inventarlo.', // TODO: translate
+  'legal.related.title': 'Otros documentos en borrador', // TODO: translate
   'home.footer.cookies': 'Cookies', // TODO: translate
-  'legal.privacy.title': 'Privacy notice', // TODO: translate
-  'legal.privacy.subtitle': 'What DroneTag stores about you, what a stranger sees when they tap your NFC badge, and what stays private.', // TODO: translate
-  'legal.privacy.who.title': 'Who runs this service', // TODO: translate
-  'legal.privacy.who.body': 'This section will identify the legal entity that operates DroneTag and decides how your data is used, its registered address, and the person to contact about data. That entity has not been fixed yet, so nothing is stated here. Technically, the service runs on Google Firebase for authentication, database and file storage, and is deployed on Netlify.', // TODO: translate
-  'legal.privacy.collect.title': 'What data DroneTag collects', // TODO: translate
-  'legal.privacy.collect.body': 'The account itself holds an email address, a phone number, a name or company name, a postal address, and for private accounts a date of birth. The pilot record adds nationality, an operator code, a licence number and an emergency contact. Operator records repeat name or company name, address, email and, for companies, a VAT or registry number. Drone records hold manufacturer, model, EU class marking, the serial engraved on the aircraft and the controller serial. Uploaded files — insurance policies, certificates, permits and identity documents — are stored as you provide them, so they contain whatever those documents contain.', // TODO: translate
-  'legal.privacy.why.title': 'Why it is collected', // TODO: translate
-  'legal.privacy.why.body': 'Account and contact data is used to sign you in, to notify you, and to answer support requests. Pilot, operator, drone and document data exists so you can keep your own compliance paperwork in one place and, if you choose, show a verifiable summary of it to a third party. Payment and order data exists to ship NFC badges and process plan purchases. The final version of this section will have to state a lawful basis for each purpose; that is a question for a lawyer, and no basis is asserted here.', // TODO: translate
-  'legal.privacy.public.title': 'What is visible on your public page', // TODO: translate
-  'legal.privacy.public.body': 'A published drone gets a page at /u/ followed by its slug, and anyone with the link or the badge can open it without signing in. That page reads a single sanitised record and shows only the holder name (your pilot name, your name as a private operator, or your company name), manufacturer, model, EU class marking, the engraved drone serial, the insurance status and insurer, the policy expiry date, a masked policy number that keeps only the first and last three characters, the verification badge with its date, and any profile photo, logo or banner you uploaded as branding.', // TODO: translate
-  'legal.privacy.notPublic.title': 'What is deliberately not published', // TODO: translate
-  'legal.privacy.notPublic.body': 'The public record does not contain the insurance PDF, your postal address, your email address, your phone number, your date of birth, your VAT or registry number, the controller serial, your emergency contact, internal notes, or the account identifier that would link the page back to you. This is enforced in code rather than by convention: the public page reads only the sanitised snapshot, and the fields above are never written into it. The one internal identifier that is present is the drone record id, used to keep the snapshot aligned with the private record.', // TODO: translate
-  'legal.privacy.sharing.title': 'Who else can see it', // TODO: translate
-  'legal.privacy.sharing.body': 'DroneTag does not sell your data. It is processed by the suppliers the application actually depends on: Google Firebase hosts authentication, the database and uploaded files; Netlify hosts and serves the application and keeps request logs; Resend delivers transactional email such as sign-up codes and notifications. DroneTag staff with an administrator account can read your records in order to review documents and answer support requests. The final version will have to list each supplier, where it processes data, and the contract in place with it.', // TODO: translate
-  'legal.privacy.retention.title': 'How long it is kept', // TODO: translate
-  'legal.privacy.retention.body': 'There is no automatic deletion today. Records and uploaded files stay until you delete them or ask DroneTag to delete them, and reports filed by someone who found your drone stay in your inbox until removed. Setting real retention periods — in particular for insurance and certificate documents, which may need to be kept for a period after they expire — is an open question for a lawyer and is not answered here.', // TODO: translate
-  'legal.privacy.requests.title': 'Asking to see, correct or delete your data', // TODO: translate
-  'legal.privacy.requests.body': 'You can edit most of your own data from the account area, although some identity fields are locked once confirmed so that a published profile cannot be quietly rewritten. For anything you cannot change yourself, including deleting your account, write to info@drone-tag.com and the request is handled manually. There is no self-service export and no automated deletion yet. This notice makes no claim about which statutory rights apply to you; that has to be established by a lawyer.', // TODO: translate
-  'legal.privacy.security.title': 'How the data is protected', // TODO: translate
-  'legal.privacy.security.body': 'Private records are readable only by their owner and by DroneTag administrators, enforced by Firebase security rules rather than by the application alone. Uploaded documents live in a private storage namespace that is not readable without authentication, kept separate from the small public namespace that holds only branding images. Server logs pass through a filter that replaces values such as email addresses, phone numbers and policy numbers before anything is written out. No system is immune to compromise, so this is a description of the current design and not a guarantee.', // TODO: translate
-  'legal.privacy.changes.title': 'Changes to this draft', // TODO: translate
-  'legal.privacy.changes.body': 'This draft will change as the product and its legal review progress. When a reviewed version replaces it, the draft banner at the top of this page will be removed and a real effective date will appear in its place.', // TODO: translate
+  'legal.privacy.title': 'Política de privacidad', // TODO: translate
+  'legal.privacy.subtitle': 'Qué datos conserva DroneTag sobre ti, qué ve un desconocido al acercar el móvil a tu insignia NFC y qué permanece privado.', // TODO: translate
+  'legal.privacy.who.title': 'Quién gestiona este servicio', // TODO: translate
+  'legal.privacy.who.body': 'Esta sección identificará a la entidad jurídica que gestiona DroneTag y decide cómo se usan tus datos, su domicilio social y la persona de contacto en materia de datos. Esa entidad todavía no está definida, así que aquí no se indica nada. Desde el punto de vista técnico, el servicio funciona sobre Google Firebase para la autenticación, la base de datos y el almacenamiento de archivos, y está desplegado en Netlify.', // TODO: translate
+  'legal.privacy.collect.title': 'Qué datos recoge DroneTag', // TODO: translate
+  'legal.privacy.collect.body': 'La propia cuenta contiene una dirección de correo electrónico, un número de teléfono, un nombre o una razón social, una dirección postal y, en las cuentas de particulares, una fecha de nacimiento. La ficha de piloto añade la nacionalidad, un código de operador, un número de licencia y un contacto de emergencia. Las fichas de operador repiten el nombre o la razón social, la dirección, el correo electrónico y, en el caso de las empresas, el NIF o el número de registro. Las fichas de dron contienen el fabricante, el modelo, la clase UE, el número de serie grabado en la aeronave y el número de serie del mando. Los archivos subidos —pólizas de seguro, certificados, permisos y documentos de identidad— se almacenan tal como los proporcionas, por lo que contienen todo lo que contengan esos documentos.', // TODO: translate
+  'legal.privacy.why.title': 'Por qué se recogen', // TODO: translate
+  'legal.privacy.why.body': 'Los datos de cuenta y de contacto se usan para que puedas iniciar sesión, para enviarte notificaciones y para responder a las solicitudes de soporte. Los datos de piloto, operador, dron y documentos existen para que puedas guardar tu documentación de cumplimiento normativo en un solo lugar y, si así lo decides, mostrar un resumen verificable a un tercero. Los datos de pago y de pedidos existen para enviar las insignias NFC y gestionar la compra de planes. La versión definitiva de esta sección deberá indicar una base jurídica para cada finalidad; es una cuestión que corresponde a un abogado y aquí no se afirma ninguna base.', // TODO: translate
+  'legal.privacy.public.title': 'Qué es visible en tu página pública', // TODO: translate
+  'legal.privacy.public.body': 'Un dron publicado obtiene una página en la ruta /u/ seguida de su slug, y cualquiera que tenga el enlace o la insignia puede abrirla sin iniciar sesión. Esa página lee un único registro depurado y muestra solo el nombre del titular (tu nombre como piloto, tu nombre como operador particular o tu razón social), el fabricante, el modelo, la clase UE, el número de serie grabado en el dron, el estado del seguro y la aseguradora, la fecha de vencimiento de la póliza, un número de póliza enmascarado que solo conserva los tres primeros y los tres últimos caracteres, la insignia de verificación con su fecha y cualquier foto de perfil, logotipo o banner que hayas subido como personalización.', // TODO: translate
+  'legal.privacy.notPublic.title': 'Qué no se publica deliberadamente', // TODO: translate
+  'legal.privacy.notPublic.body': 'El registro público no contiene el PDF del seguro, tu dirección postal, tu dirección de correo electrónico, tu número de teléfono, tu fecha de nacimiento, tu NIF o número de registro, el número de serie del mando, tu contacto de emergencia, las notas internas ni el identificador de cuenta que permitiría relacionar la página contigo. Esto se impone en el código y no por convención: la página pública solo lee la instantánea depurada, y los campos anteriores nunca se escriben en ella. El único identificador interno presente es el id de la ficha del dron, que se usa para mantener la instantánea alineada con el registro privado.', // TODO: translate
+  'legal.privacy.sharing.title': 'Quién más puede verlos', // TODO: translate
+  'legal.privacy.sharing.body': 'DroneTag no vende tus datos. Los tratan los proveedores de los que realmente depende la aplicación: Google Firebase aloja la autenticación, la base de datos y los archivos subidos; Netlify aloja y sirve la aplicación y conserva los registros de solicitudes; Resend entrega el correo transaccional, como los códigos de registro y las notificaciones. El personal de DroneTag con cuenta de administrador puede leer tus registros para revisar documentos y responder a las solicitudes de soporte. La versión definitiva deberá enumerar cada proveedor, dónde trata los datos y el contrato vigente con él.', // TODO: translate
+  'legal.privacy.retention.title': 'Cuánto tiempo se conservan', // TODO: translate
+  'legal.privacy.retention.body': 'Hoy no existe ninguna eliminación automática. Los registros y los archivos subidos se conservan hasta que los elimines o pidas a DroneTag que los elimine, y los avisos enviados por quien encontró tu dron permanecen en tu bandeja de entrada hasta que se borran. Fijar plazos de conservación reales —en particular para pólizas y certificados, que quizá deban conservarse durante un tiempo después de su vencimiento— es una cuestión abierta que corresponde a un abogado y aquí no se resuelve.', // TODO: translate
+  'legal.privacy.requests.title': 'Consultar, corregir o eliminar tus datos', // TODO: translate
+  'legal.privacy.requests.body': 'Puedes editar la mayoría de tus datos desde el área de cuenta, aunque algunos campos de identidad se bloquean una vez confirmados para que un perfil publicado no pueda reescribirse sin que nadie lo note. Para todo lo que no puedas cambiar tú mismo, incluida la eliminación de tu cuenta, escribe a info@drone-tag.com y la solicitud se gestionará manualmente. Todavía no hay exportación autogestionada ni eliminación automática. Esta política no afirma qué derechos legales te corresponden; eso deberá determinarlo un abogado.', // TODO: translate
+  'legal.privacy.security.title': 'Cómo se protegen los datos', // TODO: translate
+  'legal.privacy.security.body': 'Los registros privados solo pueden leerlos su propietario y los administradores de DroneTag, algo que imponen las reglas de seguridad de Firebase y no solo la aplicación. Los documentos subidos se guardan en una zona de almacenamiento privada que no puede leerse sin autenticación, separada de la pequeña zona pública que solo contiene las imágenes de personalización. Los registros de actividad del servidor pasan por un filtro que sustituye valores como direcciones de correo electrónico, números de teléfono y números de póliza antes de escribir nada. Ningún sistema es inmune a los ataques, así que esto es una descripción del diseño actual y no una garantía.', // TODO: translate
+  'legal.privacy.changes.title': 'Cambios en este borrador', // TODO: translate
+  'legal.privacy.changes.body': 'Este borrador cambiará a medida que avancen el producto y su revisión jurídica. Cuando lo sustituya una versión revisada, se retirará el banner de borrador de la parte superior de esta página y en su lugar aparecerá una fecha real de entrada en vigor.', // TODO: translate
   'pricing.kit.visual.badge': 'DRONETAG', // TODO: translate
-  'legal.terms.title': 'Terms of service', // TODO: translate
-  'legal.terms.subtitle': 'The rules that will govern the use of DroneTag, drafted so that they can be reviewed. Nothing below is binding yet.', // TODO: translate
-  'legal.terms.what.title': 'What DroneTag is, and what it is not', // TODO: translate
-  'legal.terms.what.body': 'DroneTag is a private platform for storing your drone paperwork and, if you choose, publishing a short summary of it at a public address reachable from an NFC badge or a QR code. It is not an aviation authority, it is not a public register, and it does not issue, validate or renew any official document. A profile on DroneTag does not replace registration with a competent authority, a pilot certificate, an insurance policy, or any authorisation you need in order to fly.', // TODO: translate
-  'legal.terms.eligibility.title': 'Who can open an account', // TODO: translate
-  'legal.terms.eligibility.body': 'The final version will state a minimum age and whether an account may be opened on behalf of a company by an authorised person. Today the sign-up form asks for a first and last name, an email address, a phone number and a password, or you can sign up with a Google account; the email address or the phone number is then confirmed with a one-time code. There is no age check.', // TODO: translate
-  'legal.terms.account.title': 'Your account and your credentials', // TODO: translate
-  'legal.terms.account.body': 'You are responsible for keeping access to your account secure and for what is done through it. Write to info@drone-tag.com if you believe someone else has access. DroneTag administrators can read the records in your account in order to review the documents you submit for verification and to answer support requests.', // TODO: translate
-  'legal.terms.content.title': 'The documents and data you upload', // TODO: translate
-  'legal.terms.content.body': 'You keep ownership of everything you upload. You grant DroneTag only what is needed to run the service: storing your files, showing them back to you, letting an administrator review them, and publishing the short summary described in the privacy notice when you choose to publish a drone. You are responsible for the accuracy of what you enter and for having the right to upload it, in particular for documents that name someone other than you.', // TODO: translate
-  'legal.terms.publication.title': 'Publishing a drone profile', // TODO: translate
-  'legal.terms.publication.body': 'Publication is your decision and is made one drone at a time. Once published, the page can be read by anyone who has the address; it is not behind a login and there is no visitor log. Unpublishing removes the public record so the address stops resolving, but DroneTag cannot recall pages that have already been saved, cached or shared by someone else. The final version will need to say how quickly unpublishing takes effect.', // TODO: translate
-  'legal.terms.verification.title': 'What the verification badge means', // TODO: translate
-  'legal.terms.verification.body': 'A verified badge means a DroneTag administrator looked at the documents in the account and considered them consistent. It is not an endorsement by an authority, it does not say that the flight you are about to make is lawful, and it does not guarantee that the insurance policy will pay a claim. Anyone relying on a DroneTag page should treat it as a starting point and ask for the original documents when it matters.', // TODO: translate
-  'legal.terms.plans.title': 'Plans, badges and payment', // TODO: translate
-  'legal.terms.plans.body': 'Every account includes a small allowance of drones, operators, certificates and documents, and larger allowances can be bought. NFC badges are physical goods that are manufactured and shipped. Prices, billing periods, renewal, refunds and shipping terms are not settled and are deliberately not stated here: the pricing page shows the prices currently intended, not a contractual offer.', // TODO: translate
-  'legal.terms.availability.title': 'Availability during pre-beta', // TODO: translate
-  'legal.terms.availability.body': 'DroneTag is not finished. Features can change or be removed, data can be migrated, and the service can be unavailable without notice. Do not use DroneTag as the only copy of a document you need — keep your originals. No availability commitment is offered at this stage.', // TODO: translate
-  'legal.terms.suspension.title': 'Suspension and closing an account', // TODO: translate
-  'legal.terms.suspension.body': 'The final version will describe when DroneTag may suspend or close an account, for example for uploading someone else\'s documents or misrepresenting a verification status, and what notice is given. Today you can ask for your account to be closed by writing to info@drone-tag.com; the request is handled by hand and there is no automated deletion.', // TODO: translate
-  'legal.terms.liability.title': 'Liability', // TODO: translate
-  'legal.terms.liability.body': 'This is the section that most needs a lawyer, so no wording is proposed for it. It will have to set out what DroneTag is responsible for, what it is not responsible for, and what happens if a public page shows outdated or incorrect information. Nothing on this page limits any liability today, because nothing on this page is in force.', // TODO: translate
-  'legal.terms.law.title': 'Governing law and disputes', // TODO: translate
-  'legal.terms.law.body': 'The applicable law and the competent court depend on where the operating company is established and where its users are, and neither is fixed. A lawyer will have to complete this section. No jurisdiction is stated here.', // TODO: translate
-  'legal.terms.changes.title': 'Changes to these draft terms', // TODO: translate
-  'legal.terms.changes.body': 'This draft will change without notice while the product is being built. When a reviewed version replaces it, the draft banner will be removed, a real effective date will appear, and the final version will describe how future changes are announced.', // TODO: translate
-  'legal.cookies.title': 'Cookie and browser storage notice', // TODO: translate
-  'legal.cookies.subtitle': 'What DroneTag stores in your browser today, why it is stored, and what is not stored.', // TODO: translate
-  'legal.cookies.scope.title': 'What this page covers', // TODO: translate
-  'legal.cookies.scope.body': 'Cookies are only part of the picture. DroneTag also uses the browser\'s local storage, and the Firebase authentication library keeps its own sign-in state in the browser. This page describes all of them together, because from your point of view they are the same thing: data this site leaves on your device.', // TODO: translate
-  'legal.cookies.essential.title': 'Cookies that are set', // TODO: translate
-  'legal.cookies.essential.body': 'Two cookies are used, both for signing in and both limited to this site. One is set by the server once your sign-in token has been verified, cannot be read by scripts in the page, and expires after one hour. The other is set by the page itself so that the same token is available to the code that guards the administration area, and expires after fifty-five minutes. Both are cleared when you sign out. No advertising or tracking cookie is set.', // TODO: translate
-  'legal.cookies.storage.title': 'What is kept in browser storage', // TODO: translate
-  'legal.cookies.storage.body': 'Your theme choice and your language choice are saved in local storage under the names dronetag-theme and dronetag-language, so that the next visit does not briefly show the wrong colours or the wrong language. The Firebase authentication library also keeps its own sign-in state in the browser, which is what lets you stay signed in between visits. Clearing site data removes all of it and signs you out.', // TODO: translate
-  'legal.cookies.analytics.title': 'Usage analytics', // TODO: translate
-  'legal.cookies.analytics.body': 'No analytics or advertising provider is connected. The application contains an internal event layer with a short, closed list of events, and in its current state that layer only writes to the browser console during development. If a provider is added later, this page and the privacy notice will have to be updated before it is switched on.', // TODO: translate
-  'legal.cookies.thirdParty.title': 'Storage set by other services', // TODO: translate
-  'legal.cookies.thirdParty.body': 'Signing in with Google opens a flow operated by Google, which may set its own cookies on its own domains during that step; those are governed by Google\'s terms rather than by this page. The application is served through Netlify, which records ordinary request logs. The final version of this page will have to list any other third-party component that reaches the browser.', // TODO: translate
-  'legal.cookies.consent.title': 'Consent', // TODO: translate
-  'legal.cookies.consent.body': 'There is no cookie banner and no consent mechanism in the product today. Whether one is required, and for which of the items above, is a question for a lawyer. This page does not claim that the current behaviour is sufficient; it describes it so that the decision can be made on accurate facts.', // TODO: translate
-  'legal.cookies.control.title': 'How to remove them', // TODO: translate
-  'legal.cookies.control.body': 'Signing out clears the two sign-in cookies. Clearing site data for this domain in your browser settings removes everything listed above, including your saved theme and language. Blocking cookies entirely will prevent signing in, because the sign-in token would have nowhere to live.', // TODO: translate
-  'legal.cookies.changes.title': 'Changes to this draft', // TODO: translate
-  'legal.cookies.changes.body': 'This list reflects what the application does at the date shown above, and it will be re-checked against the code whenever that changes. When a reviewed version replaces this draft, the banner at the top will be removed.', // TODO: translate
-  'nav.preview': 'Preview', // TODO: translate
-  'account.nav.section.fleet': 'Fleet', // TODO: translate
-  'account.nav.section.compliance': 'Compliance', // TODO: translate
-  'consent.title': 'Make this profile public?', // TODO: translate
-  'consent.description': 'Anyone with the link will be able to see it, without signing in.', // TODO: translate
-  'consent.warning': 'A public DroneTag profile is readable by anyone who scans the badge or opens the link. It is not indexed as a private page and requires no login.', // TODO: translate
-  'consent.urlLabel': 'Public address', // TODO: translate
-  'consent.sharedTitle': 'What will be visible', // TODO: translate
-  'consent.withheldTitle': 'What stays private', // TODO: translate
-  'consent.shared.name': 'Your name, or your operator or company name', // TODO: translate
-  'consent.shared.drone': 'Drone manufacturer, model and class marking', // TODO: translate
-  'consent.shared.serial': 'The drone serial number engraved on the aircraft', // TODO: translate
-  'consent.shared.certStatus': 'Whether your pilot certificate is valid', // TODO: translate
-  'consent.shared.insuranceStatus': 'Whether your insurance is valid, and its status', // TODO: translate
-  'consent.shared.insuranceProvider': 'The name of your insurance provider', // TODO: translate
-  'consent.shared.insuranceExpiry': 'The insurance expiry date', // TODO: translate
-  'consent.shared.maskedPolicy': 'A masked policy number, showing only the first and last characters', // TODO: translate
-  'consent.shared.verification': 'The DroneTag verification status of the profile', // TODO: translate
-  'consent.withheld.policyPdf': 'The insurance policy document itself', // TODO: translate
-  'consent.withheld.address': 'Your home or registered address', // TODO: translate
-  'consent.withheld.email': 'Your email address', // TODO: translate
-  'consent.withheld.phone': 'Your phone number', // TODO: translate
-  'consent.withheld.fullPolicy': 'The full, unmasked policy number', // TODO: translate
-  'consent.withheld.ids': 'Account identifiers and internal record ids', // TODO: translate
-  'consent.checkbox': 'I understand this profile will be publicly visible, and I want to publish it.', // TODO: translate
-  'consent.confirm': 'Publish profile', // TODO: translate
-  'consent.revocable': 'You can make the profile private again at any time. Once it is unpublished the public page stops working, though anyone who already opened it may still have a copy.', // TODO: translate
-  'form.created': 'Profile created', // TODO: translate
-  'links.copiedToast': 'Public link copied to clipboard', // TODO: translate
-  'links.copyFailed': 'Could not copy the link. Select and copy it manually.', // TODO: translate
-  'support.sent': 'Message sent to DroneTag support', // TODO: translate
-  'signup.terms.prefix': 'I have read and accept the', // TODO: translate
-  'signup.terms.termsLink': 'Terms of service', // TODO: translate
-  'signup.terms.and': 'and the', // TODO: translate
-  'signup.terms.privacyLink': 'Privacy notice', // TODO: translate
-  'signup.terms.required': 'Accept the Terms and Privacy notice to continue.', // TODO: translate
-  'signup.terms.googleHint': 'Accept the Terms and Privacy notice above before signing up with Google.', // TODO: translate
-  'account.delete.title': 'Request account deletion', // TODO: translate
-  'account.delete.body': 'Deletion is not automatic. Opening a support request records your wish to close the account. A DroneTag administrator will process it manually. Your public profiles stay visible until that happens.', // TODO: translate
-  'account.delete.cta': 'Open a deletion request', // TODO: translate
-  'drone.publish': 'Publish profile', // TODO: translate
-  'drone.unpublish': 'Unpublish', // TODO: translate
-  'drone.publish.success': 'Public profile is now live.', // TODO: translate
-  'drone.unpublish.success': 'Public profile has been unpublished.', // TODO: translate
-  'toast.certificate.created': 'Certificate added.', // TODO: translate
-  'toast.certificate.deleted': 'Certificate deleted.', // TODO: translate
-  'toast.certificate.deleteFailed': 'Could not delete the certificate. Please try again.', // TODO: translate
-  'toast.insurance.created': 'Insurance policy added.', // TODO: translate
-  'toast.insurance.deleted': 'Insurance policy deleted.', // TODO: translate
-  'toast.insurance.deleteFailed': 'Could not delete the policy. Please try again.', // TODO: translate
-  'toast.document.created': 'Document uploaded.', // TODO: translate
-  'toast.document.updated': 'Document updated.', // TODO: translate
-  'toast.document.deleted': 'Document deleted.', // TODO: translate
-  'toast.document.deleteFailed': 'Could not delete the document. Please try again.', // TODO: translate
-  'toast.permit.created': 'Authorisation added.', // TODO: translate
-  'toast.permit.updated': 'Authorisation updated.', // TODO: translate
-  'toast.permit.deleted': 'Authorisation deleted.', // TODO: translate
-  'toast.permit.deleteFailed': 'Could not delete the authorisation. Please try again.', // TODO: translate
-  'toast.operator.created': 'UAS operator added.', // TODO: translate
-  'toast.operator.updated': 'UAS operator updated.', // TODO: translate
-  'toast.operator.deleted': 'UAS operator deleted.', // TODO: translate
-  'toast.operator.deleteFailed': 'Could not delete the UAS operator. Please try again.', // TODO: translate
-  'toast.operator.setCurrent': 'Default UAS operator updated.', // TODO: translate
-  'toast.drone.created': 'Drone added.', // TODO: translate
-  'toast.drone.saved': 'Drone details saved.', // TODO: translate
-  'toast.drone.deleted': 'Drone deleted.', // TODO: translate
-  'toast.drone.deleteFailed': 'Could not delete the drone. Please try again.', // TODO: translate
-  'toast.archive.deleted': 'Item permanently deleted.', // TODO: translate
-  'toast.archive.deleteFailed': 'Could not delete the item. Please try again.', // TODO: translate
-  'toast.verify.approved': 'Marked as verified.', // TODO: translate
-  'toast.verify.rejected': 'Marked as rejected.', // TODO: translate
-  'toast.verify.reset': 'Moved back to the review queue.', // TODO: translate
-  'toast.verify.failed': 'Could not save the decision. Please try again.', // TODO: translate
-  'admin.users.detail.pilotOperatorNote': 'The two operator fields below identify the UAS operator, not the remote pilot. They are still stored on the pilot record pending a schema change.', // TODO: translate
+  'legal.terms.title': 'Términos del servicio', // TODO: translate
+  'legal.terms.subtitle': 'Las normas que regirán el uso de DroneTag, redactadas para poder revisarlas. Nada de lo que sigue es vinculante todavía.', // TODO: translate
+  'legal.terms.what.title': 'Qué es DroneTag y qué no es', // TODO: translate
+  'legal.terms.what.body': 'DroneTag es una plataforma privada para guardar la documentación de tu dron y, si así lo decides, publicar un breve resumen en una dirección pública accesible desde una insignia NFC o un código QR. No es una autoridad aeronáutica ni un registro público, y no emite, valida ni renueva ningún documento oficial. Un perfil en DroneTag no sustituye al registro ante la autoridad competente, a un certificado de piloto, a una póliza de seguro ni a ninguna autorización que necesites para volar.', // TODO: translate
+  'legal.terms.eligibility.title': 'Quién puede abrir una cuenta', // TODO: translate
+  'legal.terms.eligibility.body': 'La versión definitiva indicará una edad mínima y si una persona autorizada puede abrir una cuenta en nombre de una empresa. Hoy el formulario de registro pide nombre y apellidos, una dirección de correo electrónico, un número de teléfono y una contraseña, aunque también puedes registrarte con una cuenta de Google; después, la dirección de correo o el número de teléfono se confirma con un código de un solo uso. No hay ninguna verificación de edad.', // TODO: translate
+  'legal.terms.account.title': 'Tu cuenta y tus credenciales', // TODO: translate
+  'legal.terms.account.body': 'Eres responsable de mantener seguro el acceso a tu cuenta y de lo que se haga a través de ella. Escribe a info@drone-tag.com si crees que otra persona tiene acceso. Los administradores de DroneTag pueden leer los registros de tu cuenta para revisar los documentos que envías a verificación y para responder a las solicitudes de soporte.', // TODO: translate
+  'legal.terms.content.title': 'Los documentos y datos que subes', // TODO: translate
+  'legal.terms.content.body': 'Conservas la titularidad de todo lo que subes. Concedes a DroneTag solo lo necesario para prestar el servicio: almacenar tus archivos, mostrártelos, permitir que un administrador los revise y publicar el breve resumen descrito en la política de privacidad cuando decidas publicar un dron. Eres responsable de la exactitud de lo que introduces y de tener derecho a subirlo, en particular en el caso de documentos que nombran a otra persona.', // TODO: translate
+  'legal.terms.publication.title': 'Publicar el perfil de un dron', // TODO: translate
+  'legal.terms.publication.body': 'La publicación es decisión tuya y se hace dron por dron. Una vez publicada, la página puede leerla cualquiera que tenga la dirección; no está protegida por un inicio de sesión y no hay registro de visitas. Al retirar la publicación se elimina el registro público y la dirección deja de funcionar, pero DroneTag no puede recuperar páginas que otras personas ya hayan guardado, almacenado en caché o compartido. La versión definitiva deberá indicar en cuánto tiempo surte efecto la retirada.', // TODO: translate
+  'legal.terms.verification.title': 'Qué significa la insignia de verificación', // TODO: translate
+  'legal.terms.verification.body': 'Una insignia de verificado significa que un administrador de DroneTag examinó los documentos de la cuenta y los consideró coherentes. No es un aval de ninguna autoridad, no indica que el vuelo que vas a realizar sea legal y no garantiza que la póliza de seguro vaya a cubrir un siniestro. Quien se base en una página de DroneTag debería tomarla como punto de partida y pedir los documentos originales cuando sea importante.', // TODO: translate
+  'legal.terms.plans.title': 'Planes, insignias y pagos', // TODO: translate
+  'legal.terms.plans.body': 'Cada cuenta incluye una pequeña cantidad de drones, operadores, certificados y documentos, y se pueden comprar cantidades mayores. Las insignias NFC son productos físicos que se fabrican y se envían. Los precios, los periodos de facturación, la renovación, los reembolsos y las condiciones de envío no están definidos y deliberadamente no se indican aquí: la página de precios muestra los precios previstos actualmente, no una oferta contractual.', // TODO: translate
+  'legal.terms.availability.title': 'Disponibilidad durante la pre-beta', // TODO: translate
+  'legal.terms.availability.body': 'DroneTag no está terminado. Las funciones pueden cambiar o desaparecer, los datos pueden migrarse y el servicio puede dejar de estar disponible sin previo aviso. No uses DroneTag como única copia de un documento que necesites: conserva los originales. En esta fase no se ofrece ningún compromiso de disponibilidad.', // TODO: translate
+  'legal.terms.suspension.title': 'Suspensión y cierre de la cuenta', // TODO: translate
+  'legal.terms.suspension.body': 'La versión definitiva describirá cuándo puede DroneTag suspender o cerrar una cuenta, por ejemplo por subir documentos de otra persona o falsear un estado de verificación, y con qué preaviso. Hoy puedes solicitar el cierre de tu cuenta escribiendo a info@drone-tag.com; la solicitud se gestiona manualmente y no hay eliminación automática.', // TODO: translate
+  'legal.terms.liability.title': 'Responsabilidad', // TODO: translate
+  'legal.terms.liability.body': 'Esta es la sección que más necesita la intervención de un abogado, así que no se propone ningún texto. Deberá establecer de qué es responsable DroneTag, de qué no lo es y qué ocurre si una página pública muestra información desactualizada o incorrecta. Hoy nada de esta página limita ninguna responsabilidad, porque nada de esta página está en vigor.', // TODO: translate
+  'legal.terms.law.title': 'Legislación aplicable y litigios', // TODO: translate
+  'legal.terms.law.body': 'La legislación aplicable y el tribunal competente dependen de dónde esté establecida la empresa que gestiona el servicio y de dónde se encuentren sus usuarios, y ninguna de las dos cosas está definida. Un abogado deberá completar esta sección. Aquí no se indica ninguna jurisdicción.', // TODO: translate
+  'legal.terms.changes.title': 'Cambios en estos términos en borrador', // TODO: translate
+  'legal.terms.changes.body': 'Este borrador cambiará sin previo aviso mientras se desarrolla el producto. Cuando lo sustituya una versión revisada, se retirará el banner de borrador, aparecerá una fecha real de entrada en vigor y la versión definitiva describirá cómo se anunciarán los cambios futuros.', // TODO: translate
+  'legal.cookies.title': 'Política de cookies y almacenamiento del navegador', // TODO: translate
+  'legal.cookies.subtitle': 'Qué guarda hoy DroneTag en tu navegador, por qué lo guarda y qué no guarda.', // TODO: translate
+  'legal.cookies.scope.title': 'Qué abarca esta página', // TODO: translate
+  'legal.cookies.scope.body': 'Las cookies son solo una parte del panorama. DroneTag también usa el almacenamiento local del navegador, y la biblioteca de autenticación de Firebase guarda su propio estado de sesión en el navegador. Esta página los describe todos juntos porque, desde tu punto de vista, son lo mismo: datos que este sitio deja en tu dispositivo.', // TODO: translate
+  'legal.cookies.essential.title': 'Cookies que se utilizan', // TODO: translate
+  'legal.cookies.essential.body': 'Se usan dos cookies, ambas para iniciar sesión y ambas limitadas a este sitio. La primera la establece el servidor una vez verificado tu token de inicio de sesión, no pueden leerla los scripts de la página y caduca al cabo de una hora. La segunda la establece la propia página para que el mismo token esté disponible para el código que protege el área de administración, y caduca a los cincuenta y cinco minutos. Ambas se borran al cerrar sesión. No se instala ninguna cookie publicitaria ni de seguimiento.', // TODO: translate
+  'legal.cookies.storage.title': 'Qué se guarda en el almacenamiento del navegador', // TODO: translate
+  'legal.cookies.storage.body': 'El tema y el idioma que eliges se guardan en el almacenamiento local con los nombres dronetag-theme y dronetag-language, para que en la siguiente visita no aparezcan por un instante colores o un idioma incorrectos. La biblioteca de autenticación de Firebase también guarda su propio estado de sesión en el navegador, que es lo que te permite mantener la sesión iniciada entre visitas. Al borrar los datos del sitio se elimina todo ello y se cierra tu sesión.', // TODO: translate
+  'legal.cookies.analytics.title': 'Analítica de uso', // TODO: translate
+  'legal.cookies.analytics.body': 'No hay conectado ningún proveedor de analítica ni de publicidad. La aplicación incluye una capa interna de eventos con una lista breve y cerrada de eventos y, en su estado actual, esa capa solo escribe en la consola del navegador durante el desarrollo. Si más adelante se añade un proveedor, habrá que actualizar esta página y la política de privacidad antes de activarlo.', // TODO: translate
+  'legal.cookies.thirdParty.title': 'Almacenamiento de otros servicios', // TODO: translate
+  'legal.cookies.thirdParty.body': 'Iniciar sesión con Google abre un proceso gestionado por Google, que puede instalar sus propias cookies en sus propios dominios durante ese paso; esas cookies se rigen por las condiciones de Google y no por esta página. La aplicación se sirve a través de Netlify, que guarda los registros habituales de solicitudes. La versión definitiva de esta página deberá enumerar cualquier otro componente de terceros que llegue al navegador.', // TODO: translate
+  'legal.cookies.consent.title': 'Consentimiento', // TODO: translate
+  'legal.cookies.consent.body': 'Hoy el producto no tiene ni banner de cookies ni mecanismo de consentimiento. Si hace falta alguno, y para cuáles de los elementos anteriores, es una cuestión que corresponde a un abogado. Esta página no afirma que el comportamiento actual sea suficiente; lo describe para que la decisión pueda tomarse sobre hechos exactos.', // TODO: translate
+  'legal.cookies.control.title': 'Cómo eliminarlos', // TODO: translate
+  'legal.cookies.control.body': 'Al cerrar sesión se borran las dos cookies de inicio de sesión. Si borras los datos del sitio para este dominio desde la configuración del navegador, se elimina todo lo indicado arriba, incluidos el tema y el idioma guardados. Bloquear por completo las cookies impedirá iniciar sesión, porque el token de inicio de sesión no tendría dónde guardarse.', // TODO: translate
+  'legal.cookies.changes.title': 'Cambios en este borrador', // TODO: translate
+  'legal.cookies.changes.body': 'Esta lista refleja lo que hace la aplicación en la fecha indicada arriba y se volverá a contrastar con el código cada vez que eso cambie. Cuando una versión revisada sustituya a este borrador, se retirará el banner de la parte superior.', // TODO: translate
+  'nav.preview': 'Vista previa', // TODO: translate
+  'account.nav.section.fleet': 'Flota', // TODO: translate
+  'account.nav.section.compliance': 'Cumplimiento', // TODO: translate
+  'consent.title': '¿Hacer público este perfil?', // TODO: translate
+  'consent.description': 'Cualquiera que tenga el enlace podrá verlo, sin iniciar sesión.', // TODO: translate
+  'consent.warning': 'Un perfil público de DroneTag puede leerlo cualquiera que escanee la insignia o abra el enlace. No se trata como una página privada y no requiere iniciar sesión.', // TODO: translate
+  'consent.urlLabel': 'Dirección pública', // TODO: translate
+  'consent.sharedTitle': 'Qué será visible', // TODO: translate
+  'consent.withheldTitle': 'Qué seguirá siendo privado', // TODO: translate
+  'consent.shared.name': 'Tu nombre, o el nombre de tu operador o de tu empresa', // TODO: translate
+  'consent.shared.drone': 'Fabricante, modelo y clase del dron', // TODO: translate
+  'consent.shared.serial': 'El número de serie del dron grabado en la aeronave', // TODO: translate
+  'consent.shared.certStatus': 'Si tu certificado de piloto es válido', // TODO: translate
+  'consent.shared.insuranceStatus': 'Si tu seguro es válido y cuál es su estado', // TODO: translate
+  'consent.shared.insuranceProvider': 'El nombre de tu aseguradora', // TODO: translate
+  'consent.shared.insuranceExpiry': 'La fecha de vencimiento del seguro', // TODO: translate
+  'consent.shared.maskedPolicy': 'Un número de póliza enmascarado, que solo muestra los primeros y los últimos caracteres', // TODO: translate
+  'consent.shared.verification': 'El estado de verificación del perfil en DroneTag', // TODO: translate
+  'consent.withheld.policyPdf': 'El documento de la póliza de seguro en sí', // TODO: translate
+  'consent.withheld.address': 'Tu domicilio o tu domicilio social', // TODO: translate
+  'consent.withheld.email': 'Tu correo electrónico', // TODO: translate
+  'consent.withheld.phone': 'Tu número de teléfono', // TODO: translate
+  'consent.withheld.fullPolicy': 'El número de póliza completo, sin enmascarar', // TODO: translate
+  'consent.withheld.ids': 'Identificadores de cuenta e ID internos de los registros', // TODO: translate
+  'consent.checkbox': 'Entiendo que este perfil será visible públicamente y quiero publicarlo.', // TODO: translate
+  'consent.confirm': 'Publicar perfil', // TODO: translate
+  'consent.revocable': 'Puedes volver a hacer privado el perfil en cualquier momento. Una vez retirada la publicación, la página pública deja de funcionar, aunque quien ya la haya abierto podría conservar una copia.', // TODO: translate
+  'form.created': 'Perfil creado', // TODO: translate
+  'links.copiedToast': 'Enlace público copiado al portapapeles', // TODO: translate
+  'links.copyFailed': 'No se ha podido copiar el enlace. Selecciónalo y cópialo manualmente.', // TODO: translate
+  'support.sent': 'Mensaje enviado al soporte de DroneTag', // TODO: translate
+  'signup.terms.prefix': 'He leído y acepto los', // TODO: translate
+  'signup.terms.termsLink': 'Términos del servicio', // TODO: translate
+  'signup.terms.and': 'y la', // TODO: translate
+  'signup.terms.privacyLink': 'Política de privacidad', // TODO: translate
+  'signup.terms.required': 'Acepta los Términos y la Política de privacidad para continuar.', // TODO: translate
+  'signup.terms.googleHint': 'Acepta arriba los Términos y la Política de privacidad antes de registrarte con Google.', // TODO: translate
+  'account.delete.title': 'Solicitar la eliminación de la cuenta', // TODO: translate
+  'account.delete.body': 'La eliminación no es automática. Al abrir una solicitud de soporte queda registrada tu voluntad de cerrar la cuenta. Un administrador de DroneTag la tramitará manualmente. Tus perfiles públicos seguirán visibles hasta entonces.', // TODO: translate
+  'account.delete.cta': 'Abrir una solicitud de eliminación', // TODO: translate
+  'drone.publish': 'Publicar perfil', // TODO: translate
+  'drone.unpublish': 'Despublicar', // TODO: translate
+  'drone.publish.success': 'El perfil público ya está publicado.', // TODO: translate
+  'drone.unpublish.success': 'Se ha retirado la publicación del perfil público.', // TODO: translate
+  'toast.certificate.created': 'Certificado añadido.', // TODO: translate
+  'toast.certificate.deleted': 'Certificado eliminado.', // TODO: translate
+  'toast.certificate.deleteFailed': 'No se ha podido eliminar el certificado. Vuelve a intentarlo.', // TODO: translate
+  'toast.insurance.created': 'Póliza de seguro añadida.', // TODO: translate
+  'toast.insurance.deleted': 'Póliza de seguro eliminada.', // TODO: translate
+  'toast.insurance.deleteFailed': 'No se ha podido eliminar la póliza. Vuelve a intentarlo.', // TODO: translate
+  'toast.document.created': 'Documento subido.', // TODO: translate
+  'toast.document.updated': 'Documento actualizado.', // TODO: translate
+  'toast.document.deleted': 'Documento eliminado.', // TODO: translate
+  'toast.document.deleteFailed': 'No se ha podido eliminar el documento. Vuelve a intentarlo.', // TODO: translate
+  'toast.permit.created': 'Autorización añadida.', // TODO: translate
+  'toast.permit.updated': 'Autorización actualizada.', // TODO: translate
+  'toast.permit.deleted': 'Autorización eliminada.', // TODO: translate
+  'toast.permit.deleteFailed': 'No se ha podido eliminar la autorización. Vuelve a intentarlo.', // TODO: translate
+  'toast.operator.created': 'Operador UAS añadido.', // TODO: translate
+  'toast.operator.updated': 'Operador UAS actualizado.', // TODO: translate
+  'toast.operator.deleted': 'Operador UAS eliminado.', // TODO: translate
+  'toast.operator.deleteFailed': 'No se ha podido eliminar el operador UAS. Vuelve a intentarlo.', // TODO: translate
+  'toast.operator.setCurrent': 'Operador UAS predeterminado actualizado.', // TODO: translate
+  'toast.drone.created': 'Dron añadido.', // TODO: translate
+  'toast.drone.saved': 'Datos del dron guardados.', // TODO: translate
+  'toast.drone.deleted': 'Dron eliminado.', // TODO: translate
+  'toast.drone.deleteFailed': 'No se ha podido eliminar el dron. Vuelve a intentarlo.', // TODO: translate
+  'toast.archive.deleted': 'Elemento eliminado definitivamente.', // TODO: translate
+  'toast.archive.deleteFailed': 'No se ha podido eliminar el elemento. Vuelve a intentarlo.', // TODO: translate
+  'toast.verify.approved': 'Marcado como verificado.', // TODO: translate
+  'toast.verify.rejected': 'Marcado como rechazado.', // TODO: translate
+  'toast.verify.reset': 'Devuelto a la cola de revisión.', // TODO: translate
+  'toast.verify.failed': 'No se ha podido guardar la decisión. Vuelve a intentarlo.', // TODO: translate
+  'admin.users.detail.pilotOperatorNote': 'Los dos campos de abajo se refieren al operador UAS, no al piloto a distancia.', // TODO: translate
+  'auth.googlePopupBlocked': 'Tu navegador ha bloqueado la ventana de acceso de Google. Permite las ventanas emergentes para este sitio y vuelve a intentarlo.',
+  'signup.otp.skip': 'Omitir por ahora',
+  'signup.otp.errorCooldown': 'Acabas de solicitar un código. Espera un minuto antes de pedir otro.',
+  'signup.otp.errorDelivery': 'No podemos enviar el correo en este momento. Puedes continuar y verificar más tarde.',
+  'signup.otp.sentTo': 'Código enviado a {email}. Revisa también la carpeta de spam.',
+  'signup.errorInvalidEmail': 'Dirección de correo no válida.',
+  'signup.errorNetwork': 'Conexión ausente o inestable. Comprueba tu red y vuelve a intentarlo.',
+  'admin.overview.loadFailed': 'No se ha podido cargar el resumen. Comprueba tu conexión y vuelve a intentarlo.',
+  'admin.overview.partialFailure': 'Algunas secciones no se han podido cargar',
+  'admin.overview.health.ok': 'Todos los servicios operativos',
+  'admin.overview.health.degraded': 'Algunos servicios no responden correctamente',
+  'common.pdfShowAllPages': 'Mostrar todas las páginas ({count})',
+  'common.close': 'Cerrar',
+  'common.copied': 'Copiado al portapapeles',
+  'loadError.title': 'Algo ha salido mal',
+  'loadError.body': 'No se han podido cargar los datos. Comprueba tu conexión y vuelve a intentarlo.',
+  'upload.hint': 'Formatos: {formats} · máx. {mb} MB',
+  'upload.progress': 'Subiendo…',
+  'upload.error.type': 'Tipo de archivo no compatible.',
+  'upload.error.tooLarge': 'El archivo supera los {mb} MB.',
+  'upload.error.heic': 'Este navegador no puede leer fotos HEIC. Exporta la imagen en JPG o PNG y vuelve a intentarlo.',
+  'upload.error.canceled': 'Subida cancelada.',
+  'slot.usedUnlimited': '{used} · ilimitado',
+  'account.plan.unlimitedNote': 'No hay límites activos: puedes añadir drones, operadores, certificados y documentos libremente.',
+  'operator.list.subtitleUnlimited': 'Añade todos los operadores que necesites.',
+  'doc.list.subtitleUnlimited': 'Sube todos los documentos que necesites.',
+  'drone.publish.notLive': 'Cambios guardados, pero la página pública no se ha actualizado. Vuelve a intentarlo en un momento.',
+  'drone.insuranceLink.hint': 'Elige una de las pólizas que has subido; se mostrará en la página pública del dron.',
+  'error.locked': 'Estos datos se bloquean tras el primer guardado. Contacta con soporte para modificarlos.',
+  'error.suspended': 'Este elemento ha sido suspendido por un administrador. Contacta con soporte para más información.',
+  'error.quota': 'Has alcanzado el límite de tu plan.',
+  'error.invalidLink': 'El vínculo seleccionado no es válido. Actualiza la página y vuelve a intentarlo.',
+  'error.emailInUse': 'Esta dirección de correo ya la usa otra cuenta.',
+  'error.session': 'Tu sesión ha caducado. Vuelve a iniciar sesión para continuar.',
+  'error.permission': 'No tienes permiso para realizar esta acción.',
+  'error.notFound': 'No encontrado: puede que se haya eliminado.',
+  'error.rateLimited': 'Demasiadas solicitudes. Espera un momento y vuelve a intentarlo.',
+  'error.server': 'El servidor no ha respondido correctamente. Vuelve a intentarlo en un momento.',
+  'error.network': 'Conexión ausente o inestable. Comprueba tu red y vuelve a intentarlo.',
+  'reportFound.errorRateLimited': 'Has enviado demasiados avisos. Vuelve a intentarlo en unos minutos.',
+  'reportFound.errorUnavailable': 'Ahora mismo no se pueden enviar avisos para este dron.',
+  'account.verification.reasonLine': 'Motivo: {reason}',
+  'admin.verify.reason.label': 'Motivo del rechazo (opcional)',
+  'admin.verify.reason.placeholder': 'P. ej., documento caducado o ilegible',
+  'admin.verify.reason.confirm': 'Confirmar rechazo',
+  'admin.support.newConversation': 'Nueva conversación',
+  'admin.users.detail.emailHint': 'También cambia el correo de acceso; el usuario tendrá que verificarlo de nuevo.',
+  'admin.users.detail.droneCount': 'Drones registrados: {count}',
+  'admin.slots.notEnforced': 'Los límites de espacios están desactivados: estos valores se guardan pero no bloquean al usuario.',
+  'admin.reports.ownerRead': 'Leído por el propietario',
+  'admin.reports.ownerUnread': 'Aún no leído por el propietario',
+  'admin.nfc.baseUrl': 'URL base de las insignias: {url}',
+  'pricing.checkout.error.invalid_json': 'Solicitud no válida. Actualiza la página y vuelve a intentarlo.',
+  'pricing.checkout.error.checkout_failed': 'No hemos podido registrar tu solicitud. Vuelve a intentarlo en un momento.',
+  'account.dashboard.greetingAnon': '¡Hola!',
+  'account.identity.name': 'Nombre y apellidos',
+  'account.identity.completeHint': 'Tu nombre aún no está registrado. Introdúcelo una vez y aparecerá en tu perfil público. Para cambios posteriores, contacta con soporte.',
+  'account.plan.subtitleUnlimited': 'Resumen de lo que has registrado. Ahora mismo no hay límites.',
+  'drone.catalog.classUnknown': 'N/D',
+  'drone.catalog.note.mini4pro': 'UE: C0 de serie, C1 con actualización',
+  'reportFound.geolocation.hint': 'Opcional: ayuda al propietario a encontrar el dron más rápido. Tu navegador te pedirá permiso.',
+  'admin.notify.reason.email_not_configured': 'el envío de correos no está configurado en el servidor',
+  'admin.notify.reason.no_recipient_email': 'la cuenta no tiene dirección de correo',
+  'admin.notify.reason.no_recipient': 'la cuenta no tiene dirección de correo',
+  'admin.notify.reason.email_provider_auth_failed': 'la clave del servicio de correo no es válida',
+  'admin.notify.reason.email_address_rejected': 'el servicio de correo rechazó la dirección',
+  'admin.notify.reason.email_rate_limited': 'demasiados correos enviados, inténtalo más tarde',
+  'admin.notify.reason.email_provider_unavailable': 'servicio de correo no disponible temporalmente',
+  'admin.notify.reason.email_network_error': 'error de red con el servicio de correo',
+  'admin.notify.reason.network': 'error de red',
+  'admin.reports.emailSent': 'Propietario avisado por correo',
+  'admin.reports.emailNotSent': 'Propietario no avisado por correo ({reason})',
+  'admin.notify.reason.email_send_failed': 'el envío falló',
+  'admin.support.status.open': 'Pendiente de respuesta',
+  'admin.support.status.pending': 'Esperando al usuario',
+  'admin.support.status.closed': 'Cerrada',
+  'drone.publicLink.title': 'Página pública',
+  'drone.publicLink.hint': 'Es la dirección que debes grabar en la insignia NFC o convertir en código QR.',
+  'drone.publicLink.copy': 'Copiar enlace',
+  'drone.publicLink.open': 'Abrir',
+  'drone.publicLink.copyFailed': 'No se pudo copiar: selecciona el enlace y cópialo a mano.',
+  'activeOp.empty.addOperator': 'Añadir operador',
+  'insurance.row.onPublicPage': 'Se muestra en la página pública del dron',
+  'operator.row.publicDronesOne': 'Predeterminado para 1 dron público',
+  'operator.row.publicDronesMany': 'Predeterminado para {count} drones públicos',
+  'operator.delete.warningPublicOne': 'Este operador es el predeterminado de un dron público. Si lo eliminas, ese dron quedará sin operador predeterminado.',
 };

@@ -7,7 +7,7 @@
  * Archive: verified or rejected items (can be reopened to pending).
  */
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -30,8 +30,8 @@ import {
 } from '@/lib/firebase/insurances';
 import { listAllDrones, updateDrone } from '@/lib/firebase/drones';
 import { listAllAccounts } from '@/lib/firebase/account';
-import { ensureSupportThread, sendSupportMessage } from '@/lib/firebase/support';
-import { adminFetch } from '@/lib/client/adminApi';
+import { notifyUserVerification as sendVerificationNotice, type VerifiableKind } from '@/lib/client/notifyVerification';
+import { errorMessage } from '@/lib/client/errorMessage';
 import { DEMO_MODE } from '@/lib/firebase/config';
 import type { UserAccount } from '@/lib/types/account';
 import type { Authorization, Certificate, DocumentRef, Drone, Insurance } from '@/lib/types/entities';
@@ -43,6 +43,8 @@ import { Card } from '@/components/ui/Card';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { SectionHeader } from '@/components/ui/SectionHeader';
 import { VerifyControls } from '@/components/admin/VerifyControls';
+import { LoadError } from '@/components/ui/LoadError';
+import { formatDroneClass } from '@/lib/droneCatalog';
 
 type EntityTab = 'documents' | 'certificates' | 'insurances' | 'authorizations' | 'drones';
 type ViewMode = 'queue' | 'archive';
@@ -85,7 +87,8 @@ export default function AdminVerifyPage() {
   const { user } = useAuth();
   const toast = useToast();
   const [view, setView] = useState<ViewMode>('queue');
-  const [tab, setTab] = useState<EntityTab>('documents');
+  /** null until the admin picks a tab: until then, open the first one with work in it. */
+  const [pickedTab, setTab] = useState<EntityTab | null>(null);
   const [accounts, setAccounts] = useState<UserAccount[]>([]);
   const [documents, setDocuments] = useState<DocumentRef[]>([]);
   const [certificates, setCertificates] = useState<Certificate[]>([]);
@@ -97,30 +100,40 @@ export default function AdminVerifyPage() {
   /** Set when the decision saved but the user could not be emailed. */
   const [notifyWarning, setNotifyWarning] = useState<string | null>(null);
 
-  const reload = async () => {
-    const [a, d, c, i, az, dr] = await Promise.all([
+  const [loadError, setLoadError] = useState<string | null>(null);
+
+  // Each collection loads on its own so one failing read does not hide the
+  // rest of the queue.
+  const reload = useCallback(async () => {
+    const results = await Promise.allSettled([
       listAllAccounts(),
       listAllDocuments(),
       listAllCertificates(),
       listAllInsurances(),
       listAllAuthorizations(),
       listAllDrones(),
-    ]);
-    setAccounts(a);
-    setDocuments(d);
-    setCertificates(c);
-    setInsurances(i);
-    setAuthorizations(az);
-    setDrones(dr);
-  };
+    ] as const);
+    const [a, d, c, i, az, dr] = results;
+    if (a.status === 'fulfilled') setAccounts(a.value);
+    if (d.status === 'fulfilled') setDocuments(d.value);
+    if (c.status === 'fulfilled') setCertificates(c.value);
+    if (i.status === 'fulfilled') setInsurances(i.value);
+    if (az.status === 'fulfilled') setAuthorizations(az.value);
+    if (dr.status === 'fulfilled') setDrones(dr.value);
+    const failed = results.find((r): r is PromiseRejectedResult => r.status === 'rejected');
+    if (failed) {
+      console.error('[admin verify] load failed', failed.reason);
+      setLoadError(errorMessage(failed.reason, t, 'admin.overview.partialFailure'));
+    } else {
+      setLoadError(null);
+    }
+  }, [t]);
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
         await reload();
-      } catch (err) {
-        console.error('[admin verify] load failed', err);
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -128,78 +141,25 @@ export default function AdminVerifyPage() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [reload]);
 
-  /**
-   * Tell the user about a verification decision, by email and in the in-app
-   * support thread.
-   *
-   * The decision itself is already saved by the time this runs, so a failure
-   * here must not be surfaced as a failed approval. It is reported as a
-   * separate, non-blocking warning instead.
-   */
   async function notifyUserVerification(
     userId: string,
-    kind: 'certificate' | 'insurance' | 'document' | 'drone' | 'authorization',
+    kind: VerifiableKind,
     label: string,
     status: VerificationStatus,
     reason?: string,
   ) {
-    if (status !== 'verified' && status !== 'rejected') return;
-
-    const kindLabel = t(`account.verification.kind.${kind}`);
-    const body =
-      status === 'verified'
-        ? t('account.verification.notifyVerified', { kind: kindLabel, label })
-        : t('account.verification.notifyRejected', { kind: kindLabel, label });
-    const subject = t('account.verification.threadSubject');
-
-    if (DEMO_MODE) {
-      try {
-        await ensureSupportThread(userId, subject);
-        await sendSupportMessage({
-          threadId: userId,
-          sender: 'admin',
-          senderUid: user?.uid ?? 'demo-admin',
-          body,
-          subject,
-        });
-      } catch (err) {
-        console.warn('[admin verify] notify user failed', err);
-      }
-      return;
-    }
-
-    // `drone` has no email template — a drone is not a document a user submits
-    // for approval — so it stays an in-app message only.
-    const emailEntity =
-      kind === 'drone' ? undefined : (kind as 'certificate' | 'insurance' | 'document' | 'authorization');
-
-    try {
-      const res = await adminFetch('/api/admin/notify-verification', {
-        method: 'POST',
-        body: JSON.stringify({
-          userId,
-          entity: emailEntity ?? 'document',
-          outcome: status === 'verified' ? 'approved' : 'rejected',
-          itemLabel: label,
-          reason,
-          threadMessage: body,
-          threadSubject: subject,
-        }),
-      });
-      const payload = (await res.json().catch(() => ({}))) as {
-        email?: { status: string; reason?: string };
-      };
-      if (payload.email && payload.email.status !== 'sent') {
-        setNotifyWarning(
-          t('admin.verify.notifyWarning', { reason: payload.email.reason ?? payload.email.status }),
-        );
-      }
-    } catch (err) {
-      console.warn('[admin verify] notify user failed', err);
-      setNotifyWarning(t('admin.verify.notifyWarning', { reason: 'network' }));
-    }
+    const warning = await sendVerificationNotice({
+      userId,
+      kind,
+      label,
+      status,
+      reason,
+      adminUid: user?.uid,
+      t,
+    });
+    if (warning) setNotifyWarning(warning);
   }
 
   /**
@@ -228,7 +188,7 @@ export default function AdminVerifyPage() {
       );
     } catch (err) {
       console.error('[admin verify] decision failed', err);
-      toast.error(t('toast.verify.failed'));
+      toast.error(errorMessage(err, t, 'toast.verify.failed'));
     }
   }
 
@@ -270,6 +230,18 @@ export default function AdminVerifyPage() {
     [drones, view],
   );
 
+  const viewCounts: Record<EntityTab, number> = {
+    documents: docsView.length,
+    certificates: certsView.length,
+    insurances: insView.length,
+    authorizations: authzView.length,
+    drones: dronesView.length,
+  };
+  const tab: EntityTab =
+    pickedTab ??
+    (Object.keys(viewCounts) as EntityTab[]).find((k) => viewCounts[k] > 0) ??
+    'documents';
+
   const queueCount =
     documents.filter((d) => isQueued(d.verificationStatus)).length +
     certificates.filter((c) => isQueued(c.verificationStatus)).length +
@@ -283,7 +255,7 @@ export default function AdminVerifyPage() {
     authorizations.filter((a) => isArchived(a.verificationStatus)).length +
     drones.filter((d) => isReviewableDrone(d) && isArchived(d.verificationStatus)).length;
 
-  async function setDocStatus(d: DocumentRef, s: VerificationStatus) {
+  async function setDocStatus(d: DocumentRef, s: VerificationStatus, reason?: string) {
     setBusyId(d.id);
     try {
       await runDecision(s, async () => {
@@ -291,13 +263,13 @@ export default function AdminVerifyPage() {
         setDocuments((prev) =>
           prev.map((x) => (x.id === d.id ? { ...x, verificationStatus: s } : x)),
         );
-        await notifyUserVerification(d.userId, 'document', d.label || d.fileName || d.kind, s);
+        await notifyUserVerification(d.userId, 'document', d.label || d.fileName || d.kind, s, reason);
       });
     } finally {
       setBusyId(null);
     }
   }
-  async function setCertStatus(c: Certificate, s: VerificationStatus) {
+  async function setCertStatus(c: Certificate, s: VerificationStatus, reason?: string) {
     setBusyId(c.id);
     try {
       await runDecision(s, async () => {
@@ -310,13 +282,14 @@ export default function AdminVerifyPage() {
           'certificate',
           c.registrationNumber || c.label || c.kind,
           s,
+          reason,
         );
       });
     } finally {
       setBusyId(null);
     }
   }
-  async function setInsStatus(i: Insurance, s: VerificationStatus) {
+  async function setInsStatus(i: Insurance, s: VerificationStatus, reason?: string) {
     setBusyId(i.id);
     try {
       await runDecision(s, async () => {
@@ -337,13 +310,14 @@ export default function AdminVerifyPage() {
           'insurance',
           i.provider || i.policyNumber || '—',
           s,
+          reason,
         );
       });
     } finally {
       setBusyId(null);
     }
   }
-  async function setAuthzStatus(a: Authorization, s: VerificationStatus) {
+  async function setAuthzStatus(a: Authorization, s: VerificationStatus, reason?: string) {
     setBusyId(a.id);
     try {
       await runDecision(s, async () => {
@@ -356,13 +330,14 @@ export default function AdminVerifyPage() {
           'authorization',
           a.label || a.kind,
           s,
+          reason,
         );
       });
     } finally {
       setBusyId(null);
     }
   }
-  async function setDroneStatus(d: Drone, s: VerificationStatus) {
+  async function setDroneStatus(d: Drone, s: VerificationStatus, reason?: string) {
     setBusyId(d.id);
     try {
       await runDecision(s, async () => {
@@ -379,6 +354,7 @@ export default function AdminVerifyPage() {
           'drone',
           [d.manufacturer, d.model].filter(Boolean).join(' ') || d.slug,
           s,
+          reason,
         );
       });
     } finally {
@@ -416,22 +392,34 @@ export default function AdminVerifyPage() {
         </div>
       ) : null}
 
+      {loadError && !loading ? (
+        <div className="mt-4">
+          <LoadError message={loadError} onRetry={reload} />
+        </div>
+      ) : null}
+
       <div className="mt-4 flex flex-wrap gap-2">
         <ViewToggle
           active={view === 'queue'}
-          onClick={() => setView('queue')}
+          onClick={() => {
+            setView('queue');
+            setTab(null);
+          }}
           label={t('admin.verify.view.queue')}
           count={queueCount}
         />
         <ViewToggle
           active={view === 'archive'}
-          onClick={() => setView('archive')}
+          onClick={() => {
+            setView('archive');
+            setTab(null);
+          }}
           label={t('admin.verify.view.archive')}
           count={archiveCount}
         />
       </div>
 
-      <div className="mt-3 flex flex-wrap items-center gap-1 border-b border-[var(--color-border)]">
+      <div className="-mx-4 mt-3 flex items-center gap-1 overflow-x-auto border-b border-[var(--color-border)] px-4 sm:mx-0 sm:flex-wrap sm:px-0">
         <TabButton active={tab === 'documents'} onClick={() => setTab('documents')}>
           {t('admin.verify.tab.documents')} ({docsView.length})
         </TabButton>
@@ -451,7 +439,7 @@ export default function AdminVerifyPage() {
 
       {loading ? (
         <div className="mt-6 flex items-center gap-3 text-sm text-[var(--color-text-secondary)]">
-          <div className="h-4 w-4 animate-spin rounded-full border-2 border-[var(--color-border)] border-t-gray-600" />
+          <div className="h-4 w-4 animate-spin rounded-full border-2 border-[var(--color-border)] border-t-[var(--color-text-secondary)]" />
           {t('common.loading')}
         </div>
       ) : tab === 'documents' ? (
@@ -486,7 +474,7 @@ export default function AdminVerifyPage() {
                           {d.updatedAt ? ` · ${formatDateTime(d.updatedAt)}` : null}
                         </p>
                       </div>
-                      <div className="flex shrink-0 items-center gap-2">
+                      <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:shrink-0 sm:justify-end">
                         {d.fileUrl ? (
                           <a
                             href={d.fileUrl}
@@ -500,7 +488,7 @@ export default function AdminVerifyPage() {
                         <VerifyControls
                           current={d.verificationStatus}
                           busy={busyId === d.id}
-                          onSet={(s) => setDocStatus(d, s)}
+                          onSet={(s, r) => setDocStatus(d, s, r)}
                         />
                       </div>
                     </div>
@@ -548,7 +536,7 @@ export default function AdminVerifyPage() {
                           {c.expiresAt ? ` · ${t('field.expiresAt')}: ${formatDate(c.expiresAt)}` : null}
                         </p>
                       </div>
-                      <div className="flex shrink-0 items-center gap-2">
+                      <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:shrink-0 sm:justify-end">
                         {c.fileUrl ? (
                           <a
                             href={c.fileUrl}
@@ -562,7 +550,7 @@ export default function AdminVerifyPage() {
                         <VerifyControls
                           current={c.verificationStatus}
                           busy={busyId === c.id}
-                          onSet={(s) => setCertStatus(c, s)}
+                          onSet={(s, r) => setCertStatus(c, s, r)}
                         />
                       </div>
                     </div>
@@ -604,7 +592,7 @@ export default function AdminVerifyPage() {
                           {i.expiryDate ? ` · ${t('profile.validUntil')} ${formatDate(i.expiryDate)}` : null}
                         </p>
                       </div>
-                      <div className="flex shrink-0 items-center gap-2">
+                      <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:shrink-0 sm:justify-end">
                         {i.pdfUrl ? (
                           <a
                             href={i.pdfUrl}
@@ -618,7 +606,7 @@ export default function AdminVerifyPage() {
                         <VerifyControls
                           current={i.verificationStatus}
                           busy={busyId === i.id}
-                          onSet={(s) => setInsStatus(i, s)}
+                          onSet={(s, r) => setInsStatus(i, s, r)}
                         />
                       </div>
                     </div>
@@ -668,7 +656,7 @@ export default function AdminVerifyPage() {
                             : null}
                         </p>
                       </div>
-                      <div className="flex shrink-0 items-center gap-2">
+                      <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:shrink-0 sm:justify-end">
                         {a.fileUrl ? (
                           <a
                             href={a.fileUrl}
@@ -682,7 +670,7 @@ export default function AdminVerifyPage() {
                         <VerifyControls
                           current={a.verificationStatus}
                           busy={busyId === a.id}
-                          onSet={(s) => setAuthzStatus(a, s)}
+                          onSet={(s, r) => setAuthzStatus(a, s, r)}
                         />
                       </div>
                     </div>
@@ -722,11 +710,11 @@ export default function AdminVerifyPage() {
                         ) : (
                           d.userId
                         )}
-                        {d.classMarking ? ` · ${d.classMarking}` : null}
+                        {` · ${formatDroneClass(d.classMarking, t)}`}
                         {d.updatedAt ? ` · ${formatDateTime(d.updatedAt)}` : null}
                       </p>
                     </div>
-                    <div className="flex shrink-0 items-center gap-2">
+                    <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:shrink-0 sm:justify-end">
                       {d.visibility === 'public' && d.slug ? (
                         <a
                           href={getPublicProfileUrl(d.slug)}
@@ -740,7 +728,7 @@ export default function AdminVerifyPage() {
                       <VerifyControls
                         current={d.verificationStatus}
                         busy={busyId === d.id}
-                        onSet={(s) => setDroneStatus(d, s)}
+                        onSet={(s, r) => setDroneStatus(d, s, r)}
                       />
                     </div>
                   </div>

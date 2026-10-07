@@ -240,7 +240,7 @@ export function buildDemoSeedPayload(): DemoSeedPayload {
       issueDate: MICHELE.insuranceIssueDate,
       expiryDate: MICHELE.insuranceExpiryDate,
       notes: MICHELE.insuranceNotes,
-      pdfUrl: MICHELE.insurancePdfUrl,
+      pdfUrl: '/demo/sample-doc.pdf',
       verificationStatus: 'verified',
       createdAt: ago(200),
       updatedAt: ago(10),

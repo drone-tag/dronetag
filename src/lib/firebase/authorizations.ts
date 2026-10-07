@@ -5,8 +5,12 @@
  */
 
 import {
-  collection, deleteDoc, doc, getDoc, getDocs,
-  query, updateDoc, where,
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  query,
+  where,
 } from 'firebase/firestore';
 
 import { awaitFirebaseAuthReady } from '@/lib/firebase/auth';
@@ -14,6 +18,9 @@ import { DEMO_MODE, getFirebaseDb } from '@/lib/firebase/config';
 import * as demo from '@/lib/demo/entitiesStore';
 import { fileToDataUrl } from '@/lib/demo/fileToDataUrl';
 import { adminFetch } from '@/lib/client/adminApi';
+import { readJsonOrThrow } from '@/lib/client/apiError';
+import { attachFile, prepareFile } from '@/lib/client/fileUpload';
+import { deleteEntityOnServer } from '@/lib/client/entityApi';
 import type { Authorization, AuthorizationKind } from '@/lib/types/entities';
 import type { VerificationStatus } from '@/lib/types';
 
@@ -95,6 +102,7 @@ export async function createAuthorization(
 export async function uploadAuthorizationFile(
   authorizationId: string,
   file: File,
+  onProgress?: (fraction: number) => void,
 ): Promise<string> {
   if (DEMO_MODE) {
     await new Promise((r) => setTimeout(r, 300));
@@ -108,41 +116,47 @@ export async function uploadAuthorizationFile(
     });
     return fileUrl;
   }
-  const form = new FormData();
-  form.append('file', file);
-  const res = await adminFetch(`/api/entities/authorizations/${authorizationId}/file`, {
-    method: 'POST',
-    body: form,
+  const prepared = await prepareFile(file, 'pdf-or-image');
+  const body = await attachFile<{ fileUrl?: string }>({
+    route: `/api/entities/authorizations/${authorizationId}/file`,
+    objectPath: `authorizations/${authorizationId}/file.${prepared.ext}`,
+    file: prepared.file,
+    contentType: prepared.contentType,
+    fileName: file.name,
+    onProgress,
   });
-  const body = (await res.json().catch(() => ({}))) as { fileUrl?: string; error?: string };
-  if (!res.ok) {
-    throw new Error(body.error || `upload authorization failed (${res.status})`);
-  }
   if (!body.fileUrl) throw new Error('upload authorization failed: missing fileUrl');
   return body.fileUrl;
 }
 
+/**
+ * Edit a permit through the server, which re-queues it for review when
+ * reviewed details change. `removeFile` detaches and deletes the file.
+ */
 export async function updateAuthorization(
   id: string,
-  patch: Partial<Authorization>,
+  patch: Partial<Authorization> & { removeFile?: boolean },
 ): Promise<void> {
-  if (DEMO_MODE) return demo.updateAuthorization(id, patch);
-  await awaitFirebaseAuthReady();
-  const db = getFirebaseDb();
-  const payload = Object.fromEntries(
+  if (DEMO_MODE) {
+    const { removeFile, ...rest } = patch;
+    return demo.updateAuthorization(
+      id,
+      removeFile ? { ...rest, fileUrl: '', fileName: '', fileSize: 0, mimeType: '' } : rest,
+    );
+  }
+  const body = Object.fromEntries(
     Object.entries(patch).filter(([k, v]) => k !== 'id' && v !== undefined),
   );
-  await updateDoc(doc(db, AUTHORIZATIONS, id), {
-    ...payload,
-    updatedAt: new Date().toISOString(),
+  const res = await adminFetch(`/api/entities/authorizations/${encodeURIComponent(id)}`, {
+    method: 'PATCH',
+    body: JSON.stringify(body),
   });
+  await readJsonOrThrow(res, 'update authorization');
 }
 
 export async function deleteAuthorization(id: string): Promise<void> {
   if (DEMO_MODE) return demo.deleteAuthorization(id);
-  await awaitFirebaseAuthReady();
-  const db = getFirebaseDb();
-  await deleteDoc(doc(db, AUTHORIZATIONS, id));
+  await deleteEntityOnServer('authorizations', id);
 }
 
 export async function listAllAuthorizations(): Promise<Authorization[]> {

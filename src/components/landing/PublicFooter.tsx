@@ -14,7 +14,7 @@ export function PublicFooter() {
         <div className="grid gap-6 sm:grid-cols-[1.2fr_1fr] sm:gap-8 lg:grid-cols-[1.5fr_1fr_1fr]">
           <div>
             <div className="flex items-center gap-2">
-              <Image src="/logo.png?v=3" alt="" width={512} height={512} className="h-8 w-8" unoptimized aria-hidden />
+              <Image src="/logo-mark.webp" alt="" width={192} height={192} className="h-8 w-8" unoptimized aria-hidden />
               <span className="text-sm font-bold text-[var(--color-navy)]">DroneTag</span>
             </div>
             <p className="mt-2 max-w-xs text-xs leading-relaxed text-[var(--color-text-secondary)]">

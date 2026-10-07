@@ -41,8 +41,9 @@ import { deleteObject, getDownloadURL, ref, uploadBytes } from 'firebase/storage
 import { awaitFirebaseAuthReady } from '@/lib/firebase/auth';
 import { DEMO_MODE, getFirebaseStorage } from '@/lib/firebase/config';
 
-const MAX_IMAGE_SIZE = 5 * 1024 * 1024;   // 5 MB
-const MAX_PDF_SIZE   = 20 * 1024 * 1024;   // 20 MB
+// Mirror storage.rules: 20 MB for public images, 50 MB for private files.
+const MAX_IMAGE_SIZE = 20 * 1024 * 1024;
+const MAX_PDF_SIZE   = 50 * 1024 * 1024;
 
 // SVG intentionally NOT in the allow-list (V-013).
 const ALLOWED_IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);

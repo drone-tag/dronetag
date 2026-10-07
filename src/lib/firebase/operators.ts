@@ -9,8 +9,13 @@
  */
 
 import {
-  collection, deleteDoc, doc, getDoc, getDocs,
-  query, updateDoc, where,
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  query,
+  updateDoc,
+  where,
 } from 'firebase/firestore';
 
 import { awaitFirebaseAuthReady } from '@/lib/firebase/auth';
@@ -24,6 +29,7 @@ import {
   type Operator,
   type OperatorKind,
 } from '@/lib/types/entities';
+import { deleteEntityOnServer } from '@/lib/client/entityApi';
 
 const OPERATORS = 'operators';
 
@@ -98,8 +104,10 @@ export async function createOperator(
 }
 
 export async function updateOperator(id: string, patch: Partial<Operator>): Promise<void> {
+  // `isDefault` only orders the user's own list; public pages never show it.
+  const touchesPublicPages = Object.keys(patch).some((k) => k !== 'isDefault' && k !== 'id');
   // Capture owner uid before the write so we can re-sync public drones after.
-  const before = await getOperator(id);
+  const before = touchesPublicPages ? await getOperator(id) : null;
   if (DEMO_MODE) {
     await demo.updateOperator(id, patch);
   } else {
@@ -113,16 +121,19 @@ export async function updateOperator(id: string, patch: Partial<Operator>): Prom
   if (before?.userId) await resyncUserPublicDrones(before.userId);
 }
 
+/**
+ * Delete an operator. The server moves drones that used it to the remaining
+ * default operator, ends any temporary switch to it and refreshes the
+ * affected public pages.
+ */
 export async function deleteOperator(id: string): Promise<void> {
-  const before = await getOperator(id);
   if (DEMO_MODE) {
+    const before = await getOperator(id);
     await demo.deleteOperator(id);
-  } else {
-    await awaitFirebaseAuthReady();
-    const db = getFirebaseDb();
-    await deleteDoc(doc(db, OPERATORS, id));
+    if (before?.userId) await resyncUserPublicDrones(before.userId);
+    return;
   }
-  if (before?.userId) await resyncUserPublicDrones(before.userId);
+  await deleteEntityOnServer('operators', id);
 }
 
 /** Admin-only: list every operator across users. */

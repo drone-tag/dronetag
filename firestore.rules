@@ -22,7 +22,7 @@ rules_version = '2';
 //     deny-from-client. Creates go through Next.js Admin-SDK API routes
 //     (and/or Cloud Functions where still deployed) which enforce quotas.
 //   • V-005/V-006 — anonymous `reports` create is also deny-from-client.
-//     The `submitReport` Cloud Function looks up the drone server-side,
+//     `POST /api/reports` (Admin SDK) looks up the drone server-side,
 //     derives the trustworthy ownerUserId, and applies an IP+slug
 //     rate limit. Clients cannot directly post reports anymore.
 //   • V-035 — App Check enforcement on the Cloud Functions side
@@ -63,23 +63,41 @@ service cloud.firestore {
       return entityDataLocked(data);
     }
     function entityDataLocked(data) {
+      // The updatedAt/createdAt heuristic only covers legacy records written
+      // before `dataLockedAt` existed. A record that carries the field (even
+      // empty) states its lock explicitly; every edit would otherwise lock it.
       return (data.dataLockedAt is string && data.dataLockedAt.size() > 0)
-          || (data.updatedAt is string && data.createdAt is string
+          || (!('dataLockedAt' in data)
+              && data.updatedAt is string && data.createdAt is string
               && data.updatedAt.size() > 0 && data.createdAt.size() > 0
               && data.updatedAt != data.createdAt);
     }
     function activeOperatorUpdateValid() {
+      // Only checked when the override itself changes: an expired or
+      // admin-set override must not block unrelated edits.
       return (
-        request.resource.data.activeOperatorId == null
+        !request.resource.data.diff(resource.data).affectedKeys().hasAny([
+          'activeOperatorId','activeOperatorUntil',
+          'activeOperatorSetAt','activeOperatorSetBy','activeOperatorReason'
+        ])
+        ||
+        request.resource.data.get('activeOperatorId', null) == null
         ||
         (
-          request.resource.data.activeOperatorSetBy == request.auth.uid
+          request.resource.data.get('activeOperatorSetBy', '') == request.auth.uid
           && request.resource.data.activeOperatorUntil is timestamp
           && request.resource.data.activeOperatorUntil > request.time
           && request.resource.data.activeOperatorUntil
                <= request.time + duration.value(24 * 60 + 2, 'm')
         )
       );
+    }
+    function ownerStatusChangeValid() {
+      // Owners move a drone between draft and active; suspending and
+      // archiving belong to admins, and a suspension cannot be lifted here.
+      return !request.resource.data.diff(resource.data).affectedKeys().hasAny(['status'])
+          || (resource.data.get('status', 'draft') in ['draft', 'active']
+              && request.resource.data.status in ['draft', 'active']);
     }
 
     // ─── Legacy `profiles` (admin-only; no anonymous reads) ─────────────
@@ -100,6 +118,7 @@ service cloud.firestore {
                               'email','phone','address',
                               'companyName','companyContactPerson','companyVat','companyUniqueNumber',
                               'profilePhotoUrl','logoUrl','bannerUrl',
+                              'language',
                               'updatedAt'
                             ]);
       allow read, write: if isAdmin();
@@ -164,6 +183,7 @@ service cloud.firestore {
                        && request.resource.data.userId == resource.data.userId
                        && request.resource.data.slug == resource.data.slug
                        && activeOperatorUpdateValid()
+                       && ownerStatusChangeValid()
                        && (
                          (
                            !droneDataLocked(resource.data)
@@ -219,7 +239,10 @@ service cloud.firestore {
     // bypasses these rules. Owners request publication; they do not author
     // its contents.
     match /dronesPublic/{slug} {
-      allow read: if true;
+      // A tap reads one page by slug; listing would let anyone enumerate
+      // every published owner.
+      allow get: if true;
+      allow list: if false;
       allow create, update, delete: if false;
 
       // Admin retains direct access for support and backfill.
@@ -327,15 +350,15 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
-    // ─── Reports — function-only create, owner-or-admin read ───────────
-    // V-005/V-006 closure: anonymous client create is denied. The
-    // `submitReport` Cloud Function looks up the drone, derives the
-    // trustworthy ownerUserId, applies a per-IP+slug rate limit, and
-    // writes the audit-safe payload via firebase-admin (which bypasses
-    // these rules). Owners read their own inbox; mark-as-read is the
-    // only permitted owner update.
+    // ─── Reports — server-only create, owner-or-admin read ─────────────
+    // V-005/V-006 closure: anonymous client create is denied.
+    // `POST /api/reports` looks up the drone, derives the trustworthy
+    // ownerUserId, applies a per-IP+slug rate limit, and writes the
+    // audit-safe payload via firebase-admin (which bypasses these rules).
+    // Owners read their own inbox; mark-as-read is the only permitted
+    // owner update.
     match /reports/{reportId} {
-      allow create: if false; // → see functions/src/submit-report.ts
+      allow create: if false; // → see src/app/api/reports/route.ts
 
       allow read: if isSignedIn() && request.auth.uid == resource.data.ownerUserId;
       allow read: if isAdmin();
@@ -343,13 +366,15 @@ service cloud.firestore {
       // Owner can only flip `read` to true; everything else is locked.
       allow update: if isSignedIn()
                        && request.auth.uid == resource.data.ownerUserId
-                       && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
+                       && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read'])
+                       && request.resource.data.read == true;
       allow update, delete: if isAdmin();
     }
 
-    // ─── Rate-limit buckets (used by Cloud Functions only) ─────────────
-    // The `submitReport` function writes here under the firebase-admin
-    // bypass; clients must never read or write this collection.
+    // ─── Rate-limit buckets (server only) ───────────────────────────────
+    // `POST /api/reports` (and the legacy `submitReport` function) write
+    // here under the firebase-admin bypass; clients must never read or
+    // write this collection.
     match /rateLimits/{key} {
       allow read, write: if false;
       allow read: if isAdmin();

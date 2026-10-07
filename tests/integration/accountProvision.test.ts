@@ -16,20 +16,29 @@ const verifyIdToken = vi.fn();
 const docs = new Map<string, Record<string, unknown>>();
 const setCalls: { path: string; data: Record<string, unknown> }[] = [];
 
+type Ref = { path: string };
+
+function snapshot(ref: Ref) {
+  return { exists: docs.has(ref.path), data: () => docs.get(ref.path) };
+}
+
+function write(path: string, data: Record<string, unknown>) {
+  docs.set(path, data);
+  setCalls.push({ path, data });
+}
+
 vi.mock('@/lib/server/firebaseAdmin', () => ({
   isFirebaseAdminConfigured: () => true,
   adminAuth: () => ({ verifyIdToken }),
   adminFirestore: () => ({
-    doc: (path: string) => ({
-      get: async () => ({
-        exists: docs.has(path),
-        data: () => docs.get(path),
+    doc: (path: string): Ref => ({ path }),
+    runTransaction: async <T,>(fn: (tx: unknown) => Promise<T>) =>
+      fn({
+        getAll: async (...refs: Ref[]) => refs.map(snapshot),
+        create: (ref: Ref, data: Record<string, unknown>) => write(ref.path, data),
+        update: (ref: Ref, patch: Record<string, unknown>) =>
+          write(ref.path, { ...(docs.get(ref.path) ?? {}), ...patch }),
       }),
-      set: async (data: Record<string, unknown>) => {
-        docs.set(path, data);
-        setCalls.push({ path, data });
-      },
-    }),
   }),
 }));
 
@@ -115,13 +124,17 @@ describe('provisioning', () => {
   });
 
   it('repairs an account left half-provisioned by the old broken flow', async () => {
-    docs.set('users/u1', { uid: 'u1' });
+    docs.set('users/u1', { uid: 'u1', firstName: 'Kept' });
 
-    const res = await POST(requestWith('valid'));
+    const res = await POST(requestWith('valid', { firstName: 'Ignored' }));
     const body = await res.json();
 
-    expect(body.created).toEqual({ account: false, pilot: true, slots: true });
-    expect(setCalls.map((c) => c.path)).toEqual(['pilots/u1', 'slots/u1']);
+    expect(body.created).toEqual({ account: true, pilot: true, slots: true });
+    expect(setCalls.map((c) => c.path)).toEqual(['users/u1', 'pilots/u1', 'slots/u1']);
+    const user = docs.get('users/u1')!;
+    // Missing fields are filled; what the user already had is not touched.
+    expect(user.firstName).toBe('Kept');
+    expect(user.email).toBe('u1@example.com');
   });
 
   it('provisions from the token alone, as the Google sign-in path does', async () => {

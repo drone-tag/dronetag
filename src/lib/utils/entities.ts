@@ -8,6 +8,7 @@
 import type { Certificate, Drone, Insurance, Operator, Pilot } from '@/lib/types/entities';
 import type { UserAccount } from '@/lib/types/account';
 import type { VerificationStatus } from '@/lib/types';
+import { computeCertificateStatus } from '@/lib/utils/expiry';
 
 // ─── Drone slug generation ─────────────────────────────────────────────────
 
@@ -57,13 +58,24 @@ export function isInsuranceDataLocked(i: Insurance): boolean {
   return isEntityDataLocked(i);
 }
 
-function isEntityDataLocked(entity: {
-  dataLockedAt?: string;
-  createdAt?: string;
-  updatedAt?: string;
-}): boolean {
-  if (entity.dataLockedAt) return true;
-  return Boolean(entity.updatedAt && entity.createdAt && entity.updatedAt !== entity.createdAt);
+/**
+ * Readers fill `dataLockedAt` for legacy documents too (see
+ * `lockedAtFromRaw`), so the field alone decides.
+ */
+function isEntityDataLocked(entity: { dataLockedAt?: string }): boolean {
+  return Boolean(entity.dataLockedAt);
+}
+
+/**
+ * `dataLockedAt` as the UI should see it. Documents written before the
+ * field existed count as locked once they were saved after creation — the
+ * same fallback the server and the Firestore rules apply.
+ */
+export function lockedAtFromRaw(raw: Record<string, unknown>): string {
+  if (typeof raw.dataLockedAt === 'string') return raw.dataLockedAt;
+  const created = typeof raw.createdAt === 'string' ? raw.createdAt : '';
+  const updated = typeof raw.updatedAt === 'string' ? raw.updatedAt : '';
+  return created && updated && created !== updated ? updated : '';
 }
 
 export function generateDroneSlug(): string {
@@ -147,8 +159,11 @@ export function accountDisplayName(a: UserAccount): string {
  * `drone.verificationStatus` field nor insurance coverage.
  */
 export function deriveCertificateVerification(
-  certificates: Certificate[],
+  all: Certificate[],
 ): { status: VerificationStatus; lastVerifiedAt: string } {
+  // An expired certificate no longer vouches for the pilot, whatever its
+  // review outcome was.
+  const certificates = all.filter((c) => computeCertificateStatus(c) !== 'expired');
   if (certificates.length === 0) {
     return { status: 'unverified', lastVerifiedAt: '' };
   }

@@ -1,6 +1,6 @@
 import {
   addDoc, collection, deleteDoc, doc, getDoc, getDocs,
-  limit, orderBy, query, updateDoc, where,
+  limit, query, updateDoc, where,
 } from 'firebase/firestore';
 
 import { awaitFirebaseAuthReady } from '@/lib/firebase/auth';

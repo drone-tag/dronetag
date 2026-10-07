@@ -22,6 +22,8 @@ import { Card } from '@/components/ui/Card';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { SectionHeader } from '@/components/ui/SectionHeader';
 
+const SUPPORT_POLL_MS = 20_000;
+
 export default function AccountSupportPage() {
   return (
     <Suspense
@@ -83,8 +85,23 @@ function AccountSupportInner() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
+  // Replies from the admin appear without a manual refresh.
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (!user) return;
+    const refresh = () => {
+      if (document.visibilityState !== 'visible') return;
+      reload(user.uid).catch(() => undefined);
+    };
+    const id = window.setInterval(refresh, SUPPORT_POLL_MS);
+    document.addEventListener('visibilitychange', refresh);
+    return () => {
+      window.clearInterval(id);
+      document.removeEventListener('visibilitychange', refresh);
+    };
+  }, [user]);
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }, [messages.length]);
 
   async function handleSend(e: React.FormEvent) {
@@ -161,7 +178,7 @@ function AccountSupportInner() {
                     className={classNames(
                       'max-w-[85%] rounded-2xl px-3.5 py-2.5 text-sm',
                       mine
-                        ? 'bg-[var(--color-action)] text-white'
+                        ? 'bg-[var(--color-action-solid)] text-white'
                         : 'bg-[var(--color-hover)] text-[var(--color-text)]',
                     )}
                   >
@@ -193,7 +210,7 @@ function AccountSupportInner() {
               value={subject}
               onChange={(e) => setSubject(e.target.value)}
               placeholder={t('support.composer.subjectPlaceholder')}
-              className="w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-card)] px-3 py-2 text-sm text-[var(--color-text)] outline-none focus:border-[var(--color-action)] focus:ring-2 focus:ring-[var(--color-action)]/20"
+              className="w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-card)] px-3 py-2 text-base text-[var(--color-text)] outline-none focus:border-[var(--color-action)] focus:ring-2 focus:ring-[var(--color-action)]/20 sm:text-sm"
             />
           ) : null}
           <div className="flex gap-2">
@@ -202,7 +219,7 @@ function AccountSupportInner() {
               onChange={(e) => setBody(e.target.value)}
               rows={2}
               placeholder={t('support.composer.placeholder')}
-              className="min-h-[2.75rem] flex-1 resize-y rounded-lg border border-[var(--color-border)] bg-[var(--color-card)] px-3 py-2 text-sm text-[var(--color-text)] outline-none focus:border-[var(--color-action)] focus:ring-2 focus:ring-[var(--color-action)]/20"
+              className="min-h-[2.75rem] flex-1 resize-y rounded-lg border border-[var(--color-border)] bg-[var(--color-card)] px-3 py-2 text-base text-[var(--color-text)] outline-none focus:border-[var(--color-action)] focus:ring-2 focus:ring-[var(--color-action)]/20 sm:text-sm"
             />
             <Button type="submit" loading={sending} disabled={!body.trim()}>
               {sending ? t('support.sending') : t('support.send')}

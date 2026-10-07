@@ -8,16 +8,24 @@
  */
 
 import {
-  collection, deleteDoc, doc, getDoc, getDocs,
-  query, updateDoc, where,
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  query,
+  updateDoc,
+  where,
 } from 'firebase/firestore';
 
 import { awaitFirebaseAuthReady } from '@/lib/firebase/auth';
 import { DEMO_MODE, getFirebaseDb } from '@/lib/firebase/config';
 import * as demo from '@/lib/demo/entitiesStore';
+import { lockedAtFromRaw } from '@/lib/utils/entities';
 import { fileToDataUrl } from '@/lib/demo/fileToDataUrl';
 import { resyncUserPublicDrones } from '@/lib/firebase/dronesPublic';
 import { adminFetch } from '@/lib/client/adminApi';
+import { attachFile, prepareFile } from '@/lib/client/fileUpload';
+import { deleteEntityOnServer } from '@/lib/client/entityApi';
 import type { Insurance, InsuranceLink } from '@/lib/types/entities';
 import type { VerificationStatus } from '@/lib/types';
 import { normalizeInsuranceDroneIds } from '@/lib/utils/insurance';
@@ -47,7 +55,7 @@ function insuranceFromRaw(id: string, raw: Record<string, unknown>): Insurance {
     verificationStatus: (str('verificationStatus') || 'unverified') as VerificationStatus,
     createdAt: str('createdAt'),
     updatedAt: str('updatedAt'),
-    dataLockedAt: str('dataLockedAt'),
+    dataLockedAt: lockedAtFromRaw(raw),
   };
 }
 
@@ -105,11 +113,12 @@ export async function createInsurance(
   return body.id;
 }
 
-/** Upload policy PDF via Admin SDK (avoids client Storage rules). */
+/** Upload the policy PDF and attach it to the insurance. */
 export async function uploadInsurancePolicyPdf(
   insuranceId: string,
   file: File,
   parserTrusted = false,
+  onProgress?: (fraction: number) => void,
 ): Promise<string> {
   if (DEMO_MODE) {
     await new Promise((r) => setTimeout(r, 300));
@@ -122,20 +131,18 @@ export async function uploadInsurancePolicyPdf(
     if (insurance?.userId) await resyncUserPublicDrones(insurance.userId);
     return pdfUrl;
   }
-  const before = await getInsurance(insuranceId);
-  const form = new FormData();
-  form.append('file', file);
-  if (parserTrusted) form.append('parserTrusted', '1');
-  const res = await adminFetch(`/api/entities/insurances/${insuranceId}/pdf`, {
-    method: 'POST',
-    body: form,
+  const prepared = await prepareFile(file, 'pdf');
+  // The route also refreshes the owner's public pages.
+  const body = await attachFile<{ pdfUrl?: string }>({
+    route: `/api/entities/insurances/${insuranceId}/pdf`,
+    objectPath: `insurances/${insuranceId}/policy.pdf`,
+    file: prepared.file,
+    contentType: prepared.contentType,
+    fileName: file.name,
+    fields: parserTrusted ? { parserTrusted: '1' } : undefined,
+    onProgress,
   });
-  const body = (await res.json().catch(() => ({}))) as { pdfUrl?: string; error?: string };
-  if (!res.ok) {
-    throw new Error(body.error || `upload policy pdf failed (${res.status})`);
-  }
   if (!body.pdfUrl) throw new Error('upload policy pdf failed: missing pdfUrl');
-  if (before?.userId) await resyncUserPublicDrones(before.userId);
   return body.pdfUrl;
 }
 
@@ -154,16 +161,21 @@ export async function updateInsurance(id: string, patch: Partial<Insurance>): Pr
   if (before?.userId) await resyncUserPublicDrones(before.userId);
 }
 
+/**
+ * Delete a policy. The server detaches it from every drone that points at
+ * it, removes the stored PDF and refreshes the affected public pages.
+ */
 export async function deleteInsurance(id: string): Promise<void> {
-  const before = await getInsurance(id);
   if (DEMO_MODE) {
+    const before = await getInsurance(id);
+    for (const d of before?.userId ? await demo.listDronesByUser(before.userId) : []) {
+      if (d.insuranceId === id) await demo.updateDrone(d.id, { insuranceId: null });
+    }
     await demo.deleteInsurance(id);
-  } else {
-    await awaitFirebaseAuthReady();
-    const db = getFirebaseDb();
-    await deleteDoc(doc(db, INSURANCES, id));
+    if (before?.userId) await resyncUserPublicDrones(before.userId);
+    return;
   }
-  if (before?.userId) await resyncUserPublicDrones(before.userId);
+  await deleteEntityOnServer('insurances', id);
 }
 
 /** Admin-only: list every insurance policy across users. */

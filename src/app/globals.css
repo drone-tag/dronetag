@@ -1,18 +1,29 @@
 @import "tailwindcss";
 
+/* `dark:` follows the in-app theme toggle, not only the OS setting. */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
 :root {
   --color-navy: #07152f;
+  /* Dark fill that carries white text in both themes (--color-navy flips). */
+  --color-navy-surface: #07152f;
   --color-brand-solid: #07152f;
   --color-on-brand: #ffffff;
   --color-action: #2563eb;
   --color-action-hover: #1d4ed8;
   --color-action-light: #eff6ff;
+  /* Fills behind white text: ≥ 4.5:1 contrast in both themes. */
+  --color-action-solid: #2563eb;
+  --color-action-solid-hover: #1d4ed8;
+  --color-danger: #dc2626;
+  --color-danger-solid: #dc2626;
   --color-app-bg: #f6f8fc;
   --color-card: #ffffff;
   --color-text: #111827;
   --color-text-secondary: #667085;
   --color-border: #e5e7eb;
   --color-hover: #f3f4f6;
+  --color-surface: #f8fafc;
   --color-danger-soft: #fef2f2;
   --color-valid: #16a34a;
   --color-expiring: #d97706;
@@ -65,17 +76,23 @@
 
 [data-theme="dark"] {
   --color-navy: #e8eef8;
+  --color-navy-surface: #15284a;
   --color-brand-solid: #3b82f6;
   --color-on-brand: #ffffff;
   --color-action: #60a5fa;
   --color-action-hover: #93c5fd;
   --color-action-light: rgb(59 130 246 / 0.16);
+  --color-action-solid: #2563eb;
+  --color-action-solid-hover: #1d4ed8;
+  --color-danger: #f87171;
+  --color-danger-solid: #dc2626;
   --color-app-bg: #0a0f1a;
   --color-card: #121a27;
   --color-text: #f1f5f9;
   --color-text-secondary: #94a3b8;
   --color-border: #243044;
   --color-hover: #1a2436;
+  --color-surface: #162031;
   --color-danger-soft: rgb(239 68 68 / 0.12);
   --color-valid: #34d399;
   --color-expiring: #fbbf24;
@@ -149,6 +166,8 @@ body {
   outline-offset: 2px;
 }
 
+/* Unlayered, so they override Tailwind padding on the same element instead of
+   adding to it. Where both are needed use e.g. `pb-[calc(1rem+var(--safe-bottom))]`. */
 .safe-pt   { padding-top: var(--safe-top); }
 .safe-pb   { padding-bottom: var(--safe-bottom); }
 .safe-px   { padding-left: var(--safe-left); padding-right: var(--safe-right); }
@@ -171,23 +190,18 @@ html[data-demo='true'] {
   --demo-banner-height: 2.25rem;
 }
 
-.pt-header {
+/* Real utilities (not plain classes) so responsive overrides like `md:pb-0` win. */
+@utility pt-header {
   padding-top: var(--app-header-offset);
 }
 
-.pb-bottom-nav {
+@utility pb-bottom-nav {
   padding-bottom: calc(var(--bottom-nav-height) + var(--safe-bottom) + 0.5rem);
 }
 
-.pb-bottom-nav-fab {
-  padding-bottom: calc(var(--bottom-nav-height) + var(--fab-clearance) + var(--safe-bottom));
-}
-
-@media (min-width: 1024px) {
-  .pb-bottom-nav,
-  .pb-bottom-nav-fab {
-    padding-bottom: 0;
-  }
+/* Room for the floating "new" button; the shell already clears the bottom nav. */
+@utility pb-fab {
+  padding-bottom: var(--fab-clearance);
 }
 
 .overflow-x-safe {

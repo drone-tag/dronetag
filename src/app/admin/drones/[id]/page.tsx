@@ -18,6 +18,9 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { ChangeEvent, FormEvent } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useToast } from '@/contexts/ToastContext';
+import { errorMessage } from '@/lib/client/errorMessage';
+import { notifyUserVerification } from '@/lib/client/notifyVerification';
 import { getAccount } from '@/lib/firebase/account';
 import { deleteDrone, getDrone, updateDrone } from '@/lib/firebase/drones';
 import { listOperators } from '@/lib/firebase/operators';
@@ -48,6 +51,7 @@ import { Select } from '@/components/ui/Select';
 import { ActiveOperatorPanel } from '@/components/account/ActiveOperatorPanel';
 import { ConfirmDialog } from '@/components/account/ConfirmDialog';
 import { FormErrorBanner } from '@/components/account/FormErrorBanner';
+import { LoadError } from '@/components/ui/LoadError';
 
 interface DroneFormState {
   manufacturer: string;
@@ -82,6 +86,7 @@ export default function AdminDroneDetailPage() {
   const router = useRouter();
   const { user } = useAuth();
   const { t } = useLanguage();
+  const toast = useToast();
 
   const droneId = useMemo(() => {
     const raw = params?.id;
@@ -100,19 +105,28 @@ export default function AdminDroneDetailPage() {
   const [dirty, setDirty] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const reload = useCallback(async () => {
     if (!droneId) return;
-    const d = await getDrone(droneId);
+    let d: Drone | null;
+    try {
+      d = await getDrone(droneId);
+      setLoadError(null);
+    } catch (err) {
+      console.error('[admin drone] load failed', err);
+      setLoadError(errorMessage(err, t, 'loadError.body'));
+      return;
+    }
     if (!d) {
       setDrone(null);
       return;
     }
     const [a, p, opList, insList] = await Promise.all([
-      getAccount(d.userId),
-      getPilot(d.linkedPilotId || d.userId),
-      listOperators(d.userId),
-      listInsurances(d.userId),
+      getAccount(d.userId).catch(() => null),
+      getPilot(d.linkedPilotId || d.userId).catch(() => null),
+      listOperators(d.userId).catch(() => [] as Operator[]),
+      listInsurances(d.userId).catch(() => [] as Insurance[]),
     ]);
     setDrone(d);
     setOwner(a);
@@ -121,7 +135,7 @@ export default function AdminDroneDetailPage() {
     setInsurances(insList);
     setForm(droneToForm(d));
     setDirty(false);
-  }, [droneId]);
+  }, [droneId, t]);
 
   useEffect(() => {
     let cancelled = false;
@@ -141,9 +155,17 @@ export default function AdminDroneDetailPage() {
     return (
       <div className="mx-auto max-w-[1400px] px-4 py-8 sm:px-6 lg:px-8">
         <div className="flex items-center gap-3 text-sm text-[var(--color-text-secondary)]">
-          <div className="h-4 w-4 animate-spin rounded-full border-2 border-[var(--color-border)] border-t-gray-600" />
+          <div className="h-4 w-4 animate-spin rounded-full border-2 border-[var(--color-border)] border-t-[var(--color-text-secondary)]" />
           {t('common.loading')}
         </div>
+      </div>
+    );
+  }
+
+  if (loadError && !drone) {
+    return (
+      <div className="mx-auto max-w-[1400px] px-4 py-8 sm:px-6 lg:px-8">
+        <LoadError message={loadError} onRetry={reload} />
       </div>
     );
   }
@@ -179,11 +201,24 @@ export default function AdminDroneDetailPage() {
           ? new Date().toISOString()
           : drone.publishedAt,
       });
+      const decided = form.verificationStatus !== drone.verificationStatus;
       await reload();
       setSavedAt(Date.now());
+      toast.success(t('account.saved'));
+      if (decided) {
+        const warning = await notifyUserVerification({
+          userId: drone.userId,
+          kind: 'drone',
+          label: [form.manufacturer, form.model].filter(Boolean).join(' ') || drone.slug,
+          status: form.verificationStatus,
+          adminUid: user?.uid,
+          t,
+        });
+        if (warning) toast.error(warning);
+      }
     } catch (err) {
       console.error('[admin drone] save failed', err);
-      setError(t('account.saveError'));
+      setError(errorMessage(err, t));
     } finally {
       setSaving(false);
     }
@@ -194,7 +229,12 @@ export default function AdminDroneDetailPage() {
     setSaving(true);
     try {
       await deleteDrone(drone.id);
+      toast.success(t('toast.drone.deleted'));
       router.push('/admin/drones');
+    } catch (err) {
+      console.error('[admin drone] delete failed', err);
+      toast.error(errorMessage(err, t, 'toast.drone.deleteFailed'));
+      setConfirmingDelete(false);
     } finally {
       setSaving(false);
     }
@@ -223,7 +263,7 @@ export default function AdminDroneDetailPage() {
               <>
                 {' '}
                 · {t('admin.drones.col.owner')}:{' '}
-                <Link href={`/admin/users/${owner.uid}`} className="text-blue-600 hover:underline">
+                <Link href={`/admin/users/${owner.uid}`} className="text-[var(--color-action)] hover:underline">
                   {accountDisplayName(owner)}
                 </Link>
               </>
@@ -232,7 +272,7 @@ export default function AdminDroneDetailPage() {
           </p>
           <p className="mt-1 text-xs text-[var(--color-text-secondary)]">{t('admin.drones.adminEdit.subtitle')}</p>
         </div>
-        <div className="flex shrink-0 items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 sm:shrink-0">
           {savedAt && !dirty ? (
             <span className="rounded-full bg-[var(--tone-success-bg)] px-2.5 py-1 text-xs font-medium text-[var(--tone-success-fg)] ring-1 ring-inset ring-[var(--tone-success-ring)]">
               {t('account.saved')}

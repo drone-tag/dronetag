@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { type ReactNode, useEffect, useMemo, useState } from 'react';
+import { type ReactNode, useCallback, useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { getAccount } from '@/lib/firebase/account';
@@ -13,15 +13,18 @@ import { listOperators } from '@/lib/firebase/operators';
 import { computeCertificateStatus, computePolicyStatus, daysUntilExpiry, formatDate } from '@/lib/utils';
 import { operatorDisplayName } from '@/lib/utils/entities';
 import { getPublicProfileUrl } from '@/lib/utils';
+import { PublicLinkCard } from '@/components/account/PublicLinkCard';
 import { Card } from '@/components/ui/Card';
 import { PolicyStatusBadge, VerificationBadge } from '@/components/ui/StatusBadge';
 import { ResponsivePageHeader } from '@/components/ui/ResponsivePageHeader';
 import { CoverdroneCta } from '@/components/account/CoverdroneCta';
 import { OnboardingChecklist } from '@/components/account/OnboardingChecklist';
 import { UserAvatar } from '@/components/ui/UserAvatar';
+import { LoadError } from '@/components/ui/LoadError';
 import type { Certificate, DocumentRef, Drone, Insurance, Operator } from '@/lib/types/entities';
 import type { UserAccount } from '@/lib/types/account';
 import type { PolicyStatus, VerificationStatus } from '@/lib/types';
+import { formatDroneClass } from '@/lib/droneCatalog';
 
 type ExpiryAlert = {
   id: string;
@@ -70,37 +73,51 @@ export function AccountDashboard() {
   const [account, setAccount] = useState<UserAccount | null>(null);
   const [profilePhotoUrl, setProfilePhotoUrl] = useState('');
 
+  const [partialFailure, setPartialFailure] = useState(false);
+
+  const load = useCallback(async () => {
+    if (!user) return;
+    // Each list renders on its own: one failed read must not blank the page.
+    const results = await Promise.allSettled([
+      listOperators(user.uid),
+      listDronesByUser(user.uid),
+      listCertificates(user.uid),
+      listInsurances(user.uid),
+      listDocuments(user.uid),
+      getAccount(user.uid),
+    ] as const);
+    const [ops, drs, certs, ins, docs, acctResult] = results;
+    const value = <T,>(r: PromiseSettledResult<T>, fallback: T): T =>
+      r.status === 'fulfilled' ? r.value : fallback;
+    setPartialFailure(results.some((r) => r.status === 'rejected'));
+    setOperators(value(ops, []));
+    setDrones(value(drs, []));
+    setCertificates(value(certs, []));
+    setInsurances(value(ins, []));
+    setDocuments(value(docs, []));
+    const acct = value(acctResult, null);
+    const name = acct
+      ? acct.accountType === 'company' && acct.companyName?.trim()
+        ? acct.companyName.trim()
+        : [acct.firstName, acct.lastName].filter(Boolean).join(' ').trim()
+      : user.displayName ?? '';
+    setDisplayName(name);
+    setAccount(acct);
+    setProfilePhotoUrl(acct?.profilePhotoUrl ?? '');
+  }, [user]);
+
   useEffect(() => {
     if (!user) return;
     let cancelled = false;
     (async () => {
       try {
-        const [ops, drs, certs, ins, docs, acct] = await Promise.all([
-          listOperators(user.uid),
-          listDronesByUser(user.uid),
-          listCertificates(user.uid),
-          listInsurances(user.uid),
-          listDocuments(user.uid),
-          getAccount(user.uid).catch(() => null),
-        ]);
-        if (cancelled) return;
-        setOperators(ops);
-        setDrones(drs);
-        setCertificates(certs);
-        setInsurances(ins);
-        setDocuments(docs);
-        const name = acct
-          ? [acct.firstName, acct.lastName].filter(Boolean).join(' ').trim()
-          : user.displayName ?? user.email ?? '';
-        setDisplayName(name);
-        setAccount(acct);
-        setProfilePhotoUrl(acct?.profilePhotoUrl ?? '');
+        await load();
       } finally {
         if (!cancelled) setLoading(false);
       }
     })();
     return () => { cancelled = true; };
-  }, [user]);
+  }, [user, load]);
 
   const stats = useMemo(() => {
     const validCerts = certificates.filter((c) => computeCertificateStatus(c) === 'valid').length;
@@ -243,22 +260,29 @@ export function AccountDashboard() {
     );
   }
 
-  const firstName = displayName.split(/\s+/)[0] || t('account.nav.home');
+  const greetingName =
+    account?.accountType === 'company' ? displayName : displayName.split(/\s+/)[0] ?? '';
 
   return (
     <div className="space-y-4 sm:space-y-6">
       <ResponsivePageHeader
-        title={t('account.dashboard.greeting', { name: firstName })}
+        title={
+          greetingName
+            ? t('account.dashboard.greeting', { name: greetingName })
+            : t('account.dashboard.greetingAnon')
+        }
         subtitle={t('account.dashboard.subtitle')}
         actions={
           <UserAvatar
-            name={displayName}
+            name={displayName || user?.email || ''}
             photoUrl={profilePhotoUrl}
             className="h-10 w-10 shrink-0 sm:h-11 sm:w-11"
-            textClassName="bg-[var(--color-navy)] text-xs text-white sm:text-sm"
+            textClassName="bg-[var(--color-navy-surface)] text-xs text-white sm:text-sm"
           />
         }
       />
+
+      {partialFailure ? <LoadError onRetry={load} /> : null}
 
       {verifyAlerts.length > 0 ? (
         <div
@@ -456,7 +480,7 @@ export function AccountDashboard() {
           <Link key={d.id} href={`/account/drones/${d.id}`} className="app-card flex items-center justify-between gap-2 p-4 transition hover:border-[var(--color-action)]/30">
             <div className="min-w-0">
               <p className="font-semibold text-[var(--color-text)]">{[d.manufacturer, d.model].filter(Boolean).join(' ') || d.slug}</p>
-              <p className="mt-1 text-xs text-[var(--color-text-secondary)]">{d.classMarking}</p>
+              <p className="mt-1 text-xs text-[var(--color-text-secondary)]">{formatDroneClass(d.classMarking, t)}</p>
             </div>
             <VerificationBadge status={d.verificationStatus} />
           </Link>
@@ -501,9 +525,7 @@ export function AccountDashboard() {
         ))}
       </DashboardSection>
 
-      {stats.publicDrone ? (
-        <p className="truncate text-center text-[10px] text-[var(--color-text-secondary)] sm:text-[11px]">{getPublicProfileUrl(stats.publicDrone.slug)}</p>
-      ) : null}
+      {stats.publicDrone ? <PublicLinkCard url={getPublicProfileUrl(stats.publicDrone.slug)} /> : null}
     </div>
   );
 }

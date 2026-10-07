@@ -111,6 +111,8 @@ const csp = [
     `script-src`,
     `'self'`,
     `'unsafe-inline'`,
+    // Certificate OCR (tesseract.js) compiles WebAssembly; this allows only that, not eval().
+    `'wasm-unsafe-eval'`,
     'https://apis.google.com',
     ...RECAPTCHA_HOSTS,
   ].join(' '),
@@ -194,16 +196,32 @@ const nextConfig: NextConfig = {
   // (native deps / google-cloud). Keep it external; do not bundle it.
   // The jwks-rsa → jose CJS/ESM boundary is resolved by the jose@4.15.9
   // npm override, not by externalizing jose or jwks-rsa.
-  serverExternalPackages: ['firebase-admin'],
+  // pdfjs-dist resolves its fake worker with a runtime import(); bundled,
+  // that import fails and server-side PDF parsing never runs.
+  serverExternalPackages: ['firebase-admin', 'pdfjs-dist'],
+  outputFileTracingIncludes: {
+    '/api/entities/**': ['./node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs'],
+  },
   // Monorepo layout: app lives in Sito/ but repo root may contain other lockfiles.
   turbopack: {
     root: projectRoot,
   },
   async headers() {
-    return [{ source: '/:path*', headers: securityHeaders }];
+    return [
+      { source: '/:path*', headers: securityHeaders },
+      {
+        source: '/u/:path*',
+        headers: [{ key: 'X-Robots-Tag', value: 'noindex, nofollow, noarchive' }],
+      },
+    ];
   },
   async redirects() {
     return [
+      // Links in emails sent before the account area moved.
+      { source: '/dashboard', destination: '/account', permanent: false },
+      { source: '/dashboard/reports', destination: '/account/inbox', permanent: false },
+      { source: '/dashboard/support', destination: '/account/support', permanent: false },
+      { source: '/dashboard/:path*', destination: '/account', permanent: false },
       {
         source: '/admin/profiles',
         destination: '/admin/users',

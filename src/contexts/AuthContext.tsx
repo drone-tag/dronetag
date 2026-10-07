@@ -5,9 +5,10 @@ import type { User } from 'firebase/auth';
 import { onAuthChange } from '@/lib/firebase/auth';
 import { DEMO_MODE } from '@/lib/firebase/config';
 import { DEMO_PERSONA_EVENT, getDemoPersona } from '@/lib/demo/personas';
+import { tokenExpiry } from '@/lib/auth/sessionCookieNames';
 
 const TOKEN_COOKIE = '__dronetag_idt';
-const REFRESH_INTERVAL_MS = 5 * 60 * 1000;
+const REFRESH_INTERVAL_MS = 10 * 60 * 1000;
 
 interface AuthContextType {
   user: User | null;
@@ -31,11 +32,24 @@ function setIdTokenCookie(token: string | null): void {
     document.cookie = `${TOKEN_COOKIE}=; path=/; max-age=0; SameSite=Strict${secure}`;
     return;
   }
-  document.cookie = `${TOKEN_COOKIE}=${token}; path=/; max-age=${55 * 60}; SameSite=Strict${secure}`;
+  // Never longer than the token itself stays valid.
+  const exp = tokenExpiry(token);
+  const remaining = exp ? exp - Math.floor(Date.now() / 1000) : 55 * 60;
+  const maxAge = Math.max(60, Math.min(55 * 60, remaining));
+  document.cookie = `${TOKEN_COOKIE}=${token}; path=/; max-age=${maxAge}; SameSite=Strict${secure}`;
 }
+
+function hasIdTokenCookie(): boolean {
+  if (typeof document === 'undefined') return false;
+  return document.cookie.split(';').some((c) => c.trim().startsWith(`${TOKEN_COOKIE}=`));
+}
+
+let lastPostedSessionToken: string | null = null;
 
 async function postSessionCookie(token: string): Promise<void> {
   if (DEMO_MODE) return;
+  if (token === lastPostedSessionToken) return;
+  lastPostedSessionToken = token;
   try {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 3000);
@@ -48,12 +62,13 @@ async function postSessionCookie(token: string): Promise<void> {
     });
     clearTimeout(timer);
   } catch {
-    /* best-effort */
+    lastPostedSessionToken = null;
   }
 }
 
 async function clearSessionCookie(): Promise<void> {
   if (DEMO_MODE) return;
+  lastPostedSessionToken = null;
   try {
     await fetch('/api/session', { method: 'DELETE', credentials: 'same-origin' });
   } catch {
@@ -73,9 +88,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     async function applyClaims(u: User | null, forceRefresh = false): Promise<void> {
       if (!u) {
+        const hadSession = hasIdTokenCookie() || lastPostedSessionToken !== null;
         setIsAdmin(false);
         setIdTokenCookie(null);
-        void clearSessionCookie();
+        if (hadSession) void clearSessionCookie();
         setClaimsReady(true);
         return;
       }
@@ -87,52 +103,79 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      const token = await u.getIdToken(forceRefresh);
       const tokenResult = await u.getIdTokenResult(forceRefresh);
       if (cancelled) return;
       setIsAdmin(tokenResult.claims.admin === true);
-      setIdTokenCookie(token);
-      void postSessionCookie(token);
+      setIdTokenCookie(tokenResult.token);
       setClaimsReady(true);
+      // The JS-readable cookie set above already satisfies the proxy and the
+      // admin layout; the HttpOnly copy is defence in depth, so it is only
+      // refreshed alongside a freshly minted token.
+      if (forceRefresh) void postSessionCookie(tokenResult.token);
     }
 
-    let initialAuthEvent = true;
+    let currentUid: string | null = null;
+    let settled = false;
 
     const unsubscribe = onAuthChange((u) => {
+      const isNewIdentity = (u?.uid ?? null) !== currentUid;
+      currentUid = u?.uid ?? null;
       setUser(u);
+      // Claims belong to an identity: never let a previous user's admin flag
+      // (or "ready" state) leak into the next sign-in on the same tab.
+      if (u && isNewIdentity && !DEMO_MODE) {
+        setIsAdmin(false);
+        setClaimsReady(false);
+      }
       void (async () => {
         try {
           await applyClaims(u, false);
-          if (u && initialAuthEvent && !DEMO_MODE) {
-            initialAuthEvent = false;
+          if (u && isNewIdentity && !DEMO_MODE) {
             void applyClaims(u, true).catch(() => undefined);
           }
         } catch (err) {
           console.warn('[auth] claims apply failed', err);
           if (!cancelled) setClaimsReady(true);
         } finally {
+          settled = true;
           if (!cancelled) setLoading(false);
         }
       })();
     });
 
+    // Safety net for a stalled auth bootstrap only; once the first auth event
+    // has been processed, later sign-ins must wait for their own claims.
     const loadingTimeout = setTimeout(() => {
-      if (!cancelled) {
+      if (!cancelled && !settled) {
         setLoading(false);
         setClaimsReady(true);
       }
     }, 2500);
 
-    refreshTimerRef.current = setInterval(async () => {
+    let lastRefreshAt = Date.now();
+    async function refreshClaims(): Promise<void> {
       if (DEMO_MODE) return;
       const current = (await import('@/lib/firebase/auth')).getCurrentUser?.();
       if (!current) return;
+      lastRefreshAt = Date.now();
       try {
         await applyClaims(current, true);
       } catch {
         /* ignore */
       }
-    }, REFRESH_INTERVAL_MS);
+    }
+
+    refreshTimerRef.current = setInterval(() => void refreshClaims(), REFRESH_INTERVAL_MS);
+
+    // Background tabs and sleeping laptops skip timer ticks; catch up as soon
+    // as the page is visible again so the cookies never go stale under a
+    // user who is actively navigating.
+    function onVisible() {
+      if (document.visibilityState !== 'visible') return;
+      if (Date.now() - lastRefreshAt < REFRESH_INTERVAL_MS) return;
+      void refreshClaims();
+    }
+    document.addEventListener('visibilitychange', onVisible);
 
     function onPersonaChange() {
       if (!DEMO_MODE) return;
@@ -145,6 +188,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       clearTimeout(loadingTimeout);
       unsubscribe();
       if (refreshTimerRef.current) clearInterval(refreshTimerRef.current);
+      document.removeEventListener('visibilitychange', onVisible);
       window.removeEventListener(DEMO_PERSONA_EVENT, onPersonaChange);
     };
   }, []);

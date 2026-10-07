@@ -25,11 +25,32 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { SectionHeader } from '@/components/ui/SectionHeader';
 import { AdminSubNav } from '@/components/layout/AdminSubNav';
 
+/** Shape of GET /api/health (see src/app/api/health/route.ts). */
 interface HealthPayload {
   status: 'ok' | 'degraded';
-  build: { version: string; commit: string; environment: string; bootedAt: string };
-  firebase: { adminConfigured: boolean };
-  security: { appCheckEnforce: boolean; cspMode: 'enforce' | 'report-only' | 'disabled' };
+  version?: string;
+  commit?: string;
+}
+
+async function fetchHealth(): Promise<HealthPayload | null> {
+  try {
+    const res = await fetch('/api/health', { credentials: 'same-origin', cache: 'no-store' });
+    const body = (await res.json().catch(() => ({}))) as Partial<HealthPayload>;
+    return {
+      status: res.ok && body.status === 'ok' ? 'ok' : 'degraded',
+      version: typeof body.version === 'string' ? body.version : undefined,
+      commit: typeof body.commit === 'string' ? body.commit : undefined,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function settledValue<T>(result: PromiseSettledResult<T>, fallback: T, failures: string[], label: string): T {
+  if (result.status === 'fulfilled') return result.value;
+  console.error(`[admin overview] ${label} failed`, result.reason);
+  failures.push(label);
+  return fallback;
 }
 
 function isQueued(status: VerificationStatus): boolean {
@@ -52,45 +73,51 @@ type DashboardData = {
   unreadReports: Report[];
   supportNeedsReply: SupportThread[];
   overrides: Drone[];
+  /** Totals; the lists above only keep the most recent few. */
+  counts: { unreadReports: number; supportNeedsReply: number; overrides: number };
   publicDrones: number;
   users: number;
   accountsByUid: Map<string, UserAccount>;
   health: HealthPayload | null;
+  /** Sections that could not be loaded; the rest of the page still renders. */
+  failures: string[];
 };
 
 export default function AdminOverviewPage() {
   const { t } = useLanguage();
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
+    setLoading(true);
     (async () => {
       try {
-        const [
-          accounts,
-          drones,
-          reports,
-          certificates,
-          documents,
-          insurances,
-          authorizations,
-          threads,
-          healthRes,
-        ] = await Promise.all([
-          listAllAccounts(),
-          listAllDrones(),
-          listAllReports(),
-          listAllCertificates(),
-          listAllDocuments(),
-          listAllInsurances(),
-          listAllAuthorizations(),
-          listSupportThreads(),
-          fetch('/api/health', { credentials: 'same-origin' })
-            .then((r) => r.json() as Promise<HealthPayload>)
-            .catch(() => null),
+        const [results, healthRes] = await Promise.all([
+          Promise.allSettled([
+            listAllAccounts(),
+            listAllDrones(),
+            listAllReports(),
+            listAllCertificates(),
+            listAllDocuments(),
+            listAllInsurances(),
+            listAllAuthorizations(),
+            listSupportThreads(),
+          ] as const),
+          fetchHealth(),
         ]);
         if (cancelled) return;
+
+        const failures: string[] = [];
+        const accounts = settledValue(results[0], [], failures, t('admin.nav.users'));
+        const drones = settledValue(results[1], [], failures, t('admin.nav.drones'));
+        const reports = settledValue(results[2], [], failures, t('admin.nav.reports'));
+        const certificates = settledValue(results[3], [], failures, t('admin.verify.tab.certificates'));
+        const documents = settledValue(results[4], [], failures, t('admin.verify.tab.documents'));
+        const insurances = settledValue(results[5], [], failures, t('admin.verify.tab.insurances'));
+        const authorizations = settledValue(results[6], [], failures, t('admin.verify.tab.authorizations'));
+        const threads = settledValue(results[7], [], failures, t('admin.nav.support'));
 
         const accountsByUid = new Map(accounts.map((a) => [a.uid, a]));
         const queue = {
@@ -108,30 +135,35 @@ export default function AdminOverviewPage() {
           queue.authorizations +
           queue.drones;
 
-        const unreadReports = reports
-          .filter((r) => !r.read)
-          .sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''))
-          .slice(0, 6);
+        const allUnreadReports = reports
+          .filter((r) => !r.adminReadAt)
+          .sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
 
-        const supportNeedsReply = threads
-          .filter((th) => th.status === 'open' && (th.adminUnreadCount || 0) > 0)
-          .sort((a, b) => (b.lastMessageAt || '').localeCompare(a.lastMessageAt || ''))
-          .slice(0, 6);
+        // `pending` means support already replied, but a new user message
+        // still needs an answer.
+        const allSupportNeedsReply = threads
+          .filter((th) => th.status !== 'closed' && (th.adminUnreadCount || 0) > 0)
+          .sort((a, b) => (b.lastMessageAt || '').localeCompare(a.lastMessageAt || ''));
 
-        const overrides = drones
+        const allOverrides = drones
           .filter((d) => isActiveOperatorOverride(d))
-          .sort((a, b) => (a.activeOperatorUntil || '').localeCompare(b.activeOperatorUntil || ''))
-          .slice(0, 6);
+          .sort((a, b) => (a.activeOperatorUntil || '').localeCompare(b.activeOperatorUntil || ''));
 
         setData({
           queue,
-          unreadReports,
-          supportNeedsReply,
-          overrides,
+          unreadReports: allUnreadReports.slice(0, 6),
+          supportNeedsReply: allSupportNeedsReply.slice(0, 6),
+          overrides: allOverrides.slice(0, 6),
+          counts: {
+            unreadReports: allUnreadReports.length,
+            supportNeedsReply: allSupportNeedsReply.length,
+            overrides: allOverrides.length,
+          },
           publicDrones: drones.filter((d) => d.status === 'active' && d.visibility === 'public').length,
           users: accounts.length,
           accountsByUid,
           health: healthRes,
+          failures,
         });
       } catch (err) {
         console.error('[admin overview] load failed', err);
@@ -142,11 +174,14 @@ export default function AdminOverviewPage() {
     return () => {
       cancelled = true;
     };
-  }, []);
+    // `t` changes identity with the language; the labels are only used for
+    // the failure notice, which does not warrant refetching every list.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reloadKey]);
 
   const attentionTotal = useMemo(() => {
     if (!data) return 0;
-    return data.queue.total + data.unreadReports.length + data.supportNeedsReply.length;
+    return data.queue.total + data.counts.unreadReports + data.counts.supportNeedsReply;
   }, [data]);
 
   return (
@@ -155,13 +190,40 @@ export default function AdminOverviewPage() {
       <div className="mx-auto max-w-[1400px] px-4 py-8 sm:px-6 lg:px-8">
         <SectionHeader title={t('admin.title')} description={t('admin.overview.subtitle')} />
 
-        {loading || !data ? (
-          <div className="mt-6 flex items-center gap-3 text-sm text-[var(--color-text-secondary)]">
-            <div className="h-4 w-4 animate-spin rounded-full border-2 border-[var(--color-border)] border-t-[var(--color-action)]" />
-            {t('common.loading')}
+        {loading && !data ? (
+          <OverviewSkeleton />
+        ) : !data ? (
+          <div className="mt-6 rounded-xl border border-[var(--tone-danger-border)] bg-[var(--tone-danger-bg)] px-4 py-3 text-sm text-[var(--tone-danger-fg)]" role="alert">
+            <p className="font-semibold">{t('admin.overview.loadFailed')}</p>
+            <button
+              type="button"
+              onClick={() => setReloadKey((n) => n + 1)}
+              className="mt-2 text-xs font-semibold underline underline-offset-2"
+            >
+              {t('common.retry')}
+            </button>
           </div>
         ) : (
           <>
+            {data.failures.length > 0 ? (
+              <div
+                className="mt-4 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[var(--tone-danger-border)] bg-[var(--tone-danger-bg)] px-4 py-3 text-sm text-[var(--tone-danger-fg)]"
+                role="alert"
+              >
+                <p>
+                  <span className="font-semibold">{t('admin.overview.partialFailure')}</span>{' '}
+                  <span className="opacity-90">({data.failures.join(', ')})</span>
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setReloadKey((n) => n + 1)}
+                  disabled={loading}
+                  className="text-xs font-semibold underline underline-offset-2 disabled:opacity-60"
+                >
+                  {t('common.retry')}
+                </button>
+              </div>
+            ) : null}
             {attentionTotal > 0 ? (
               <div
                 className="mt-4 rounded-xl border border-[var(--tone-warning-border)] bg-[var(--tone-warning-bg)] px-4 py-3 text-sm text-[var(--tone-warning-fg)]"
@@ -192,20 +254,20 @@ export default function AdminOverviewPage() {
               <ActionStat
                 href="/admin/reports"
                 label={t('admin.overview.stat.unreadReports')}
-                value={data.unreadReports.length}
-                variant={data.unreadReports.length > 0 ? 'warning' : 'default'}
+                value={data.counts.unreadReports}
+                variant={data.counts.unreadReports > 0 ? 'warning' : 'default'}
               />
               <ActionStat
                 href="/admin/support"
                 label={t('admin.overview.stat.support')}
-                value={data.supportNeedsReply.length}
-                variant={data.supportNeedsReply.length > 0 ? 'warning' : 'default'}
+                value={data.counts.supportNeedsReply}
+                variant={data.counts.supportNeedsReply > 0 ? 'warning' : 'default'}
               />
               <ActionStat
                 href="/admin/drones"
                 label={t('admin.overview.stat.overrides')}
-                value={data.overrides.length}
-                variant={data.overrides.length > 0 ? 'warning' : 'default'}
+                value={data.counts.overrides}
+                variant={data.counts.overrides > 0 ? 'warning' : 'default'}
               />
             </div>
 
@@ -489,30 +551,43 @@ function ActionStat({
   );
 }
 
+function OverviewSkeleton() {
+  return (
+    <div className="mt-4 animate-pulse" aria-hidden>
+      <div className="h-14 rounded-xl bg-[var(--color-hover)]" />
+      <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        {[0, 1, 2, 3].map((i) => (
+          <div key={i} className="h-[84px] rounded-xl bg-[var(--color-hover)]" />
+        ))}
+      </div>
+      <div className="mt-6 grid gap-4 lg:grid-cols-2">
+        {[0, 1, 2, 3].map((i) => (
+          <div key={i} className="h-56 rounded-xl bg-[var(--color-hover)]" />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function OpsFooter({ health }: { health: HealthPayload | null }) {
+  const { t } = useLanguage();
   if (!health) return null;
-  const statusColour =
-    health.status === 'ok'
-      ? 'bg-[var(--tone-success-bg)] text-[var(--tone-success-fg)] ring-[var(--tone-success-ring)]'
-      : 'bg-[var(--tone-warning-bg)] text-[var(--tone-warning-fg)] ring-[var(--tone-warning-ring)]';
-  const fbColour = health.firebase.adminConfigured
+  const ok = health.status === 'ok';
+  const statusColour = ok
     ? 'bg-[var(--tone-success-bg)] text-[var(--tone-success-fg)] ring-[var(--tone-success-ring)]'
     : 'bg-[var(--tone-danger-bg)] text-[var(--tone-danger-fg)] ring-[var(--tone-danger-ring)]';
 
   return (
     <div className="mt-8 flex flex-wrap items-center gap-2 border-t border-[var(--color-border)] pt-4 text-[11px] text-[var(--color-text-secondary)]">
       <span className={`rounded-full px-2.5 py-0.5 font-medium ring-1 ring-inset ${statusColour}`}>
-        {health.status}
+        {ok ? t('admin.overview.health.ok') : t('admin.overview.health.degraded')}
       </span>
-      <span className={`rounded-full px-2.5 py-0.5 font-medium ring-1 ring-inset ${fbColour}`}>
-        Admin SDK: {health.firebase.adminConfigured ? 'ok' : 'missing'}
-      </span>
-      <span className="ml-auto font-mono">
-        v{health.build.version}
-        {health.build.commit ? ` · ${health.build.commit}` : ''}
-        {' · '}
-        {health.build.environment}
-      </span>
+      {health.version ? (
+        <span className="ml-auto font-mono">
+          v{health.version}
+          {health.commit ? ` · ${health.commit}` : ''}
+        </span>
+      ) : null}
     </div>
   );
 }

@@ -51,7 +51,7 @@ export function VerificationPreview() {
       <div className="min-w-0 rounded-2xl border border-[var(--color-border)] bg-[var(--color-card)] p-4 shadow-[var(--shadow-card)] sm:p-5">
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[var(--color-navy)] text-sm font-bold text-white">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[var(--color-navy-surface)] text-sm font-bold text-white">
               MB
             </div>
             <div>

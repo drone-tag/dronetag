@@ -118,7 +118,7 @@ export function Modal({ isOpen, onClose, title, children, footer, description }:
         </div>
 
         {footer ? (
-          <div className="safe-pb shrink-0 border-t border-[var(--color-border)] bg-[var(--color-card)] px-4 py-3 sm:px-6 sm:py-4">
+          <div className="shrink-0 border-t border-[var(--color-border)] bg-[var(--color-card)] px-4 pt-3 pb-[calc(0.75rem+var(--safe-bottom))] sm:px-6 sm:pt-4 sm:pb-[calc(1rem+var(--safe-bottom))]">
             {footer}
           </div>
         ) : null}

@@ -22,7 +22,7 @@ export type SelectProps = {
 >;
 
 const fieldBase =
-  'w-full rounded-lg border bg-[var(--color-card)] px-4 py-2.5 text-sm text-[var(--color-text)] outline-none transition focus:border-[var(--color-action)] focus:ring-2 focus:ring-[var(--color-action)]/20';
+  'w-full rounded-lg border bg-[var(--color-card)] px-4 py-3 text-base text-[var(--color-text)] outline-none transition focus:border-[var(--color-action)] focus:ring-2 focus:ring-[var(--color-action)]/20 sm:py-2.5 sm:text-sm';
 
 export function Select({
   label,
@@ -71,9 +71,11 @@ export function Select({
         )}
         {...rest}
       >
-        <option value="" disabled>
-          {t('common.select')}
-        </option>
+        {options.some((opt) => opt.value === '') ? null : (
+          <option value="" disabled>
+            {t('common.select')}
+          </option>
+        )}
         {options.map((opt) => (
           <option key={opt.value} value={opt.value}>
             {opt.label}

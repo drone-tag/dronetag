@@ -7,13 +7,13 @@ import { useAuth } from '@/contexts/AuthContext';
 /** Warm common post-login routes so client navigations feel instant. */
 export function AuthRoutePrefetch() {
   const router = useRouter();
-  const { user, loading } = useAuth();
+  const { user, loading, isAdmin } = useAuth();
 
   useEffect(() => {
     if (loading || !user) return;
     router.prefetch('/account');
-    router.prefetch('/admin');
-  }, [user, loading, router]);
+    if (isAdmin) router.prefetch('/admin');
+  }, [user, loading, isAdmin, router]);
 
   return null;
 }

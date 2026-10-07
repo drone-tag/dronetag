@@ -1,29 +1,42 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { errorMessage } from '@/lib/client/errorMessage';
 import { getOrdersForUser } from '@/lib/firebase/orders';
 import type { Order, OrderStatus } from '@/lib/types/account';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { EntityListRow } from '@/components/ui/EntityListRow';
 import { ResponsivePageHeader } from '@/components/ui/ResponsivePageHeader';
 import { Card } from '@/components/ui/Card';
+import { LoadError, PageLoading } from '@/components/ui/LoadError';
 
 export default function AccountOrdersPage() {
   const { user } = useAuth();
   const { t } = useLanguage();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+
+  const reload = useCallback(async () => {
+    if (!user) return;
+    try {
+      setOrders(await getOrdersForUser(user.uid));
+      setLoadError(null);
+    } catch (err) {
+      console.error('[orders] load failed', err);
+      setLoadError(errorMessage(err, t, 'loadError.body'));
+    }
+  }, [user, t]);
 
   useEffect(() => {
     if (!user) return;
     let cancelled = false;
     (async () => {
       try {
-        const list = await getOrdersForUser(user.uid);
-        if (!cancelled) setOrders(list);
+        await reload();
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -31,22 +44,17 @@ export default function AccountOrdersPage() {
     return () => {
       cancelled = true;
     };
-  }, [user]);
+  }, [user, reload]);
 
-  if (loading) {
-    return (
-      <div className="flex items-center gap-3 text-sm text-[var(--color-text-secondary)]">
-        <div className="h-4 w-4 animate-spin rounded-full border-2 border-[var(--color-border)] border-t-[var(--color-action)]" />
-        {t('common.loading')}
-      </div>
-    );
-  }
+  if (loading) return <PageLoading />;
 
   return (
     <div className="space-y-3 sm:space-y-4">
       <ResponsivePageHeader title={t('account.tabOrders')} />
 
-      {orders.length === 0 ? (
+      {loadError ? (
+        <LoadError message={loadError} onRetry={reload} />
+      ) : orders.length === 0 ? (
         <EmptyState
           title={t('orders.emptyTitle')}
           description={t('orders.emptyDesc')}

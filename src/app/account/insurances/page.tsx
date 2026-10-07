@@ -11,7 +11,8 @@
  *   that the public profile will lose its insurance status.
  */
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import Link from 'next/link';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ChangeEvent, FormEvent } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -20,10 +21,10 @@ import {
   createInsurance,
   deleteInsurance,
   listInsurances,
-  updateInsurance,
   uploadInsurancePolicyPdf,
 } from '@/lib/firebase/insurances';
-import { listDronesByUser, updateDrone } from '@/lib/firebase/drones';
+import { listDronesByUser } from '@/lib/firebase/drones';
+import { errorMessage } from '@/lib/client/errorMessage';
 import { listOperators } from '@/lib/firebase/operators';
 import { extractTextFromPdf } from '@/lib/insurance/extractPdfText';
 import { parsePolicyPdfText, matchDronesFromPolicySpecs } from '@/lib/insurance/parsePolicyPdf';
@@ -52,6 +53,7 @@ import { EntityListShell } from '@/components/account/EntityListShell';
 import { FormErrorBanner } from '@/components/account/FormErrorBanner';
 import { ReadOnlyField } from '@/components/account/ReadOnlyField';
 import { EntityPdfPreviewModal } from '@/components/account/EntityPdfPreviewModal';
+import { LoadError, PageLoading } from '@/components/ui/LoadError';
 import type { ParsedPolicyFields } from '@/lib/insurance/parsePolicyPdf';
 import { insuranceFormMatchesParser } from '@/lib/parser/autoVerify';
 import { classNames } from '@/lib/utils';
@@ -150,36 +152,41 @@ export default function AccountInsurancesPage() {
   const [previewing, setPreviewing] = useState<Insurance | null>(null);
   const [savingId, setSavingId] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
-  const reload = useMemo(() => async () => {
+  const reload = useCallback(async () => {
     if (!user) return;
-    const [iList, dList, oList] = await Promise.all([
-      listInsurances(user.uid),
-      listDronesByUser(user.uid),
-      listOperators(user.uid),
-    ]);
-    setInsurances(iList);
-    setDrones(dList);
-    setOperators(oList);
-  }, [user]);
+    try {
+      const [iList, dList, oList] = await Promise.all([
+        listInsurances(user.uid),
+        listDronesByUser(user.uid),
+        listOperators(user.uid),
+      ]);
+      setInsurances(iList);
+      setDrones(dList);
+      setOperators(oList);
+      setLoadError(null);
+    } catch (err) {
+      console.error('[insurances] load failed', err);
+      setLoadError(errorMessage(err, t, 'loadError.body'));
+    }
+  }, [user, t]);
 
   useEffect(() => {
     if (!user) return;
     let cancelled = false;
     (async () => {
-      try { await reload(); } finally { if (!cancelled) setLoading(false); }
+      try {
+        await reload();
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
     })();
     return () => { cancelled = true; };
   }, [user, reload]);
 
-  if (loading) {
-    return (
-      <div className="mt-8 flex items-center gap-3 text-sm text-[var(--color-text-secondary)]">
-        <div className="h-4 w-4 animate-spin rounded-full border-2 border-[var(--color-border)] border-t-gray-600" />
-        {t('common.loading')}
-      </div>
-    );
-  }
+  if (loading) return <PageLoading />;
 
   function publicDronesUsingInsurance(insId: string): Drone[] {
     return drones.filter((d) =>
@@ -195,10 +202,11 @@ export default function AccountInsurancesPage() {
     if (!user) return;
     setSavingId('new');
     setSaveError(null);
+    let insuranceId: string | null = null;
     try {
       const droneIds = [...new Set(form.droneIds)];
       const operatorId = form.link === 'operator' ? (form.operatorId || null) : null;
-      const insuranceId = await createInsurance({
+      insuranceId = await createInsurance({
         userId: user.uid,
         link: form.link,
         droneId: droneIds[0] ?? null,
@@ -210,17 +218,14 @@ export default function AccountInsurancesPage() {
         issueDate: form.issueDate,
         expiryDate: form.expiryDate,
         notes: '',
-        pdfUrl: pendingPdf ? '' : form.pdfUrl,
-        verificationStatus: parserTrusted ? 'verified' : 'pending',
+        pdfUrl: '',
+        verificationStatus: 'pending',
       });
 
+      // The server decides the verification status from the stored PDF.
       if (pendingPdf) {
-        await uploadInsurancePolicyPdf(insuranceId, pendingPdf, parserTrusted);
-        if (parserTrusted) {
-          await updateInsurance(insuranceId, { verificationStatus: 'verified' });
-        }
-      } else if (parserTrusted) {
-        await updateInsurance(insuranceId, { verificationStatus: 'verified' });
+        setUploadProgress(0);
+        await uploadInsurancePolicyPdf(insuranceId, pendingPdf, parserTrusted, setUploadProgress);
       }
 
       await reload();
@@ -228,13 +233,16 @@ export default function AccountInsurancesPage() {
       toast.success(t('toast.insurance.created'));
     } catch (err) {
       console.error('[insurances] create failed', err);
-      setSaveError(
-        err instanceof Error && err.message === 'storage_billing_required'
-          ? t('account.storageBillingRequired')
-          : (err instanceof Error ? err.message : t('account.saveError')),
-      );
+      // Policies lock on creation, so one whose PDF never arrived could not
+      // be completed later: remove it and let the user retry.
+      if (insuranceId && pendingPdf) {
+        await deleteInsurance(insuranceId).catch(() => undefined);
+        await reload();
+      }
+      setSaveError(errorMessage(err, t));
     } finally {
       setSavingId(null);
+      setUploadProgress(null);
     }
   }
 
@@ -242,19 +250,14 @@ export default function AccountInsurancesPage() {
     if (!confirmingDelete) return;
     setSavingId(confirmingDelete.id);
     try {
-      // Detach from any drone(s) that reference this policy so they don't
-      // hold a dangling insuranceId.
-      const dependents = drones.filter((d) => d.insuranceId === confirmingDelete.id);
-      await Promise.all(dependents.map((d) => updateDrone(d.id, { insuranceId: null })));
+      // The server detaches covered drones and refreshes their public pages.
       await deleteInsurance(confirmingDelete.id);
       await reload();
       setConfirmingDelete(null);
       toast.success(t('toast.insurance.deleted'));
     } catch (err) {
-      // Detaching dependent drones happens first, so a failure here can leave
-      // those drones without a policy. Saying so beats a silent no-op.
       console.error('[insurances] delete failed', err);
-      toast.error(t('toast.insurance.deleteFailed'));
+      toast.error(errorMessage(err, t, 'toast.insurance.deleteFailed'));
     } finally {
       setSavingId(null);
     }
@@ -267,8 +270,7 @@ export default function AccountInsurancesPage() {
       newLabel={t('insurance.list.new')}
       onNew={() => setCreating(true)}
     >
-      <FormErrorBanner show={Boolean(saveError)} message={saveError ?? undefined} />
-      {(() => {
+      {loadError ? <LoadError message={loadError} onRetry={reload} /> : (() => {
         const activeInsurances = insurances.filter((i) => computePolicyStatus(i) !== 'expired');
         const archivedCount = insurances.length - activeInsurances.length;
         return (
@@ -276,9 +278,9 @@ export default function AccountInsurancesPage() {
       {archivedCount > 0 ? (
         <p className="mb-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm text-[var(--color-text-secondary)]">
           {t('permits.archiveNotice').replace('{count}', String(archivedCount))}{' '}
-          <a href="/account/archive" className="font-medium text-[var(--color-action)] underline-offset-2 hover:underline">
+          <Link href="/account/archive" className="font-medium text-[var(--color-action)] underline-offset-2 hover:underline">
             {t('account.tab.archive')}
-          </a>
+          </Link>
         </p>
       ) : null}
       {activeInsurances.length === 0 ? (
@@ -329,8 +331,15 @@ export default function AccountInsurancesPage() {
           drones={drones}
           operators={operators}
           saving={savingId === 'new'}
-          onClose={() => setCreating(false)}
+          error={saveError}
+          progress={uploadProgress}
+          onClose={() => {
+            if (savingId === 'new') return;
+            setCreating(false);
+            setSaveError(null);
+          }}
           onSubmit={(form, pendingPdf, parserTrusted) => {
+            setSaveError(null);
             setPendingCreate({ form, pendingPdf, parserTrusted });
             setConfirmingCreate(true);
           }}
@@ -461,9 +470,11 @@ function InsuranceRow({
           </p>
           <p className="mt-0.5 text-[11px] leading-snug text-[var(--color-text-secondary)] sm:text-xs">
             {t('insurance.field.coveredDrones')}:{' '}
-            {coveredCount > 0
+            {coveredCount > 1
               ? `${t('insurance.coveredCount', { count: coveredCount })} · ${coveredLabel}`
-              : '—'}
+              : coveredCount === 1
+                ? coveredLabel
+                : '—'}
           </p>
           <p className="mt-0.5 text-[11px] text-[var(--color-text-secondary)] sm:text-xs">
             {insurance.issueDate && insurance.expiryDate ? (
@@ -477,8 +488,9 @@ function InsuranceRow({
             )}
           </p>
           {publicUsage > 0 ? (
-            <p className="mt-1 text-[11px] text-[var(--tone-warning-fg)] sm:text-xs">
-              {t('insurance.delete.warningPublic')}
+            <p className="mt-1.5 inline-flex items-center gap-1.5 text-[11px] font-medium text-[var(--tone-success-fg)] sm:text-xs">
+              <span className="h-1.5 w-1.5 rounded-full bg-current" aria-hidden />
+              {t('insurance.row.onPublicPage')}
             </p>
           ) : null}
           {status === 'expiring' || status === 'expired' ? (
@@ -499,6 +511,8 @@ function InsuranceFormModal({
   drones,
   operators,
   saving,
+  error,
+  progress,
   onClose,
   onSubmit,
 }: {
@@ -506,6 +520,8 @@ function InsuranceFormModal({
   drones: Drone[];
   operators: Operator[];
   saving: boolean;
+  error: string | null;
+  progress: number | null;
   onClose: () => void;
   onSubmit: (form: InsuranceFormState, pendingPdf: File | null, parserTrusted: boolean) => void;
 }) {
@@ -637,7 +653,10 @@ function InsuranceFormModal({
       title={t('insurance.create.title')}
     >
       <form onSubmit={handleSubmit} noValidate className="space-y-4">
-        <FormErrorBanner show={Object.keys(errors).length > 0} />
+        <FormErrorBanner
+          show={Boolean(error) || Object.values(errors).some(Boolean)}
+          message={error ?? undefined}
+        />
 
         <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-hover)] p-4">
           <UploadField
@@ -645,18 +664,19 @@ function InsuranceFormModal({
             accept=".pdf,application/pdf"
             currentUrl={pdfPreviewUrl || undefined}
             onUpload={handlePdfUpload}
-            onRemove={pdfPreviewUrl ? handlePdfRemove : undefined}
+            onRemove={pdfPreviewUrl && !saving ? handlePdfRemove : undefined}
             preview
+            progress={progress}
             className="mb-0"
           />
           {parsing ? (
             <p className="mt-2 flex items-center gap-2 text-xs text-[var(--color-text-secondary)]">
-              <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-[var(--color-border)] border-t-gray-600" />
+              <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-[var(--color-border)] border-t-[var(--color-text-secondary)]" />
               {t('insurance.parse.parsing')}
             </p>
           ) : null}
           {parseMessage ? (
-            <p className="mt-2 text-xs text-blue-700">{parseMessage}</p>
+            <p className="mt-2 text-xs text-[var(--tone-info-fg)]">{parseMessage}</p>
           ) : null}
           <p className="mt-2 text-[11px] text-[var(--color-text-secondary)]">{t('insurance.parse.hint')}</p>
           <p className="mt-1 text-[11px] text-[var(--color-text-secondary)]">{t('account.verification.uploadHint')}</p>
@@ -688,7 +708,7 @@ function InsuranceFormModal({
                   <p>
                     {t('insurance.parse.dronesDetected', { count: detectedDrones.rows.length })}
                     {detectedDrones.matchedDroneIds.length > 0 ? (
-                      <span className="text-emerald-700">
+                      <span className="text-[var(--tone-success-fg)]">
                         {' '}
                         · {t('insurance.parse.dronesMatched', { count: detectedDrones.matchedDroneIds.length })}
                       </span>
@@ -810,7 +830,7 @@ function InsuranceFormModal({
           <Button variant="ghost" onClick={onClose} disabled={saving}>
             {t('common.cancel')}
           </Button>
-          <Button type="submit" loading={saving}>
+          <Button type="submit" loading={saving} disabled={parsing}>
             {t('common.confirm')}
           </Button>
         </div>
@@ -869,9 +889,11 @@ function InsuranceViewModal({
           <ReadOnlyField
             label={t('insurance.field.coveredDrones')}
             value={
-              coveredCount > 0
+              coveredCount > 1
                 ? `${t('insurance.coveredCount', { count: coveredCount })} — ${coveredLabel}`
-                : '—'
+                : coveredCount === 1
+                  ? coveredLabel
+                  : '—'
             }
             className="sm:col-span-2"
           />
@@ -901,7 +923,7 @@ function InsuranceViewModal({
             </Button>
           ) : null}
           <Button variant="ghost" onClick={onClose}>
-            {t('common.cancel')}
+            {t('common.close')}
           </Button>
         </div>
       </div>

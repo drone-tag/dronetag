@@ -8,10 +8,12 @@
  */
 
 import Link from 'next/link';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useToast } from '@/contexts/ToastContext';
+import { errorMessage } from '@/lib/client/errorMessage';
 import { listAllAccounts } from '@/lib/firebase/account';
-import { listAllReports, markReportRead } from '@/lib/firebase/reports';
+import { listAllReports, markReportReadByAdmin } from '@/lib/firebase/reports';
 import type { UserAccount } from '@/lib/types/account';
 import type { Report } from '@/lib/types/entities';
 import { accountDisplayName } from '@/lib/utils/entities';
@@ -21,23 +23,41 @@ import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
 import { SectionHeader } from '@/components/ui/SectionHeader';
+import { LoadError } from '@/components/ui/LoadError';
 
 export default function AdminReportsPage() {
   const { t } = useLanguage();
+  const toast = useToast();
   const [reports, setReports] = useState<Report[]>([]);
   const [accounts, setAccounts] = useState<UserAccount[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [busyId, setBusyId] = useState<string | null>(null);
+
+  const notifyReason = (code: string) => {
+    const key = `admin.notify.reason.${code}`;
+    const text = t(key);
+    return text === key ? code : text;
+  };
+
+  const reload = useCallback(async () => {
+    try {
+      const [r, a] = await Promise.all([listAllReports(), listAllAccounts().catch(() => [])]);
+      setReports(r);
+      setAccounts(a);
+      setLoadError(null);
+    } catch (err) {
+      console.error('[admin reports] load failed', err);
+      setLoadError(errorMessage(err, t, 'loadError.body'));
+    }
+  }, [t]);
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
-        const [r, a] = await Promise.all([listAllReports(), listAllAccounts()]);
-        if (cancelled) return;
-        setReports(r);
-        setAccounts(a);
+        await reload();
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -45,7 +65,7 @@ export default function AdminReportsPage() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [reload]);
 
   const accountsByUid = useMemo(() => {
     const map = new Map<string, UserAccount>();
@@ -74,11 +94,14 @@ export default function AdminReportsPage() {
   }, [reports, search, accountsByUid]);
 
   async function handleMarkRead(r: Report) {
-    if (r.read) return;
+    if (r.adminReadAt) return;
     setBusyId(r.id);
     try {
-      await markReportRead(r.id);
-      setReports((prev) => prev.map((x) => (x.id === r.id ? { ...x, read: true } : x)));
+      const at = await markReportReadByAdmin(r.id);
+      setReports((prev) => prev.map((x) => (x.id === r.id ? { ...x, adminReadAt: at } : x)));
+    } catch (err) {
+      console.error('[admin reports] mark read failed', err);
+      toast.error(errorMessage(err, t));
     } finally {
       setBusyId(null);
     }
@@ -100,8 +123,12 @@ export default function AdminReportsPage() {
 
       {loading ? (
         <div className="mt-6 flex items-center gap-3 text-sm text-[var(--color-text-secondary)]">
-          <div className="h-4 w-4 animate-spin rounded-full border-2 border-[var(--color-border)] border-t-gray-600" />
+          <div className="h-4 w-4 animate-spin rounded-full border-2 border-[var(--color-border)] border-t-[var(--color-text-secondary)]" />
           {t('common.loading')}
+        </div>
+      ) : loadError ? (
+        <div className="mt-6">
+          <LoadError message={loadError} onRetry={reload} />
         </div>
       ) : filtered.length === 0 ? (
         <Card className="mt-6 text-center" padding="lg">
@@ -124,13 +151,32 @@ export default function AdminReportsPage() {
                       </h3>
                       <span
                         className={
-                          r.read
+                          r.adminReadAt
                             ? 'rounded-full bg-[var(--color-hover)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-[var(--color-text-secondary)] ring-1 ring-inset ring-[var(--color-border)]'
                             : 'rounded-full bg-[var(--tone-info-bg)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-[var(--tone-info-fg)] ring-1 ring-inset ring-[var(--tone-info-ring)]'
                         }
                       >
-                        {r.read ? t('inbox.read') : t('inbox.unread')}
+                        {r.adminReadAt ? t('inbox.read') : t('inbox.unread')}
                       </span>
+                      <span className="text-[11px] text-[var(--color-text-secondary)]">
+                        {r.read ? t('admin.reports.ownerRead') : t('admin.reports.ownerUnread')}
+                      </span>
+                      {r.notificationAttemptedAt ? (
+                        <span
+                          className={
+                            r.emailNotified
+                              ? 'text-[11px] text-[var(--color-text-secondary)]'
+                              : 'text-[11px] font-medium text-[var(--tone-warning-fg)]'
+                          }
+                        >
+                          ·{' '}
+                          {r.emailNotified
+                            ? t('admin.reports.emailSent')
+                            : t('admin.reports.emailNotSent', {
+                                reason: notifyReason(r.notificationError || 'email_send_failed'),
+                              })}
+                        </span>
+                      ) : null}
                     </div>
                     <p className="text-xs text-[var(--color-text-secondary)]">
                       <Link
@@ -218,7 +264,7 @@ export default function AdminReportsPage() {
                     ) : null}
                   </div>
                   <div className="flex shrink-0 flex-col items-stretch gap-2">
-                    {!r.read ? (
+                    {!r.adminReadAt ? (
                       <Button
                         variant="ghost"
                         size="sm"

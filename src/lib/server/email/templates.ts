@@ -54,23 +54,29 @@ function paragraphs(lines: string[]): string {
 
 // ─── Admin verification outcome ────────────────────────────────────────────
 
-export type VerifiableEntity = 'certificate' | 'insurance' | 'document' | 'authorization';
+export type VerifiableEntity = 'certificate' | 'insurance' | 'document' | 'authorization' | 'drone';
 export type VerificationOutcome = 'approved' | 'rejected';
 
-const ENTITY_LABEL: Record<EmailLocale, Record<VerifiableEntity, string>> = {
-  it: {
-    certificate: 'certificato',
-    insurance: 'assicurazione',
-    document: 'documento',
-    authorization: 'autorizzazione',
-  },
-  en: {
-    certificate: 'certificate',
-    insurance: 'insurance policy',
-    document: 'document',
-    authorization: 'authorisation',
-  },
+/** Italian needs the grammatical gender for the article and the participle. */
+const IT_ENTITY: Record<VerifiableEntity, { label: string; feminine: boolean }> = {
+  certificate: { label: 'certificato', feminine: false },
+  insurance: { label: 'assicurazione', feminine: true },
+  document: { label: 'documento', feminine: false },
+  authorization: { label: 'autorizzazione', feminine: true },
+  drone: { label: 'drone', feminine: false },
 };
+
+const EN_ENTITY: Record<VerifiableEntity, string> = {
+  certificate: 'certificate',
+  insurance: 'insurance policy',
+  document: 'document',
+  authorization: 'authorisation',
+  drone: 'drone',
+};
+
+function capitalize(value: string): string {
+  return value.charAt(0).toUpperCase() + value.slice(1);
+}
 
 export interface VerificationEmailInput {
   locale: EmailLocale;
@@ -89,25 +95,27 @@ export function verificationEmail(input: VerificationEmailInput): {
   html: string;
 } {
   const { locale, entity, outcome, itemLabel, reason, dashboardUrl } = input;
-  const label = ENTITY_LABEL[locale][entity];
-  const named = itemLabel ? `${label} “${itemLabel}”` : label;
+  const approved = outcome === 'approved';
 
   if (locale === 'it') {
-    const approved = outcome === 'approved';
+    const { label, feminine } = IT_ENTITY[entity];
+    const named = itemLabel ? `${label} “${itemLabel}”` : label;
+    const yours = feminine ? 'La tua' : 'Il tuo';
+    const suffix = feminine ? 'a' : 'o';
     const subject = approved
-      ? `DroneTag — ${label} approvato`
-      : `DroneTag — ${label} non approvato`;
+      ? `DroneTag — ${capitalize(label)} approvat${suffix}`
+      : `DroneTag — ${capitalize(label)} non approvat${suffix}`;
     const lines = approved
       ? [
-          `Il tuo ${named} è stato verificato e approvato.`,
+          `${yours} ${named} è stat${suffix} verificat${suffix} e approvat${suffix}.`,
           'Lo stato di verifica del tuo profilo pubblico è aggiornato.',
         ]
       : [
-          `Il tuo ${named} non è stato approvato.`,
+          `${yours} ${named} non è stat${suffix} approvat${suffix}.`,
           ...(reason ? [`Motivazione: ${reason}`] : []),
-          'Puoi caricare una versione corretta dalla tua dashboard.',
+          'Puoi caricare una versione corretta dalla tua area personale.',
         ];
-    const cta = 'Apri la dashboard';
+    const cta = 'Apri DroneTag';
     return {
       subject,
       text: `${lines.join('\n\n')}\n\n${cta}: ${dashboardUrl}`,
@@ -115,10 +123,11 @@ export function verificationEmail(input: VerificationEmailInput): {
     };
   }
 
-  const approved = outcome === 'approved';
+  const label = EN_ENTITY[entity];
+  const named = itemLabel ? `${label} “${itemLabel}”` : label;
   const subject = approved
-    ? `DroneTag — ${label} approved`
-    : `DroneTag — ${label} not approved`;
+    ? `DroneTag — ${capitalize(label)} approved`
+    : `DroneTag — ${capitalize(label)} not approved`;
   const lines = approved
     ? [
         `Your ${named} has been reviewed and approved.`,
@@ -127,9 +136,9 @@ export function verificationEmail(input: VerificationEmailInput): {
     : [
         `Your ${named} was not approved.`,
         ...(reason ? [`Reason: ${reason}`] : []),
-        'You can upload a corrected version from your dashboard.',
+        'You can upload a corrected version from your account.',
       ];
-  const cta = 'Open dashboard';
+  const cta = 'Open DroneTag';
   return {
     subject,
     text: `${lines.join('\n\n')}\n\n${cta}: ${dashboardUrl}`,

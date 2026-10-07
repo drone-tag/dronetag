@@ -5,10 +5,14 @@ import {
   ReCaptchaV3Provider,
   type AppCheck,
 } from 'firebase/app-check';
-import { getAuth, type Auth } from 'firebase/auth';
-import { getFirestore, initializeFirestore, type Firestore } from 'firebase/firestore';
-import { getFunctions, type Functions } from 'firebase/functions';
-import { getStorage, type FirebaseStorage } from 'firebase/storage';
+import { connectAuthEmulator, getAuth, type Auth } from 'firebase/auth';
+import {
+  connectFirestoreEmulator,
+  getFirestore,
+  initializeFirestore,
+  type Firestore,
+} from 'firebase/firestore';
+import { connectStorageEmulator, getStorage, type FirebaseStorage } from 'firebase/storage';
 
 /**
  * Next.js inlines NEXT_PUBLIC_* env vars at compile time via literal replacement.
@@ -33,6 +37,12 @@ const appId = process.env.NEXT_PUBLIC_FIREBASE_APP_ID ?? '';
  */
 export const DEMO_MODE = !apiKey || !projectId;
 
+/**
+ * Local development against the Firebase Emulator Suite
+ * (`firebase emulators:start`). Never set in a deployed environment.
+ */
+export const USE_FIREBASE_EMULATORS = process.env.NEXT_PUBLIC_FIREBASE_USE_EMULATORS === 'true';
+
 if (typeof window !== 'undefined' && DEMO_MODE) {
   const isHttps = window.location.protocol === 'https:';
   const isLocalhost = ['localhost', '127.0.0.1', '0.0.0.0'].includes(window.location.hostname);
@@ -48,7 +58,6 @@ let app: FirebaseApp | null = null;
 let auth: Auth | null = null;
 let db: Firestore | null = null;
 let storage: FirebaseStorage | null = null;
-let functions: Functions | null = null;
 let appCheck: AppCheck | null = null;
 
 if (!DEMO_MODE) {
@@ -69,7 +78,13 @@ if (!DEMO_MODE) {
     ? initializeFirestore(app, { experimentalAutoDetectLongPolling: true })
     : getFirestore(app);
   storage = getStorage(app);
-  functions = getFunctions(app, process.env.NEXT_PUBLIC_FIREBASE_FUNCTIONS_REGION ?? 'us-central1');
+
+  if (USE_FIREBASE_EMULATORS && isNewFirebaseApp) {
+    const host = process.env.NEXT_PUBLIC_FIREBASE_EMULATOR_HOST || '127.0.0.1';
+    connectAuthEmulator(auth, `http://${host}:9099`, { disableWarnings: true });
+    connectFirestoreEmulator(db, host, 8080);
+    connectStorageEmulator(storage, host, 9199);
+  }
 
   // ─── App Check (PR-SEC-2 V-035) ─────────────────────────────────────────
   // Init only in the browser. Two providers supported:
@@ -78,7 +93,7 @@ if (!DEMO_MODE) {
   // Skipped silently in development if no key is present so local dev
   // doesn't require an Enterprise key. Enforcement is configured in the
   // Firebase Console — start in MONITOR mode for a couple of weeks.
-  if (typeof window !== 'undefined' && isNewFirebaseApp) {
+  if (typeof window !== 'undefined' && isNewFirebaseApp && !USE_FIREBASE_EMULATORS) {
     const enterpriseKey = process.env.NEXT_PUBLIC_RECAPTCHA_ENTERPRISE_SITE_KEY;
     const v3Key = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY;
     const debugToken = process.env.NEXT_PUBLIC_APP_CHECK_DEBUG_TOKEN;
@@ -121,11 +136,6 @@ export function getFirebaseDb(): Firestore {
 export function getFirebaseStorage(): FirebaseStorage {
   if (!storage) throw new Error('Firebase Storage not initialized (demo mode?)');
   return storage;
-}
-
-export function getFirebaseFunctions(): Functions {
-  if (!functions) throw new Error('Firebase Functions not initialized (demo mode?)');
-  return functions;
 }
 
 /** Returns the App Check instance if it was initialised, else null. */

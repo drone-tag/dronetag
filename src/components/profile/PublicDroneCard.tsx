@@ -14,10 +14,9 @@
 
 import { type ReactNode, useEffect, useState } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { ALL_LANGUAGES } from '@/lib/types';
 import type { PolicyStatus, VerificationStatus } from '@/lib/types';
 import type { DroneClass, DronePublicSnapshot } from '@/lib/types/entities';
-import { classNames, formatDate, formatDateTime } from '@/lib/utils';
+import { classNames, formatDate, formatDateTime, statusFromExpiryDate } from '@/lib/utils';
 import { trackEvent } from '@/lib/analytics';
 import { Button } from '@/components/ui/Button';
 import { ReportFoundDroneForm } from './ReportFoundDroneForm';
@@ -116,19 +115,6 @@ function insuranceBannerKey(status: PolicyStatus): string {
   }
 }
 
-function userBadgeKey(status: VerificationStatus): string {
-  switch (status) {
-    case 'verified':
-      return 'publicDrone.userVerified';
-    case 'pending':
-      return 'publicDrone.userPending';
-    case 'rejected':
-      return 'publicDrone.userRejected';
-    default:
-      return 'publicDrone.userUnverified';
-  }
-}
-
 function certificateBadgeKey(status: VerificationStatus): string {
   switch (status) {
     case 'verified':
@@ -151,11 +137,20 @@ export type PublicDroneCardProps = {
    * everything renderable came from the projection at write time.
    */
   snapshot: DronePublicSnapshot;
-  /** Visitor language code; passed in to keep the card a pure renderer. */
-  language: string;
 };
 
-export function PublicDroneCard({ snapshot, language }: PublicDroneCardProps) {
+/**
+ * The snapshot stores the policy status as of its last write; the expiry
+ * date decides what it is today, so a lapsed policy never shows as active.
+ */
+function currentInsuranceStatus(snapshot: DronePublicSnapshot): PolicyStatus {
+  if (snapshot.insuranceStatus === 'missing' || !snapshot.insuranceValidUntil) {
+    return snapshot.insuranceStatus;
+  }
+  return statusFromExpiryDate(snapshot.insuranceValidUntil);
+}
+
+export function PublicDroneCard({ snapshot }: PublicDroneCardProps) {
   const { t } = useLanguage();
   const [reportOpen, setReportOpen] = useState(false);
 
@@ -165,15 +160,13 @@ export function PublicDroneCard({ snapshot, language }: PublicDroneCardProps) {
     trackEvent('qr_page_opened', { slug: snapshot.slug });
   }, [snapshot.slug]);
 
-  const policy = policyConfig[snapshot.insuranceStatus as PolicyStatus];
-  const verification = verificationConfig[snapshot.verificationStatus];
-  // ALL_LANGUAGES so a profile stored in a hidden language still gets a proper
-  // label rather than a bare code.
-  const langLabel =
-    ALL_LANGUAGES.find((l) => l.value === language)?.label ?? language.toUpperCase();
+  const insuranceStatus = currentInsuranceStatus(snapshot);
+  const policy = policyConfig[insuranceStatus] ?? policyConfig.missing;
+  const verification = verificationConfig[snapshot.verificationStatus] ?? verificationConfig.unverified;
 
   return (
-    <div className="overflow-hidden rounded-none border-y border-[var(--color-border)] bg-[var(--color-card)] shadow-none sm:rounded-xl sm:border sm:shadow-lg">
+    // `overflow-clip`, not `overflow-hidden`: the latter would stop the report bar from sticking.
+    <div className="overflow-clip rounded-none border-y border-[var(--color-border)] bg-[var(--color-card)] shadow-none sm:rounded-xl sm:border sm:shadow-lg">
       {/* ── Banner + identity ─────────────────────────────────────────── */}
       <div className="relative">
         <div className="relative h-32 w-full overflow-hidden sm:h-36">
@@ -183,7 +176,8 @@ export function PublicDroneCard({ snapshot, language }: PublicDroneCardProps) {
               src={snapshot.bannerUrl}
               alt=""
               referrerPolicy="no-referrer"
-              loading="lazy"
+              fetchPriority="high"
+              decoding="async"
               className="h-full w-full object-cover"
             />
           ) : (
@@ -197,7 +191,7 @@ export function PublicDroneCard({ snapshot, language }: PublicDroneCardProps) {
               src={snapshot.logoUrl}
               alt=""
               referrerPolicy="no-referrer"
-              loading="lazy"
+              decoding="async"
               className="absolute right-3 top-3 h-9 w-9 rounded-lg border border-white/20 bg-[var(--color-card)] object-contain p-0.5 shadow-lg sm:right-4 sm:top-4 sm:h-11 sm:w-11"
             />
           ) : null}
@@ -211,7 +205,8 @@ export function PublicDroneCard({ snapshot, language }: PublicDroneCardProps) {
                 src={snapshot.profilePhotoUrl}
                 alt=""
                 referrerPolicy="no-referrer"
-                loading="lazy"
+                fetchPriority="high"
+                decoding="async"
                 className="h-[5.5rem] w-[5.5rem] shrink-0 rounded-2xl border-[3px] border-white bg-[var(--color-hover)] object-cover shadow-md sm:h-24 sm:w-24"
               />
             ) : (
@@ -224,7 +219,7 @@ export function PublicDroneCard({ snapshot, language }: PublicDroneCardProps) {
             )}
 
             <div className="min-w-0 flex-1 sm:pb-0.5">
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-sky-700">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-[var(--tone-info-fg)]">
                 {t(holderRoleKey(snapshot.holderKind))}
               </p>
               <h1 className="mt-0.5 text-[1.35rem] font-bold leading-tight tracking-tight text-[var(--color-text)] sm:text-2xl">
@@ -249,16 +244,6 @@ export function PublicDroneCard({ snapshot, language }: PublicDroneCardProps) {
           )}
         >
           <span className={classNames('h-2.5 w-2.5 shrink-0 rounded-full', verification.dot)} aria-hidden />
-          {t(userBadgeKey(snapshot.verificationStatus))}
-        </span>
-        <span
-          className={classNames(
-            'inline-flex w-full items-center gap-2 rounded-full px-3 py-2 text-xs font-semibold ring-1 ring-inset sm:w-auto sm:py-1.5 sm:text-sm',
-            verification.bg,
-            verification.text,
-          )}
-        >
-          <span className={classNames('h-2.5 w-2.5 shrink-0 rounded-full', verification.dot)} aria-hidden />
           {t(certificateBadgeKey(snapshot.verificationStatus))}
         </span>
         <span
@@ -270,7 +255,7 @@ export function PublicDroneCard({ snapshot, language }: PublicDroneCardProps) {
           )}
         >
           <span className={classNames('h-2.5 w-2.5 shrink-0 rounded-full', policy.dot)} aria-hidden />
-          {t(insuranceBannerKey(snapshot.insuranceStatus as PolicyStatus))}
+          {t(insuranceBannerKey(insuranceStatus))}
         </span>
       </div>
 
@@ -335,27 +320,27 @@ export function PublicDroneCard({ snapshot, language }: PublicDroneCardProps) {
             value={formatDateTime(snapshot.publishedAt)}
           />
         ) : null}
-        <DataRow label={t('field.language')} value={langLabel} />
       </Section>
 
       {/* ── CTA stack — primary "Report" gets a full-width tall tap target
           on its own row so police / finders can hit it outdoors with gloves
-          or one-thumb. (STAGING-OPS-1) ────────────────────────────────── */}
-      <div className="safe-pb border-t border-[var(--color-border)] bg-[var(--color-card)] px-4 py-4 sm:px-6 sm:py-5">
+          or one-thumb. (STAGING-OPS-1) On phones it stays pinned to the
+          bottom of the screen while the finder scrolls the sections. ───── */}
+      <div className="sticky bottom-0 z-10 border-t border-[var(--color-border)] bg-[var(--color-card)] px-4 pt-3 pb-[calc(0.75rem+var(--safe-bottom))] shadow-[0_-6px_16px_rgba(0,0,0,0.12)] sm:static sm:px-6 sm:pt-5 sm:pb-0 sm:shadow-none">
         <Button onClick={() => setReportOpen(true)} fullWidth size="lg" className="tap-44">
           <IconLifebuoy />
           {t('publicDrone.reportFound')}
         </Button>
-        <div className="mt-2.5">
-          <Button href="/login" variant="secondary" fullWidth size="lg" className="tap-44">
-            <IconLogin />
-            {t('publicDrone.openApp')}
-          </Button>
-        </div>
+      </div>
+      <div className="bg-[var(--color-card)] px-4 pb-4 sm:px-6 sm:pt-2.5 sm:pb-5">
+        <Button href="/login" variant="secondary" fullWidth size="lg" className="tap-44">
+          <IconLogin />
+          {t('publicDrone.openApp')}
+        </Button>
       </div>
 
       {/* ── Footer / disclaimer ───────────────────────────────────────── */}
-      <footer className="border-t border-[var(--color-border)] bg-[var(--color-hover)]/80 px-4 py-4 text-xs leading-relaxed text-[var(--color-text-secondary)] sm:px-6 sm:py-5">
+      <footer className="border-t border-[var(--color-border)] bg-[var(--color-hover)]/80 px-4 pt-4 pb-[calc(1rem+var(--safe-bottom))] text-xs leading-relaxed text-[var(--color-text-secondary)] sm:px-6 sm:pt-5 sm:pb-[calc(1.25rem+var(--safe-bottom))]">
         <p className="text-[11px] font-semibold text-[var(--color-text)]">{t('legal.notOfficial')}</p>
         <p className="mt-1.5">{t('legal.platformDisclaimer')}</p>
         <p className="mt-3 flex items-center justify-between">
@@ -457,15 +442,6 @@ function IconClipboard() {
     <svg viewBox="0 0 20 20" fill="currentColor" className="h-[14px] w-[14px]" aria-hidden>
       <path d="M15.988 3.012A2.25 2.25 0 0118 5.25v6.5A2.25 2.25 0 0115.75 14H13.5V7A2.5 2.5 0 0011 4.5H8.128a2.252 2.252 0 011.884-1.488A2.25 2.25 0 0112.25 1h1.5a2.25 2.25 0 012.238 2.012zM11.5 3.25a.75.75 0 01.75-.75h1.5a.75.75 0 010 1.5h-1.5a.75.75 0 01-.75-.75z" />
       <path d="M2 7a1 1 0 011-1h8a1 1 0 011 1v10a1 1 0 01-1 1H3a1 1 0 01-1-1V7z" />
-    </svg>
-  );
-}
-
-function IconExternal() {
-  return (
-    <svg viewBox="0 0 20 20" fill="currentColor" className="h-3.5 w-3.5" aria-hidden>
-      <path d="M11 3a1 1 0 100 2h2.586l-6.293 6.293a1 1 0 101.414 1.414L15 6.414V9a1 1 0 102 0V4a1 1 0 00-1-1h-5z" />
-      <path d="M5 5a2 2 0 00-2 2v8a2 2 0 002 2h8a2 2 0 002-2v-3a1 1 0 10-2 0v3H5V7h3a1 1 0 000-2H5z" />
     </svg>
   );
 }

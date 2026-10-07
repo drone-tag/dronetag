@@ -19,17 +19,17 @@
  * ----------
  *   • The uid and email come from the verified ID token, never from the body.
  *     A caller cannot provision an account for someone else.
- *   • Idempotent. Re-running never overwrites existing records, so a page
- *     refresh, a retry after a network error, or a second login all converge
- *     on the same state. This also repairs accounts left half-provisioned by
- *     the previous broken flow.
- *   • Partial failures are reported per record rather than rolled back.
- *     Deleting a just-created `users/{uid}` because the pilot write failed
- *     would risk destroying data on a retry; leaving it and reporting what is
- *     missing lets the next call finish the job.
+ *   • Idempotent and race-safe. All three records are read and written in a
+ *     single transaction, so concurrent calls (the signup form and the
+ *     account gate, two tabs, a retry) serialise instead of overwriting each
+ *     other. Re-running never replaces a value the user already has; it only
+ *     creates missing records and fills fields that are still blank. That
+ *     also repairs half-provisioned accounts, e.g. a `users/{uid}` stub
+ *     written by the contact-verification endpoint before provisioning ran.
  */
 
 import { NextResponse } from 'next/server';
+import { ALLOW_PUBLIC_SIGNUP } from '@/lib/config/features';
 import { z } from 'zod';
 
 import { adminFirestore } from '@/lib/server/firebaseAdmin';
@@ -77,107 +77,174 @@ const BASE_SLOTS = {
 
 const EMPTY_ADDRESS = { line1: '', line2: '', city: '', postalCode: '', country: '' };
 
+type Doc = Record<string, unknown>;
+type Seed = z.infer<typeof provisionSchema>;
+
+function isBlank(v: unknown): boolean {
+  return v === undefined || v === null || (typeof v === 'string' && v.trim() === '');
+}
+
+function isBlankAddress(v: unknown): boolean {
+  if (!v || typeof v !== 'object') return true;
+  return Object.values(v as Doc).every(isBlank);
+}
+
+/**
+ * Fields of `defaults` the existing document is missing, plus seed values
+ * for fields that are still blank. Never returns a key whose current value
+ * is meaningful, so a re-run cannot clobber what the user typed.
+ */
+function fillBlanks(existing: Doc, defaults: Doc, seeded: Doc): Doc {
+  const patch: Doc = {};
+  for (const [key, value] of Object.entries(defaults)) {
+    if (!(key in existing) || existing[key] === undefined) patch[key] = value;
+  }
+  for (const [key, value] of Object.entries(seeded)) {
+    if (key === 'address') {
+      if (!isBlankAddress(value) && isBlankAddress(existing.address)) patch.address = value;
+      continue;
+    }
+    if (!isBlank(value) && isBlank(existing[key])) patch[key] = value;
+  }
+  return patch;
+}
+
+function userSeedFields(seed: Seed, email: string): Doc {
+  return {
+    email,
+    firstName: seed.firstName ?? '',
+    lastName: seed.lastName ?? '',
+    dateOfBirth: seed.dateOfBirth ?? '',
+    phone: seed.phone ?? '',
+    address: seed.address ?? EMPTY_ADDRESS,
+    companyName: seed.companyName ?? '',
+    companyContactPerson: seed.companyContactPerson ?? '',
+    companyVat: seed.companyVat ?? '',
+    companyUniqueNumber: seed.companyUniqueNumber ?? '',
+  };
+}
+
+function pilotSeedFields(seed: Seed, email: string): Doc {
+  return {
+    email,
+    firstName: seed.firstName ?? '',
+    lastName: seed.lastName ?? '',
+    dateOfBirth: seed.dateOfBirth ?? '',
+    nationality: seed.nationality ?? '',
+    phone: seed.phone ?? '',
+    address: seed.address ?? EMPTY_ADDRESS,
+  };
+}
+
+class SignupDisabledError extends Error {}
+
 export async function POST(request: Request) {
   const auth = await requireUserFromRequest(request);
   if (auth instanceof NextResponse) return auth;
 
   const parsed = await parseJsonBody(request, provisionSchema);
   if ('response' in parsed) return parsed.response;
-  const seed = parsed.data ?? {};
+  const seed: Seed = parsed.data ?? {};
 
   const uid = auth.uid;
   const email = auth.email ?? '';
-  const now = new Date().toISOString();
   const db = adminFirestore();
 
-  const created = { account: false, pilot: false, slots: false };
+  const userRef = db.doc(`users/${uid}`);
+  const pilotRef = db.doc(`pilots/${uid}`);
+  const slotsRef = db.doc(`slots/${uid}`);
 
   try {
-    // users/{uid}
-    const userRef = db.doc(`users/${uid}`);
-    const userSnap = await userRef.get();
-    if (!userSnap.exists) {
-      await userRef.set({
+    const created = await db.runTransaction(async (tx) => {
+      const result = { account: false, pilot: false, slots: false };
+      const now = new Date().toISOString();
+      const [userSnap, pilotSnap, slotsSnap] = await tx.getAll(userRef, pilotRef, slotsRef);
+      // With public signup off, only accounts an admin created get completed;
+      // a stranger signing in with Google must not provision themselves.
+      if (!userSnap.exists && !ALLOW_PUBLIC_SIGNUP && !auth.admin) {
+        throw new SignupDisabledError();
+      }
+
+      // users/{uid}
+      const userDefaults: Doc = {
         uid,
-        email,
         accountType: seed.accountType ?? 'private',
-        firstName: seed.firstName ?? '',
-        lastName: seed.lastName ?? '',
-        dateOfBirth: seed.dateOfBirth ?? '',
-        phone: seed.phone ?? '',
-        address: seed.address ?? EMPTY_ADDRESS,
-        companyName: seed.companyName ?? '',
-        companyContactPerson: seed.companyContactPerson ?? '',
-        companyVat: seed.companyVat ?? '',
-        companyUniqueNumber: seed.companyUniqueNumber ?? '',
+        ...userSeedFields(seed, email),
         profilePhotoUrl: '',
         logoUrl: '',
         bannerUrl: '',
-        contactVerification: {
-          emailVerified: false,
-          emailVerifiedAt: '',
-          phoneVerified: false,
-          phoneVerifiedAt: '',
-        },
+        contactVerification: { channels: [], emailVerifiedAt: '', phoneVerifiedAt: '' },
         // Recorded server-side so consent cannot be claimed by editing the
         // client. See FASE 18 / the signup checkbox.
         acceptedTermsAt: seed.acceptedTerms ? now : '',
         createdAt: now,
         updatedAt: now,
-      });
-      created.account = true;
-    }
+      };
+      if (!userSnap.exists) {
+        tx.create(userRef, userDefaults);
+        result.account = true;
+      } else {
+        const existing = (userSnap.data() ?? {}) as Doc;
+        const patch = fillBlanks(existing, userDefaults, userSeedFields(seed, email));
+        if (seed.acceptedTerms && isBlank(existing.acceptedTermsAt)) patch.acceptedTermsAt = now;
+        // The form is the only place a company account is declared; a stub
+        // created moments earlier without a seed must not pin it to private.
+        if (seed.accountType === 'company' && isBlank(existing.companyName)) {
+          patch.accountType = 'company';
+        }
+        if (Object.keys(patch).length > 0) {
+          tx.update(userRef, { ...patch, updatedAt: now });
+          result.account = true;
+        }
+      }
 
-    // pilots/{uid} — the personal remote-pilot record, always 1:1 with the account.
-    const pilotRef = db.doc(`pilots/${uid}`);
-    const pilotSnap = await pilotRef.get();
-    if (!pilotSnap.exists) {
-      await pilotRef.set({
+      // pilots/{uid} — the personal remote-pilot record, always 1:1 with the account.
+      const pilotDefaults: Doc = {
         userId: uid,
-        firstName: seed.firstName ?? '',
-        lastName: seed.lastName ?? '',
-        dateOfBirth: seed.dateOfBirth ?? '',
-        nationality: seed.nationality ?? '',
-        email,
-        phone: seed.phone ?? '',
-        address: seed.address ?? EMPTY_ADDRESS,
+        ...pilotSeedFields(seed, email),
         operatorCode: '',
         operatorLicense: '',
         emergencyContact: '',
         createdAt: now,
         updatedAt: now,
-      });
-      created.pilot = true;
-    }
+      };
+      if (!pilotSnap.exists) {
+        tx.create(pilotRef, pilotDefaults);
+        result.pilot = true;
+      } else {
+        const existing = (pilotSnap.data() ?? {}) as Doc;
+        const patch = fillBlanks(existing, pilotDefaults, pilotSeedFields(seed, email));
+        if (Object.keys(patch).length > 0) {
+          tx.update(pilotRef, { ...patch, updatedAt: now });
+          result.pilot = true;
+        }
+      }
 
-    // slots/{uid} — normally written by the bootstrapSlots auth trigger. This
-    // is a fallback for environments where Cloud Functions are not deployed;
-    // it must stay idempotent so the two writers cannot conflict.
-    const slotsRef = db.doc(`slots/${uid}`);
-    const slotsSnap = await slotsRef.get();
-    if (!slotsSnap.exists) {
-      await slotsRef.set({
-        userId: uid,
-        ...BASE_SLOTS,
-        createdAt: now,
-        updatedAt: now,
-        provisionedBy: 'api/account/provision',
-      });
-      created.slots = true;
-    }
+      // slots/{uid} — normally written by the bootstrapSlots auth trigger. This
+      // is a fallback for environments where Cloud Functions are not deployed;
+      // an existing doc (trigger or admin grants) is never touched.
+      if (!slotsSnap.exists) {
+        tx.create(slotsRef, {
+          userId: uid,
+          ...BASE_SLOTS,
+          createdAt: now,
+          updatedAt: now,
+          provisionedBy: 'api/account/provision',
+        });
+        result.slots = true;
+      }
+
+      return result;
+    });
 
     logger.info('account.provisioned', { uid, created });
     return NextResponse.json({ ok: true, created });
   } catch (err) {
-    logger.error('account.provision.failed', { uid, created }, err);
-    return NextResponse.json(
-      {
-        error: 'provisioning failed',
-        // Tell the client what did land, so a retry is informed and the UI can
-        // explain the state rather than showing a generic failure.
-        created,
-      },
-      { status: 500 },
-    );
+    if (err instanceof SignupDisabledError) {
+      logger.warn('account.provision.signup_disabled', { uid });
+      return NextResponse.json({ error: 'signup disabled', code: 'signup_disabled' }, { status: 403 });
+    }
+    logger.error('account.provision.failed', { uid }, err);
+    return NextResponse.json({ error: 'provisioning failed' }, { status: 500 });
   }
 }

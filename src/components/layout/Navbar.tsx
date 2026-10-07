@@ -23,7 +23,7 @@ import { useAccountAvatar } from '@/lib/hooks/useAccountAvatar';
 
 export function Navbar() {
   const pathname = usePathname();
-  const { user, isAdmin } = useAuth();
+  const { user, isAdmin, loading: authLoading } = useAuth();
   const { language, setLanguage, t } = useLanguage();
   // The drawer belongs to the route it was opened on. Storing that route
   // rather than a boolean makes "navigating closes the drawer" a property of
@@ -78,10 +78,10 @@ export function Navbar() {
     >
       <span className="inline-flex overflow-hidden rounded-lg">
         <Image
-          src="/logo.png?v=3"
+          src="/logo-mark.webp"
           alt="DroneTag"
-          width={512}
-          height={512}
+          width={192}
+          height={192}
           className="h-7 w-7 sm:h-9 sm:w-9"
           priority
           unoptimized
@@ -173,7 +173,7 @@ export function Navbar() {
                   {t('nav.logout')}
                 </Button>
               </>
-            ) : (
+            ) : authLoading ? null : (
               <>
                 <Link
                   href="/login"
@@ -241,7 +241,7 @@ export function Navbar() {
               id="nav-language-mobile"
               value={language}
               onChange={(e) => setLanguage(e.target.value as Language)}
-              className="tap-44 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] px-3 py-2.5 text-sm text-[var(--color-text)]"
+              className="tap-44 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] px-3 py-2.5 text-base text-[var(--color-text)]"
             >
               {LANGUAGES.map((lang) => (
                 <option key={lang.value} value={lang.value}>
@@ -270,7 +270,7 @@ export function Navbar() {
             </>
           ) : null}
 
-          {!user ? (
+          {authLoading && !user ? null : !user ? (
             <>
               {drawerNavLink('/', t('nav.home'), <NavIcons.home className="h-5 w-5" />, pathname === '/')}
               {drawerNavLink('/login', t('nav.login'), <NavIcons.profile className="h-5 w-5" />, pathname === '/login')}

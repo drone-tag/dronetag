@@ -63,11 +63,18 @@ async function loadPdfDocument(data: Uint8Array) {
   return pdfjs.getDocument({ data, useSystemFonts: true }).promise;
 }
 
+/**
+ * Every field the parsers look for sits on the first pages; reading a
+ * 60-page policy to the end only adds seconds of waiting.
+ */
+const MAX_PARSED_PAGES = 8;
+
 export async function extractTextFromPdfBuffer(data: Uint8Array): Promise<string> {
   const doc = await loadPdfDocument(data);
   const parts: string[] = [];
+  const pages = Math.min(doc.numPages, MAX_PARSED_PAGES);
 
-  for (let page = 1; page <= doc.numPages; page += 1) {
+  for (let page = 1; page <= pages; page += 1) {
     const pageDoc = await doc.getPage(page);
     const content = await pageDoc.getTextContent();
     parts.push(pageItemsToText(content.items));

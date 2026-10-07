@@ -38,7 +38,9 @@ Three write paths exist:
    and server-owned writes).
 2. Browser Firebase client SDK → Firestore / Storage, constrained by rules
    (owner reads, some updates, some deletes, some uploads).
-3. Browser callable → Cloud Function `submitReport` (anonymous found-drone).
+3. Anonymous found-drone reports: browser `fetch` → `POST /api/reports`
+   (Route Handler, Admin SDK). The `submitReport` Cloud Function is a legacy
+   path that the web app no longer calls.
 
 Hosting is **Netlify**, not Firebase Hosting. Firebase provides Auth,
 Firestore, Storage and Cloud Functions.
@@ -105,9 +107,9 @@ a later `npm install`.
 | React | 19.2.4 | |
 | TypeScript | 5.x (`strict`) | |
 | Tailwind CSS | 4.x | Custom UI in `src/components/ui/` |
-| Firebase client | ^12.11.0 | Auth, Firestore, Storage, Functions, App Check init |
+| Firebase client | ^12.11.0 | Auth, Firestore, Storage, App Check init (the Functions SDK is no longer loaded) |
 | Firebase Admin | 14.2.0 | Next Route Handlers + scripts |
-| firebase-functions | ^7.3.2 | `functions/`, Node 20 |
+| firebase-functions | ^7.3.2 | `functions/`, Node 22 (firebase-admin 14 requires it) |
 | Hosting | Netlify | `netlify.toml` + `@netlify/plugin-nextjs` |
 | Email | Resend HTTP (`fetch`) | No `resend` npm package |
 | PDF / OCR | pdfjs-dist, tesseract.js | Workers staged into `public/vendor/` (gitignored) |
@@ -125,8 +127,8 @@ Root `engines.node` is `>=20.9.0`. Prefer **Node 22** for the Next.js app
 ```
 Browser / PWA
   ├─ Firebase client SDK ──► Firestore / Storage (rules)
-  ├─ fetch ────────────────► Next.js Route Handlers (Admin SDK) ──► Firestore / Storage / Resend
-  └─ httpsCallable ────────► Cloud Function submitReport ──────────► Firestore / Resend
+  └─ fetch ────────────────► Next.js Route Handlers (Admin SDK) ──► Firestore / Storage / Resend
+                              (includes POST /api/reports for found-drone reports)
 
 Next.js on Netlify
   ├─ src/proxy.ts          optimistic cookie presence check for /admin pages
@@ -215,8 +217,8 @@ If Admin SDK is missing locally, the admin layout falls through
 | Auth | Email/password, Google, optional phone; custom claims |
 | Firestore | Application data (see §8) |
 | Storage | Uploaded PDFs/images; branding |
-| Cloud Functions | `submitReport` (live), `bootstrapSlots` (Auth onCreate), deprecated `create*` callables |
-| App Check | Client init if reCAPTCHA env is set. Functions can enforce. Next.js Route Handlers **do not** verify App Check. Rules do **not** require `request.app`. |
+| Cloud Functions | `bootstrapSlots` (Auth onCreate). `submitReport` and the `create*` callables are legacy: the web app no longer calls them. |
+| App Check | Client init if reCAPTCHA env is set. Functions can enforce. Next.js Route Handlers **do not** verify App Check (so found-drone reports work without reCAPTCHA keys). Rules do **not** require `request.app`. |
 | Hosting | Not used. Web is Netlify. |
 
 Rules files in git are tested by `npm run test:rules`. Live project behaviour
@@ -247,8 +249,8 @@ production data is listed here.
 | `authorizations/{id}` | Operational permits | `userId` | Private | `/api/entities/authorizations` |
 | `slots/{uid}` | Quotas (drone, operator, cert, pdf, permit, archive, nfc_badge, …) | Doc id = uid | Private | Provision, `bootstrapSlots`, or admin. Client create denied. |
 | `plans/{planId}` | Legacy admin slot-price docs | Public read, admin write | **Not** the commercial catalogue (`src/config/pricing.ts`) | Admin |
-| `reports/{id}` | Found-drone inbox | `ownerUserId` derived by `submitReport` | Owner + admin | Function write. Owner may only flip `read`. |
-| `rateLimits/{key}` | Function-side buckets (found-drone) | Server | No client access | Functions |
+| `reports/{id}` | Found-drone inbox | `ownerUserId` derived by `POST /api/reports` | Owner + admin | Server write. Owner may only flip `read`; admin "read" is a separate `adminReadAt`. Stores the owner-email outcome (`emailNotified`, `notificationError`). |
+| `rateLimits/{key}` | Found-drone rate-limit buckets | Server | No client access (admin read) | `POST /api/reports`. Documents are small and are not expired automatically. |
 | `orders/{id}` | Legacy order documents on `/account/orders` | `userId` | Private | **Checkout does not write here.** |
 | `signupOtp/{uid}` | Hashed email OTP | Server | No client access | Admin SDK |
 | `supportThreads/{uid}` + `messages` | One thread per user | Path id = uid | Owner + admin | APIs set `sender`. Client writes denied. |
@@ -286,8 +288,11 @@ There is no object lifecycle / cascade delete.
 - Anonymous visitors read **only** `dronesPublic/{slug}` (and `plans`).
 - Insurance PDFs are not on the public card. Authenticated preview uses
   `GET /api/files/proxy` (owner prefix or admin).
-- Found-drone form calls Cloud Function `submitReport`. Owner uid is derived
-  server-side. Rate limit: 3 reports / 10 minutes per IP+slug (Functions).
+- Found-drone form calls `POST /api/reports`. The route checks that the drone
+  is public and active, derives the owner uid server-side, drops honeypot
+  submissions and allows 3 reports / 10 minutes per IP+slug. It then emails
+  the owner through Resend (`RESEND_API_KEY` on Netlify) and records whether
+  the email went out; the admin reports page shows that outcome.
 
 ---
 
@@ -326,7 +331,7 @@ instead.
 | `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET` | Storage | Required for uploads |
 | `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID` | Web config | Required for a complete client |
 | `NEXT_PUBLIC_FIREBASE_APP_ID` | Web config | Required for a complete client |
-| `NEXT_PUBLIC_FIREBASE_FUNCTIONS_REGION` | Callables (default `us-central1`) | Optional |
+| `NEXT_PUBLIC_FIREBASE_FUNCTIONS_REGION` | Not read anymore (the web app calls no Cloud Functions) | Unused |
 | `NEXT_PUBLIC_RECAPTCHA_ENTERPRISE_SITE_KEY` | App Check (preferred) | Optional |
 | `NEXT_PUBLIC_RECAPTCHA_SITE_KEY` | App Check v3 fallback | Optional |
 | `NEXT_PUBLIC_APP_CHECK_DEBUG_TOKEN` | Local App Check debug | Local only |
@@ -353,9 +358,9 @@ instead.
 
 | Name | Use |
 |---|---|
-| `RESEND_API_KEY` | Found-drone owner email |
+| `RESEND_API_KEY` | Owner email from the legacy `submitReport` function |
 | `APP_URL` | Links in Function emails (sibling of `NEXT_PUBLIC_APP_URL`) |
-| `APP_CHECK_ENFORCE` | Function App Check (code default true; use `false` in monitor) |
+| `APP_CHECK_ENFORCE` | Function App Check (code default true; use `false` in monitor). Does not affect `POST /api/reports`. |
 
 ### Scripts only (never commit)
 
@@ -700,7 +705,7 @@ First week for a new team:
 
 | Name | Type | Status |
 |---|---|---|
-| `submitReport` | Callable | Live found-drone path |
+| `submitReport` | Callable | Legacy: replaced by `POST /api/reports`, safe to leave deployed or remove |
 | `bootstrapSlots` | Auth `onCreate` | Live if deployed |
 | `createDrone` / `createOperator` / `createCertificate` / `createDocument` / `createInsurance` | Callable | Deprecated; Next.js does not call them |
 

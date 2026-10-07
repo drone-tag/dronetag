@@ -21,7 +21,7 @@ export function AuthPageLayout({ title, subtitle, children, footer }: AuthPageLa
         <div className="mb-8 text-center">
           <Link href="/" className="mx-auto mb-4 inline-flex items-center gap-2">
             <span className="inline-flex overflow-hidden rounded-xl">
-              <Image src="/logo.png?v=3" alt="DroneTag" width={512} height={512} className="h-11 w-11" unoptimized />
+              <Image src="/logo-mark.webp" alt="DroneTag" width={192} height={192} className="h-11 w-11" unoptimized />
             </span>
           </Link>
           <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--color-action)]">

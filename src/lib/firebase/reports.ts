@@ -15,7 +15,7 @@ import {
 import { awaitFirebaseAuthReady } from '@/lib/firebase/auth';
 import { DEMO_MODE, getFirebaseDb } from '@/lib/firebase/config';
 import * as demo from '@/lib/demo/entitiesStore';
-import { callSubmitReport } from '@/lib/firebase/callable';
+import { readJsonOrThrow } from '@/lib/client/apiError';
 import type { Report, ReportLocation } from '@/lib/types/entities';
 
 const REPORTS = 'reports';
@@ -46,8 +46,11 @@ function reportFromRaw(id: string, raw: Record<string, unknown>): Report {
     locationText: str('locationText'),
     contactEmail: str('contactEmail'),
     read: bool('read'),
+    adminReadAt: str('adminReadAt'),
     emailNotified: bool('emailNotified'),
     pushNotified: bool('pushNotified'),
+    notificationAttemptedAt: str('notificationAttemptedAt'),
+    notificationError: str('notificationError'),
     createdAt: str('createdAt'),
   };
 }
@@ -78,15 +81,14 @@ export async function listReportsForDrone(droneId: string): Promise<Report[]> {
 }
 
 /**
- * Anonymous public path — goes through the `submitReport` Cloud
- * Function (PR-SEC-2). The function looks up the drone server-side,
- * derives the trustworthy `ownerUserId` from it, applies an IP-keyed
- * rate limit, and forces audit fields.
+ * Anonymous public path — goes through `POST /api/reports`. The route
+ * looks up the drone server-side, derives the trustworthy `ownerUserId`
+ * from it, applies an IP-keyed rate limit, and forces audit fields.
  *
  * PR-SEC-4 V-017 closure: callers no longer pass `ownerUserId` (the
  * `dronesPublic` snapshot doesn't carry it anymore). In DEMO_MODE
  * the helper looks up the drone in the in-memory store and derives
- * the owner uid the same way the function does in production.
+ * the owner uid the same way the route does in production.
  */
 export interface CreateReportInput {
   droneId: string;
@@ -118,15 +120,20 @@ export async function createReport(data: CreateReportInput): Promise<string> {
       pushNotified: false,
     } as Omit<Report, 'id' | 'createdAt' | 'read'>);
   }
-  const { id } = await callSubmitReport({
-    droneId: data.droneId,
-    droneSlug: data.droneSlug,
-    finderName: data.finderName,
-    message: data.message,
-    locationText: data.locationText,
-    contactEmail: data.contactEmail,
-    location: data.location,
+  const res = await fetch('/api/reports', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      droneId: data.droneId,
+      droneSlug: data.droneSlug,
+      finderName: data.finderName,
+      message: data.message,
+      locationText: data.locationText,
+      contactEmail: data.contactEmail,
+      location: data.location,
+    }),
   });
+  const { id } = await readJsonOrThrow<{ id: string }>(res, 'submit report');
   return id;
 }
 
@@ -135,6 +142,19 @@ export async function markReportRead(id: string): Promise<void> {
   await awaitFirebaseAuthReady();
   const db = getFirebaseDb();
   await updateDoc(doc(db, REPORTS, id), { read: true });
+}
+
+/** Admin-only: mark handled without touching the owner's read state. */
+export async function markReportReadByAdmin(id: string): Promise<string> {
+  const at = new Date().toISOString();
+  if (DEMO_MODE) {
+    await demo.markReportAdminRead(id, at);
+    return at;
+  }
+  await awaitFirebaseAuthReady();
+  const db = getFirebaseDb();
+  await updateDoc(doc(db, REPORTS, id), { adminReadAt: at });
+  return at;
 }
 
 /** Admin-only: list every report across users (newest first). */

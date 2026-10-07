@@ -17,7 +17,7 @@
  * already has min(slots.operator, MAX_OPERATORS) operators.
  */
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { ChangeEvent, FormEvent } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -41,6 +41,9 @@ import {
 import type { Address } from '@/lib/types/account';
 import type { Drone } from '@/lib/types/entities';
 import { operatorDisplayName } from '@/lib/utils/entities';
+import { errorMessage } from '@/lib/client/errorMessage';
+import { effectiveSlotCap } from '@/lib/config/features';
+import { LoadError, PageLoading } from '@/components/ui/LoadError';
 import { EntityListRow } from '@/components/ui/EntityListRow';
 import { RowActionMenu } from '@/components/ui/RowActionMenu';
 import { Button } from '@/components/ui/Button';
@@ -101,17 +104,25 @@ export default function AccountOperatorsPage() {
   const [savingId, setSavingId] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
 
-  const reload = useMemo(() => async () => {
+  const [loadError, setLoadError] = useState<string | null>(null);
+
+  const reload = useCallback(async () => {
     if (!user) return;
-    const [opList, dList, s] = await Promise.all([
-      listOperators(user.uid),
-      listDronesByUser(user.uid),
-      ensureSlots(user.uid),
-    ]);
-    setOperators(opList);
-    setDrones(dList);
-    setSlots(s);
-  }, [user]);
+    try {
+      const [opList, dList, s] = await Promise.all([
+        listOperators(user.uid),
+        listDronesByUser(user.uid),
+        ensureSlots(user.uid),
+      ]);
+      setOperators(opList);
+      setDrones(dList);
+      setSlots(s);
+      setLoadError(null);
+    } catch (err) {
+      console.error('[operators] load failed', err);
+      setLoadError(errorMessage(err, t, 'loadError.body'));
+    }
+  }, [user, t]);
 
   useEffect(() => {
     if (!user) return;
@@ -126,7 +137,7 @@ export default function AccountOperatorsPage() {
     return () => { cancelled = true; };
   }, [user, reload]);
 
-  const cap = slots ? Math.min(slots.operator, MAX_OPERATORS) : MAX_OPERATORS;
+  const cap = effectiveSlotCap(slots ? Math.min(slots.operator, MAX_OPERATORS) : MAX_OPERATORS);
   const atCap = operators.length >= cap;
   const sortedOperators = useMemo(
     () =>
@@ -152,10 +163,10 @@ export default function AccountOperatorsPage() {
     setSaveError(null);
     try {
       const prevDefault = operators.find((o) => o.isDefault);
-      if (prevDefault) {
-        await updateOperator(prevDefault.id, { isDefault: false });
-      }
-      await updateOperator(op.id, { isDefault: true });
+      await Promise.all([
+        prevDefault ? updateOperator(prevDefault.id, { isDefault: false }) : null,
+        updateOperator(op.id, { isDefault: true }),
+      ]);
       await reload();
       // This action has no form and no modal, so without a toast the only
       // sign it worked is a badge moving in a list the user may not be
@@ -163,7 +174,7 @@ export default function AccountOperatorsPage() {
       toast.success(t('toast.operator.setCurrent'));
     } catch (err) {
       console.error('[operators] set current failed', err);
-      setSaveError(err instanceof Error ? err.message : t('account.saveError'));
+      toast.error(errorMessage(err, t));
     } finally {
       setSavingId(null);
     }
@@ -192,7 +203,7 @@ export default function AccountOperatorsPage() {
       toast.success(t(target ? 'toast.operator.updated' : 'toast.operator.created'));
     } catch (err) {
       console.error('[operators] save failed', err);
-      setSaveError(err instanceof Error ? err.message : t('account.saveError'));
+      setSaveError(errorMessage(err, t));
     } finally {
       setSavingId(null);
     }
@@ -208,33 +219,31 @@ export default function AccountOperatorsPage() {
       toast.success(t('toast.operator.deleted'));
     } catch (err) {
       console.error('[operators] delete failed', err);
-      toast.error(t('toast.operator.deleteFailed'));
+      toast.error(errorMessage(err, t, 'toast.operator.deleteFailed'));
     } finally {
       setSavingId(null);
     }
   }
 
-  if (loading) {
-    return (
-      <div className="mt-8 flex items-center gap-3 text-sm text-[var(--color-text-secondary)]">
-        <div className="h-4 w-4 animate-spin rounded-full border-2 border-[var(--color-border)] border-t-gray-600" />
-        {t('common.loading')}
-      </div>
-    );
-  }
+  if (loading) return <PageLoading />;
 
   return (
     <EntityListShell
       title={t('operator.list.title')}
-      subtitle={t('operator.list.subtitle', { max: cap })}
+      subtitle={
+        Number.isFinite(cap)
+          ? t('operator.list.subtitle', { max: cap })
+          : t('operator.list.subtitleUnlimited')
+      }
       used={operators.length}
       max={cap}
       newLabel={t('operator.list.new')}
       onNew={() => setCreating(true)}
       newDisabled={atCap}
     >
-      <FormErrorBanner show={Boolean(saveError)} message={saveError ?? undefined} />
-      {operators.length === 0 ? (
+      {loadError ? (
+        <LoadError message={loadError} onRetry={reload} />
+      ) : operators.length === 0 ? (
         <EmptyState
           title={t('operator.list.empty')}
           description={t('operator.list.emptyDesc')}
@@ -278,7 +287,13 @@ export default function AccountOperatorsPage() {
           target={editing}
           isOpen
           saving={savingId === (editing?.id ?? 'new')}
-          onClose={() => { setCreating(false); setEditing(null); }}
+          error={saveError}
+          onClose={() => {
+            if (savingId) return;
+            setCreating(false);
+            setEditing(null);
+            setSaveError(null);
+          }}
           onSave={(form) => handleSave(form, editing)}
         />
       )}
@@ -294,9 +309,11 @@ export default function AccountOperatorsPage() {
         }
         extraWarning={
           confirmingDelete && dronesUsingOperator(confirmingDelete.id).length > 0
-            ? t('operator.delete.warningPublic', {
-                count: dronesUsingOperator(confirmingDelete.id).length,
-              })
+            ? dronesUsingOperator(confirmingDelete.id).length === 1
+              ? t('operator.delete.warningPublicOne')
+              : t('operator.delete.warningPublic', {
+                  count: dronesUsingOperator(confirmingDelete.id).length,
+                })
             : undefined
         }
         confirmLabel={t('common.delete')}
@@ -331,7 +348,7 @@ function OperatorRow({
     <li>
       <Card
         padding="md"
-        className={isCurrent ? 'ring-2 ring-blue-600/30 ring-inset' : undefined}
+        className={isCurrent ? 'ring-2 ring-[var(--tone-info-ring)] ring-inset' : undefined}
       >
         <EntityListRow
           actions={
@@ -365,7 +382,7 @@ function OperatorRow({
                 <span
                   className={
                     isCurrent
-                      ? 'flex h-5 w-5 items-center justify-center rounded-full border-[5px] border-blue-600 bg-[var(--color-card)]'
+                      ? 'flex h-5 w-5 items-center justify-center rounded-full border-[5px] border-[var(--color-action)] bg-[var(--color-card)]'
                       : 'h-5 w-5 rounded-full border-2 border-[var(--color-border)] bg-[var(--color-card)]'
                   }
                   aria-hidden
@@ -392,8 +409,11 @@ function OperatorRow({
                   : operator.private.email || ''}
               </p>
               {droneUsage > 0 ? (
-                <p className="mt-1 text-[11px] text-[var(--tone-warning-fg)] sm:text-xs">
-                  {t('operator.delete.warningPublic', { count: droneUsage })}
+                <p className="mt-1.5 inline-flex items-center gap-1.5 text-[11px] font-medium text-[var(--tone-success-fg)] sm:text-xs">
+                  <span className="h-1.5 w-1.5 rounded-full bg-current" aria-hidden />
+                  {droneUsage === 1
+                    ? t('operator.row.publicDronesOne')
+                    : t('operator.row.publicDronesMany', { count: droneUsage })}
                 </p>
               ) : null}
             </div>
@@ -410,12 +430,14 @@ function OperatorFormModal({
   target,
   isOpen,
   saving,
+  error,
   onClose,
   onSave,
 }: {
   target: Operator | null;
   isOpen: boolean;
   saving: boolean;
+  error: string | null;
   onClose: () => void;
   onSave: (form: OperatorFormState) => void;
 }) {
@@ -479,7 +501,10 @@ function OperatorFormModal({
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={target ? t('operator.edit.title') : t('operator.create.title')}>
       <form onSubmit={handleSubmit} noValidate className="space-y-5">
-        <FormErrorBanner show={Object.keys(errors).length > 0} />
+        <FormErrorBanner
+          show={Boolean(error) || Object.values(errors).some(Boolean)}
+          message={error ?? undefined}
+        />
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Select
@@ -572,7 +597,7 @@ function OperatorFormModal({
             type="checkbox"
             checked={form.isDefault}
             onChange={(e) => setField('isDefault', e.target.checked)}
-            className="mt-0.5 h-4 w-4 rounded border-[var(--color-border)] text-blue-600 focus:ring-blue-500"
+            className="mt-0.5 h-4 w-4 rounded border-[var(--color-border)] text-[var(--color-action)] focus:ring-[var(--color-action)]"
           />
           <span className="flex-1 text-sm">
             <span className="font-medium text-[var(--color-text)]">{t('operator.field.isDefault')}</span>

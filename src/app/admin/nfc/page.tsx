@@ -12,8 +12,10 @@
  * `buildPublicUrl()` directly when we ship in-app encoding.
  */
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useToast } from '@/contexts/ToastContext';
+import { errorMessage } from '@/lib/client/errorMessage';
 import { listAllDrones } from '@/lib/firebase/drones';
 import { listAllAccounts } from '@/lib/firebase/account';
 import { buildPublicUrl, exportNfcCsv, type NfcPayloadRow } from '@/lib/nfc/payload';
@@ -21,32 +23,46 @@ import { accountDisplayName } from '@/lib/utils/entities';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { SectionHeader } from '@/components/ui/SectionHeader';
+import { LoadError } from '@/components/ui/LoadError';
 import type { Drone } from '@/lib/types/entities';
 import type { UserAccount } from '@/lib/types/account';
 
+/**
+ * Badges are written once and read for years, so they must point at the
+ * production domain even when the console is opened from a preview deploy.
+ */
+const CANONICAL_ORIGIN = process.env.NEXT_PUBLIC_APP_URL?.trim().replace(/\/+$/, '') ?? '';
+
+type NfcRow = NfcPayloadRow & { ownerUid: string };
+
 export default function AdminNfcPage() {
   const { t } = useLanguage();
+  const toast = useToast();
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [drones, setDrones] = useState<Drone[]>([]);
   const [accounts, setAccounts] = useState<Record<string, UserAccount>>({});
-  const [origin, setOrigin] = useState('https://dronetag.example');
+  const [origin] = useState(() =>
+    CANONICAL_ORIGIN || (typeof window !== 'undefined' ? window.location.origin : ''),
+  );
 
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      setOrigin(window.location.origin);
+  const reload = useCallback(async () => {
+    try {
+      const [dr, accs] = await Promise.all([listAllDrones(), listAllAccounts().catch(() => [])]);
+      setDrones(dr.filter((d) => d.status === 'active' && d.visibility === 'public'));
+      setAccounts(Object.fromEntries(accs.map((a) => [a.uid, a])));
+      setLoadError(null);
+    } catch (err) {
+      console.error('[admin nfc] load failed', err);
+      setLoadError(errorMessage(err, t, 'loadError.body'));
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
-        const [dr, accs] = await Promise.all([listAllDrones(), listAllAccounts()]);
-        if (cancelled) return;
-        setDrones(
-          dr.filter((d) => d.status === 'active' && d.visibility === 'public'),
-        );
-        setAccounts(Object.fromEntries(accs.map((a) => [a.uid, a])));
+        await reload();
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -54,16 +70,18 @@ export default function AdminNfcPage() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [reload]);
 
-  const rows = useMemo<NfcPayloadRow[]>(() => {
-    const out: NfcPayloadRow[] = [];
+  const rows = useMemo<NfcRow[]>(() => {
+    const out: NfcRow[] = [];
+    if (!origin) return out;
     for (const d of drones) {
       try {
         out.push({
           slug: d.slug,
           url: buildPublicUrl(d.slug, origin),
           label: `${d.manufacturer} ${d.model}`.trim(),
+          ownerUid: d.userId,
         });
       } catch {
         // Skip rows whose slug doesn't validate. The admin will see a
@@ -74,7 +92,7 @@ export default function AdminNfcPage() {
   }, [drones, origin]);
 
   function downloadCsv() {
-    const csv = exportNfcCsv(rows);
+    const csv = exportNfcCsv(rows.map(({ slug, url, label }) => ({ slug, url, label })));
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -89,6 +107,7 @@ export default function AdminNfcPage() {
   async function copyUrl(url: string) {
     try {
       await navigator.clipboard.writeText(url);
+      toast.success(t('common.copied'));
     } catch {
       // Clipboard may be unavailable — fall back to a prompt.
       window.prompt('URL', url);
@@ -99,15 +118,26 @@ export default function AdminNfcPage() {
     <div className="mx-auto max-w-[1400px] px-4 py-8 sm:px-6 lg:px-8">
         <SectionHeader title={t('admin.nfc.title')} description={t('admin.nfc.subtitle')} />
 
-        <div className="mt-6 flex flex-wrap items-center gap-2">
+        <div className="mt-6 flex flex-wrap items-center gap-3">
           <Button onClick={downloadCsv} disabled={loading || rows.length === 0}>
             {t('admin.nfc.exportCsv')}
           </Button>
+          {!loading ? (
+            <p className="text-xs text-[var(--color-text-secondary)]">
+              {t('admin.nfc.baseUrl', { url: origin || '—' })}
+            </p>
+          ) : null}
         </div>
+
+        {loadError ? (
+          <div className="mt-4">
+            <LoadError message={loadError} onRetry={reload} />
+          </div>
+        ) : null}
 
         <Card padding="none" className="mt-6 overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full divide-y divide-gray-200 text-sm">
+            <table className="w-full divide-y divide-[var(--color-border)] text-sm">
               <thead className="bg-[var(--color-hover)] text-left text-xs font-semibold uppercase tracking-wide text-[var(--color-text-secondary)]">
                 <tr>
                   <th className="px-4 py-3">{t('admin.nfc.col.slug')}</th>
@@ -130,9 +160,8 @@ export default function AdminNfcPage() {
                     </td>
                   </tr>
                 ) : (
-                  rows.map((row, idx) => {
-                    const drone = drones[idx];
-                    const owner = drone ? accounts[drone.userId] : undefined;
+                  rows.map((row) => {
+                    const owner = accounts[row.ownerUid];
                     return (
                       <tr key={row.slug}>
                         <td className="px-4 py-2 font-mono text-xs text-[var(--color-text)]">{row.slug}</td>

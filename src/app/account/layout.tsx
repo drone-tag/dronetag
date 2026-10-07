@@ -1,7 +1,7 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
+import { usePathname, useRouter } from 'next/navigation';
+import { useEffect, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { AccountProvisionGate } from '@/components/account/AccountProvisionGate';
@@ -9,18 +9,25 @@ import { AccountAppShell } from '@/components/layout/AccountAppShell';
 
 export default function AccountLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
+  const pathname = usePathname();
   const { user, loading, isAdmin } = useAuth();
   const { t } = useLanguage();
+  const hadUser = useRef(false);
 
   useEffect(() => {
     if (loading) return;
     if (!user) {
-      router.replace('/login?redirect=/account');
+      // Signing out lands on a clean login; arriving signed out (a link from
+      // an email) comes back to the page that was asked for.
+      router.replace(
+        hadUser.current ? '/login' : `/login?redirect=${encodeURIComponent(pathname || '/account')}`,
+      );
       return;
     }
+    hadUser.current = true;
     // Admin staff account has no user workspace — only /admin.
     if (isAdmin) router.replace('/admin');
-  }, [user, loading, isAdmin, router]);
+  }, [user, loading, isAdmin, router, pathname]);
 
   if (loading) {
     return (

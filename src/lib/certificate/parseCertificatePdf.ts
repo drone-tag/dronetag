@@ -214,11 +214,6 @@ function scanItaRegistration(text: string): string {
   return code.length >= 10 && /^ITA-/i.test(code) ? code : '';
 }
 
-function extractRegistrationNumber(text: string): string {
-  if (!isItalianCertificate(text)) return '';
-  return scanItaRegistration(text);
-}
-
 function extractDateRange(text: string): { issuedAt: string; expiresAt: string } {
   const rangePatterns = [
     /data\s+di\s+emissione(?:\s*\([^)]+\))?\s*[:.]?\s*(\d{1,2}[./\-]\d{1,2}[./\-]\d{2,4}).*?data\s+di\s+scadenza(?:\s*\([^)]+\))?\s*[:.]?\s*(\d{1,2}[./\-]\d{1,2}[./\-]\d{2,4})/i,

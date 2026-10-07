@@ -5,6 +5,7 @@
  * the cap — matches the account UI (expired items live in Archive).
  */
 
+import { ENFORCE_SLOT_QUOTAS } from '@/lib/config/features';
 import { adminFirestore } from '@/lib/server/firebaseAdmin';
 
 export const MAX_OPERATORS_PER_USER = 3;
@@ -56,6 +57,7 @@ function countUsed(
 }
 
 export async function enforceQuota(uid: string, kind: QuotaSlot): Promise<void> {
+  if (!ENFORCE_SLOT_QUOTAS) return;
   const db = adminFirestore();
   const slotsSnap = await db.collection('slots').doc(uid).get();
   const slotsData = slotsSnap.exists ? (slotsSnap.data() as Record<string, unknown>) : {};

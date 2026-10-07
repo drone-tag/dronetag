@@ -17,6 +17,8 @@ import { classNames } from '@/lib/utils';
  * - Account: found-drone inbox / support (prefer support when unread).
  * - Admin: dropdown with Droni + Droni trovati (removed from AdminSubNav).
  */
+const BELL_REFRESH_MS = 60_000;
+
 export function InboxBellButton({ className }: { className?: string }) {
   const pathname = usePathname();
   const { user, isAdmin } = useAuth();
@@ -36,8 +38,35 @@ export function InboxBellButton({ className }: { className?: string }) {
   const adminBell = Boolean(isAdmin && inAdmin);
   const scope = user ? `${user.uid}:${adminBell ? 'admin' : 'self'}` : '';
 
+  const lastFetch = useRef<{ scope: string; at: number } | null>(null);
+  const [tick, setTick] = useState(0);
+
+  // Counts refresh periodically and when the tab comes back, not on every
+  // navigation: the admin bell reads every report and thread, which is too
+  // heavy to repeat per page. Pages that change the counts force a refresh.
+  useEffect(() => {
+    const bump = () => {
+      if (document.visibilityState === 'visible') setTick((n) => n + 1);
+    };
+    const id = window.setInterval(bump, BELL_REFRESH_MS);
+    document.addEventListener('visibilitychange', bump);
+    return () => {
+      window.clearInterval(id);
+      document.removeEventListener('visibilitychange', bump);
+    };
+  }, []);
+
   useEffect(() => {
     if (!user) return;
+    const countsPage = /\/(inbox|support|reports)(\/|$)/.test(pathname);
+    const last = lastFetch.current;
+    if (
+      !countsPage &&
+      last?.scope === scope &&
+      Date.now() - last.at < BELL_REFRESH_MS / 2
+    ) {
+      return;
+    }
     let cancelled = false;
     (async () => {
       try {
@@ -46,7 +75,9 @@ export function InboxBellButton({ className }: { className?: string }) {
           adminBell ? countSupportUnreadForAdmin() : countSupportUnreadForUser(user.uid),
         ]);
         if (!cancelled) {
-          setCounts({ scope, report: reports.filter((r) => !r.read).length, support });
+          const unread = reports.filter((r) => (adminBell ? !r.adminReadAt : !r.read)).length;
+          setCounts({ scope, report: unread, support });
+          lastFetch.current = { scope, at: Date.now() };
         }
       } catch {
         if (!cancelled) setCounts({ scope, report: 0, support: 0 });
@@ -55,7 +86,7 @@ export function InboxBellButton({ className }: { className?: string }) {
     return () => {
       cancelled = true;
     };
-  }, [user, adminBell, pathname, scope]);
+  }, [user, adminBell, pathname, scope, tick]);
 
   const fresh = counts?.scope === scope ? counts : null;
   const reportUnread = fresh?.report ?? 0;

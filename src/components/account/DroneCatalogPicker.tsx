@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 import {
   CUSTOM_DRONE_CATALOG_ID,
   droneCatalogLabel,
+  formatDroneClass,
   searchDroneCatalog,
   type DroneCatalogEntry,
 } from '@/lib/droneCatalog';
@@ -36,7 +37,7 @@ export function DroneCatalogPicker({ selectedId, onSelect }: DroneCatalogPickerP
             if (e.key === 'Enter') e.preventDefault();
           }}
           placeholder={t('drone.catalog.searchPlaceholder')}
-          className="w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-card)] px-4 py-2.5 text-sm text-[var(--color-text)] outline-none placeholder:text-[var(--color-text-secondary)] focus:border-[var(--color-action)] focus:ring-2 focus:ring-[var(--color-action)]/20"
+          className="w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-card)] px-4 py-3 text-base text-[var(--color-text)] outline-none placeholder:text-[var(--color-text-secondary)] sm:py-2.5 sm:text-sm focus:border-[var(--color-action)] focus:ring-2 focus:ring-[var(--color-action)]/20"
           autoComplete="off"
         />
         <p className="mt-1.5 text-xs text-[var(--color-text-secondary)]">{t('drone.catalog.hint')}</p>
@@ -73,14 +74,14 @@ export function DroneCatalogPicker({ selectedId, onSelect }: DroneCatalogPickerP
                       <span className="block text-sm font-medium text-[var(--color-text)]">
                         {droneCatalogLabel(entry)}
                       </span>
-                      {entry.note ? (
+                      {entry.noteKey ? (
                         <span className="mt-0.5 block text-[11px] text-[var(--color-text-secondary)]">
-                          {entry.note}
+                          {t(entry.noteKey)}
                         </span>
                       ) : null}
                     </span>
                     <span className="shrink-0 rounded-full bg-[var(--color-hover)] px-2 py-0.5 font-mono text-[10px] font-semibold uppercase text-[var(--color-text)]">
-                      {entry.classMarking}
+                      {formatDroneClass(entry.classMarking, t)}
                     </span>
                   </button>
                 </li>

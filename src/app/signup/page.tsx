@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useLayoutEffect, useState, type ChangeEvent, type FormEvent } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type ChangeEvent, type FormEvent } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
@@ -39,6 +39,11 @@ export default function SignupPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Set while this page is creating the account: the auth state flips to
+  // signed-in before the records and the verification step are ready, and
+  // the "already signed in" redirect must not cut that flow short.
+  const signupInFlightRef = useRef(false);
+
   const channels: ContactVerificationChannel[] = [
     ...(verifyEmail ? (['email'] as const) : []),
     ...(verifyPhone ? (['phone'] as const) : []),
@@ -50,8 +55,7 @@ export default function SignupPage() {
       router.replace('/login');
       return;
     }
-    // Utente già loggato ma non nel flusso OTP appena avviato → vai all'account.
-    if (user && step !== 'verify') {
+    if (user && step !== 'verify' && !signupInFlightRef.current) {
       router.replace('/account');
     }
   }, [user, authLoading, router, step]);
@@ -70,10 +74,26 @@ export default function SignupPage() {
     if (!res.ok) throw new Error(body.error || 'init failed');
   }
 
+  function signupErrorMessage(err: unknown): string {
+    const code = err && typeof err === 'object' && 'code' in err ? String(err.code) : '';
+    const message = err instanceof Error ? err.message : '';
+    if (code === 'auth/email-already-in-use' || message.includes('email-already-in-use')) {
+      return t('signup.errorEmailInUse');
+    }
+    if (code === 'auth/invalid-email') return t('signup.errorInvalidEmail');
+    if (code === 'auth/weak-password') return t('signup.errorPasswordShort');
+    if (code === 'auth/network-request-failed') return t('signup.errorNetwork');
+    return t('signup.errorGeneric');
+  }
+
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError(null);
 
+    if (!acceptedTerms) {
+      setError(t('signup.terms.required'));
+      return;
+    }
     if (channels.length === 0) {
       setError(t('signup.otp.channelRequired'));
       return;
@@ -92,49 +112,47 @@ export default function SignupPage() {
     }
 
     setSubmitting(true);
+    signupInFlightRef.current = true;
+    let cred: Awaited<ReturnType<typeof signupWithEmail>>;
     try {
       const displayName = `${firstName.trim()} ${lastName.trim()}`.trim();
-      const cred = await signupWithEmail(email.trim(), password, displayName);
-      const u = cred.user;
-      if (u) {
-        if (!acceptedTerms) {
-          setError(t('signup.terms.required'));
-          return;
-        }
+      cred = await signupWithEmail(email.trim(), password, displayName);
+    } catch (err) {
+      signupInFlightRef.current = false;
+      setError(signupErrorMessage(err));
+      setSubmitting(false);
+      return;
+    }
+
+    // From here on the Firebase user exists. Failures below must not strand
+    // the user on this form: the account gate finishes provisioning and the
+    // verification step can be retried or skipped.
+    const u = cred.user;
+    if (u) {
+      try {
         await ensureAccount(u.uid, u.email ?? email.trim(), {
           firstName: firstName.trim(),
           lastName: lastName.trim(),
           phone: phone.trim(),
           acceptedTerms: true,
         });
-        await initVerification(channels, phone.trim());
+      } catch (err) {
+        console.warn('[signup] provisioning deferred to the account gate', err);
       }
-      trackEvent('signup');
-      setStep('verify');
-    } catch (err) {
-      const message =
-        err instanceof Error && err.message.includes('email-already-in-use')
-          ? t('signup.errorEmailInUse')
-          : t('signup.errorGeneric');
-      setError(message);
-    } finally {
-      setSubmitting(false);
+      try {
+        await initVerification(channels, phone.trim());
+      } catch (err) {
+        console.warn('[signup] contact verification init failed', err);
+      }
     }
+    trackEvent('signup');
+    setStep('verify');
+    setSubmitting(false);
   }
 
   if (user && step === 'verify') {
     return (
-      <AuthPageLayout
-        title={t('signup.title')}
-        footer={
-          <p className="text-xs text-[var(--color-text-secondary)]">
-            {t('signup.haveAccount')}{' '}
-            <Link href="/login" className="font-semibold text-[var(--color-action)] hover:underline">
-              {t('nav.login')}
-            </Link>
-          </p>
-        }
-      >
+      <AuthPageLayout title={t('signup.title')}>
         <SignupOtpVerification
           channels={channels.length > 0 ? channels : ['email']}
           phone={phone}
@@ -201,8 +219,16 @@ export default function SignupPage() {
         <GoogleAuthButton
           disabled={submitting || !acceptedTerms}
           acceptedTerms={acceptedTerms}
+          onStart={() => {
+            setError(null);
+            signupInFlightRef.current = true;
+          }}
+          onAbort={() => {
+            signupInFlightRef.current = false;
+          }}
           onError={setError}
-          onSignedUp={() => setStep('verify')}
+          // Google addresses arrive verified, so there is nothing to confirm.
+          onSuccess={() => router.replace('/account')}
         />
         <p className="text-[11px] leading-relaxed text-[var(--color-text-secondary)]">
           {t('signup.terms.googleHint')}
@@ -259,7 +285,7 @@ export default function SignupPage() {
               checked={verifyEmail}
               onChange={(e) => setVerifyEmail(e.target.checked)}
               disabled={submitting}
-              className="h-4 w-4 rounded border-gray-300"
+              className="h-4 w-4 rounded border-[var(--color-border)] accent-[var(--color-action)]"
             />
             {t('signup.otp.verifyEmailOption')}
           </label>
@@ -269,7 +295,7 @@ export default function SignupPage() {
               checked={verifyPhone}
               onChange={(e) => setVerifyPhone(e.target.checked)}
               disabled={submitting}
-              className="h-4 w-4 rounded border-gray-300"
+              className="h-4 w-4 rounded border-[var(--color-border)] accent-[var(--color-action)]"
             />
             {t('signup.otp.verifyPhoneOption')}
           </label>

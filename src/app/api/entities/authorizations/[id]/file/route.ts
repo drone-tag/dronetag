@@ -1,38 +1,36 @@
 /**
- * POST /api/entities/authorizations/[id]/file — upload authorization PDF/image.
+ * POST /api/entities/authorizations/[id]/file — attach a PDF or image to a permit.
+ *
+ * Accepts either a Storage path the browser already uploaded to, or the raw
+ * file as multipart (see src/lib/server/uploadedFile.ts).
  */
 
 import { NextResponse } from 'next/server';
 import { adminFirestore } from '@/lib/server/firebaseAdmin';
-import {
-  adminUploadImage,
-  adminUploadPdf,
-  isAllowedImageContentType,
-} from '@/lib/server/storage';
 import { storageErrorResponse } from '@/lib/server/storageErrors';
 import { requireUserFromRequest } from '@/lib/server/requestAuth';
 import { sanitizeAllowedUrl } from '@/lib/server/urls';
+import {
+  IMAGE_TYPES,
+  PDF_TYPE,
+  deleteSupersededObject,
+  extForContentType,
+  receiveUpload,
+} from '@/lib/server/uploadedFile';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-const MAX_FILE_SIZE = 20 * 1024 * 1024;
+const ALLOWED_TYPES = new Set([PDF_TYPE, ...IMAGE_TYPES]);
 
 type RouteContext = { params: Promise<{ id: string }> };
-
-function extForContentType(contentType: string): string {
-  if (contentType === 'image/png') return 'png';
-  if (contentType === 'image/webp') return 'webp';
-  if (contentType === 'image/jpeg') return 'jpg';
-  return 'pdf';
-}
 
 export async function POST(request: Request, context: RouteContext) {
   const auth = await requireUserFromRequest(request);
   if (auth instanceof NextResponse) return auth;
 
   const { id } = await context.params;
-  if (!id?.trim()) {
+  if (!id?.trim() || id.includes('/')) {
     return NextResponse.json({ error: 'missing authorization id' }, { status: 400 });
   }
 
@@ -41,67 +39,39 @@ export async function POST(request: Request, context: RouteContext) {
   if (!snap.exists) {
     return NextResponse.json({ error: 'authorization not found' }, { status: 404 });
   }
-  const ownerId = (snap.data() as { userId?: string }).userId;
-  if (ownerId !== auth.uid) {
+  const data = snap.data() as { userId?: string; fileUrl?: string };
+  if (data.userId !== auth.uid) {
     return NextResponse.json({ error: 'forbidden' }, { status: 403 });
   }
 
-  let form: FormData;
-  try {
-    form = await request.formData();
-  } catch {
-    return NextResponse.json({ error: 'invalid form data' }, { status: 400 });
-  }
-
-  const raw = form.get('file');
-  if (!(raw instanceof Blob)) {
-    return NextResponse.json({ error: 'file is required' }, { status: 400 });
-  }
-
-  const contentType = raw.type || 'application/octet-stream';
-  const isPdf = contentType === 'application/pdf';
-  const isImage = isAllowedImageContentType(contentType);
-  if (!isPdf && !isImage) {
-    return NextResponse.json(
-      { error: 'only application/pdf, image/jpeg, image/png or image/webp allowed' },
-      { status: 400 },
-    );
-  }
-  if (raw.size > MAX_FILE_SIZE) {
-    return NextResponse.json({ error: 'file exceeds 20 MB limit' }, { status: 400 });
-  }
-
-  const ext = extForContentType(contentType);
-  const buffer = Buffer.from(await raw.arrayBuffer());
-  const path = `users/${auth.uid}/authorizations/${id}/file.${ext}`;
-
-  let fileUrl: string;
-  try {
-    fileUrl = isPdf
-      ? await adminUploadPdf(path, buffer)
-      : await adminUploadImage(path, buffer, contentType);
-    sanitizeAllowedUrl(fileUrl, 'fileUrl');
-  } catch (err) {
-    return storageErrorResponse(err, 'authorization file upload');
-  }
-
-  const fileName =
-    raw instanceof File && raw.name.trim()
-      ? raw.name.trim().slice(0, 255)
-      : `file.${ext}`;
+  const prefix = `users/${auth.uid}/authorizations/${id}/`;
+  const upload = await receiveUpload(request, {
+    prefix,
+    relayName: (type) => `file.${extForContentType(type)}`,
+    allowedTypes: ALLOWED_TYPES,
+    context: 'authorization file',
+  });
+  if (upload instanceof NextResponse) return upload;
 
   try {
+    sanitizeAllowedUrl(upload.url, 'fileUrl');
     await db.collection('authorizations').doc(id).update({
-      fileUrl,
-      fileName,
-      fileSize: raw.size,
-      mimeType: contentType,
+      fileUrl: upload.url,
+      fileName: upload.fileName,
+      fileSize: upload.size,
+      mimeType: upload.contentType,
       verificationStatus: 'pending',
       updatedAt: new Date().toISOString(),
     });
   } catch (err) {
     return storageErrorResponse(err, 'authorization file firestore update');
   }
+  await deleteSupersededObject(data.fileUrl, prefix, upload.storagePath);
 
-  return NextResponse.json({ fileUrl, fileName, mimeType: contentType, fileSize: raw.size });
+  return NextResponse.json({
+    fileUrl: upload.url,
+    fileName: upload.fileName,
+    mimeType: upload.contentType,
+    fileSize: upload.size,
+  });
 }
